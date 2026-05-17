@@ -50,4 +50,7 @@ const crminstance: AxiosInstance = axios.create({
 // attach interceptor once
 attachAuthInterceptor(crminstance);
 
+// TODO (backend step): Once the API adds x-device-id + x-session-nonce to
+// Access-Control-Allow-Headers, add the same header injection here as in identityinstance.ts.
+
 export default crminstance;

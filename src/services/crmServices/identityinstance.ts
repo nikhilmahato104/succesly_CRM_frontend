@@ -18,12 +18,19 @@ const identityInstance: AxiosInstance = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
-// Auto-inject API key from Redux store on every request
+// Inject API key on every request.
+// TODO (backend step): Once the API adds x-device-id + x-session-nonce to
+// Access-Control-Allow-Headers, uncomment the two lines below to enable
+// session binding and prevent cookie-sharing attacks.
 identityInstance.interceptors.request.use((config) => {
   const apiKey = store.getState().apiKey?.key;
-  if (apiKey) {
-    config.headers["x-api-key"] = apiKey;
-  }
+  if (apiKey) config.headers["x-api-key"] = apiKey;
+
+  // const deviceId = localStorage.getItem("_did");
+  // const sessionNonce = sessionStorage.getItem("_sn");
+  // if (deviceId) config.headers["x-device-id"] = deviceId;
+  // if (sessionNonce) config.headers["x-session-nonce"] = sessionNonce;
+
   return config;
 });
 

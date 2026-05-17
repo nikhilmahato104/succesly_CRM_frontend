@@ -78,7 +78,21 @@ type AuthContextType = {
 
 // ---- Pure helpers ----
 
-const COOKIE_OPTIONS = { path: "/", sameSite: "lax" as const };
+const COOKIE_OPTIONS = {
+  path: "/",
+  sameSite: "strict" as const,
+  ...(import.meta.env.PROD ? { secure: true } : {}),
+};
+
+// Decode JWT payload and check exp claim — returns true if token is past expiry.
+function isTokenExpired(token: string): boolean {
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    return typeof payload.exp === "number" && payload.exp * 1000 < Date.now();
+  } catch {
+    return true; // treat malformed token as expired
+  }
+}
 
 function buildAccessMap(roleAccess: RoleAccessItem[]) {
   return roleAccess.reduce<Record<string, Omit<RoleAccessItem, "module_id">>>(
@@ -123,7 +137,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(false);
 
   const userData = useSelector(selectUserData);
-  const token = cookies?.t ? String(cookies.t) : null;
+  const rawToken = cookies?.t ? String(cookies.t) : null;
+  // Treat expired tokens as absent — avoids a 401 round-trip on next render.
+  const token = rawToken && !isTokenExpired(rawToken) ? rawToken : null;
   const isAuthenticated = !!token;
 
   // On page refresh the Redux store is empty even though the cookie still exists.
@@ -163,6 +179,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // re-fetch the profile so role/access data is restored before any route check.
   useEffect(() => {
     if (!token || userData.user_id || initRef.current) {
+      // If cookie exists but token is expired, remove the stale cookie.
+      if (rawToken && !token) removeCookie("t", { path: "/" });
       setInitDone(true);
       return;
     }

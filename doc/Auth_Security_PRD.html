@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Auth Security — PRD & Developer Guide</title>
+<style>
+  :root {
+    --bg: #0f1117; --card: #1a1d27; --border: #2a2d3a; --accent: #6366f1;
+    --accent2: #06b6d4; --green: #22c55e; --yellow: #f59e0b; --red: #ef4444;
+    --orange: #f97316; --purple: #a855f7;
+    --text: #e2e4ed; --muted: #8b8fa8; --dim: #b0b3c8; --code-bg: #12151f;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+    background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.6;
+    display: flex;
+  }
+
+  /* ── Sidebar ── */
+  nav {
+    position: fixed; top: 0; left: 0; width: 248px; height: 100vh;
+    background: var(--card); border-right: 1px solid var(--border);
+    overflow-y: auto; padding: 20px 0; z-index: 100;
+  }
+  nav .logo {
+    padding: 0 18px 18px; border-bottom: 1px solid var(--border); margin-bottom: 10px;
+    font-size: 13px; font-weight: 700; color: var(--accent); letter-spacing: .04em;
+  }
+  nav .logo span { display: block; font-size: 10px; color: var(--muted); font-weight: 400; margin-top: 2px; }
+  nav a {
+    display: block; padding: 7px 18px; color: var(--muted); text-decoration: none;
+    font-size: 12.5px; transition: background 120ms, color 120ms; border-left: 3px solid transparent;
+  }
+  nav a:hover, nav a.active { background: rgba(99,102,241,.08); color: var(--text); border-left-color: var(--accent); }
+  nav .section-label {
+    padding: 12px 18px 4px; font-size: 10px; font-weight: 700; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--muted);
+  }
+
+  /* ── Main ── */
+  main { margin-left: 248px; padding: 40px 48px; max-width: 960px; width: 100%; }
+
+  /* ── Language Toggle ── */
+  .lang-bar {
+    position: sticky; top: 0; z-index: 50; background: var(--bg);
+    padding: 12px 0 16px; display: flex; align-items: center; gap: 8px;
+    border-bottom: 1px solid var(--border); margin-bottom: 36px;
+  }
+  .lang-bar span { font-size: 11px; color: var(--muted); margin-right: 4px; }
+  .lang-btn {
+    padding: 6px 18px; border-radius: 6px; border: 1px solid var(--border);
+    font-size: 12px; font-weight: 600; cursor: pointer; transition: all 140ms;
+    background: transparent; color: var(--muted);
+  }
+  .lang-btn.active {
+    background: var(--accent); border-color: var(--accent); color: #fff;
+  }
+
+  /* ── Typography ── */
+  h1 { font-size: 26px; font-weight: 800; color: var(--text); margin-bottom: 6px; }
+  h2 { font-size: 18px; font-weight: 700; color: var(--text); margin: 36px 0 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+  h3 { font-size: 14px; font-weight: 700; color: var(--accent2); margin: 22px 0 8px; }
+  h4 { font-size: 13px; font-weight: 600; color: var(--dim); margin: 14px 0 6px; }
+  p  { color: var(--dim); margin-bottom: 10px; }
+  ul, ol { padding-left: 20px; color: var(--dim); margin-bottom: 10px; }
+  li { margin-bottom: 4px; }
+  strong { color: var(--text); }
+  .subtitle { font-size: 13px; color: var(--muted); margin-bottom: 28px; }
+
+  /* ── Badges ── */
+  .badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 10px; border-radius: 100px; font-size: 11px; font-weight: 700;
+    letter-spacing: .03em; vertical-align: middle;
+  }
+  .badge-green  { background: rgba(34,197,94,.12);  color: var(--green);  border: 1px solid rgba(34,197,94,.2);  }
+  .badge-red    { background: rgba(239,68,68,.12);   color: var(--red);    border: 1px solid rgba(239,68,68,.2);  }
+  .badge-yellow { background: rgba(245,158,11,.12);  color: var(--yellow); border: 1px solid rgba(245,158,11,.2); }
+  .badge-purple { background: rgba(168,85,247,.12);  color: var(--purple); border: 1px solid rgba(168,85,247,.2); }
+  .badge-blue   { background: rgba(6,182,212,.12);   color: var(--accent2);border: 1px solid rgba(6,182,212,.2);  }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 10px; padding: 20px 24px; margin-bottom: 16px;
+  }
+  .card-problem { border-left: 3px solid var(--red); }
+  .card-solved  { border-left: 3px solid var(--green); }
+  .card-future  { border-left: 3px solid var(--yellow); }
+  .card-info    { border-left: 3px solid var(--accent); }
+  .card-code    { border-left: 3px solid var(--purple); }
+
+  /* ── Attack flow box ── */
+  .attack-flow {
+    background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 16px 20px; margin: 12px 0; font-family: monospace; font-size: 12.5px; color: var(--dim);
+    line-height: 1.9;
+  }
+  .attack-flow .step-bad  { color: var(--red); }
+  .attack-flow .step-good { color: var(--green); }
+  .attack-flow .step-mid  { color: var(--yellow); }
+  .attack-flow .arrow { color: var(--muted); }
+
+  /* ── Code block ── */
+  pre {
+    background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 16px 20px; font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 12px; line-height: 1.8; overflow-x: auto; margin: 10px 0;
+    color: var(--dim);
+  }
+  pre .k { color: #c084fc; } /* keyword */
+  pre .s { color: #86efac; } /* string */
+  pre .c { color: #4b5563; font-style: italic; } /* comment */
+  pre .f { color: #67e8f9; } /* function */
+  pre .n { color: #fde68a; } /* number */
+  pre .p { color: var(--accent); } /* path/file */
+
+  /* ── File pill ── */
+  .file-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(99,102,241,.10); border: 1px solid rgba(99,102,241,.25);
+    border-radius: 6px; padding: 4px 10px; font-size: 11.5px; font-weight: 600;
+    color: #a5b4fc; font-family: monospace; margin: 3px 2px;
+  }
+  .file-pill::before { content: '📄'; font-size: 11px; }
+
+  /* ── Comparison table ── */
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 13px; }
+  th { background: rgba(99,102,241,.1); color: var(--text); padding: 10px 14px; text-align: left; border: 1px solid var(--border); font-size: 12px; }
+  td { padding: 10px 14px; border: 1px solid var(--border); color: var(--dim); vertical-align: top; }
+  tr:hover td { background: rgba(255,255,255,.02); }
+
+  /* ── Hinglish styles ── */
+  .hi { display: none; }
+  .en { display: block; }
+  body.hinglish .hi { display: block; }
+  body.hinglish .en { display: none; }
+  /* inline spans */
+  span.hi { display: none; }
+  span.en { display: inline; }
+  body.hinglish span.hi { display: inline; }
+  body.hinglish span.en { display: none; }
+
+  .hinglish-note {
+    background: rgba(245,158,11,.08); border: 1px solid rgba(245,158,11,.2);
+    border-radius: 6px; padding: 8px 14px; margin-bottom: 14px; font-size: 12px; color: var(--yellow);
+  }
+
+  /* ── Section divider ── */
+  .problem-header {
+    display: flex; align-items: center; gap: 12px; margin: 40px 0 20px;
+    padding: 16px 20px; border-radius: 10px; border: 1px solid var(--border);
+  }
+  .problem-header.p1 { background: rgba(239,68,68,.06); border-color: rgba(239,68,68,.2); }
+  .problem-header.p2 { background: rgba(245,158,11,.06); border-color: rgba(245,158,11,.2); }
+  .problem-number {
+    width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center;
+    justify-content: center; font-size: 16px; font-weight: 800; flex-shrink: 0;
+  }
+  .p1 .problem-number { background: rgba(239,68,68,.2); color: var(--red); }
+  .p2 .problem-number { background: rgba(245,158,11,.2); color: var(--yellow); }
+  .problem-header h2 { border: none; margin: 0; padding: 0; font-size: 17px; }
+
+  /* ── Step list ── */
+  .steps { list-style: none; padding: 0; }
+  .steps li {
+    display: flex; gap: 12px; padding: 10px 0;
+    border-bottom: 1px solid rgba(42,45,58,.6);
+  }
+  .steps li:last-child { border-bottom: none; }
+  .step-num {
+    width: 24px; height: 24px; border-radius: 50%; background: rgba(99,102,241,.2);
+    color: var(--accent); font-size: 11px; font-weight: 800;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px;
+  }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     SIDEBAR
+════════════════════════════════════════════════════════════════════════ -->
+<nav>
+  <div class="logo">
+    🔐 Auth Security PRD
+    <span>Zynkly Admin — v1.0</span>
+  </div>
+
+  <div class="section-label">Overview</div>
+  <a href="#overview">Introduction</a>
+  <a href="#threats">Threat Summary</a>
+
+  <div class="section-label">Problem 1 — Solved</div>
+  <a href="#p1-attack">Attack: Fake Cookie</a>
+  <a href="#p1-how">How It's Prevented</a>
+  <a href="#p1-code">Code Location</a>
+  <a href="#p1-flow">Full Flow</a>
+
+  <div class="section-label">Problem 2 — Future</div>
+  <a href="#p2-attack">Attack: Cookie Theft</a>
+  <a href="#p2-solution">Enterprise Solution</a>
+  <a href="#p2-frontend">Frontend Changes</a>
+  <a href="#p2-backend">Backend Changes</a>
+  <a href="#p2-flow">Full Flow</a>
+
+  <div class="section-label">Reference</div>
+  <a href="#files">All Files Reference</a>
+  <a href="#checklist">Security Checklist</a>
+</nav>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     MAIN CONTENT
+════════════════════════════════════════════════════════════════════════ -->
+<main>
+
+  <!-- Language Toggle -->
+  <div class="lang-bar">
+    <span>Language / Bhasha:</span>
+    <button class="lang-btn active" id="btn-en" onclick="setLang('en')">🇬🇧 English</button>
+    <button class="lang-btn" id="btn-hi" onclick="setLang('hi')">🇮🇳 Hinglish</button>
+  </div>
+
+  <!-- ── HEADER ── -->
+  <section id="overview">
+    <h1>Auth Security — PRD & Developer Guide</h1>
+    <p class="subtitle">
+      <span class="en">Product Requirement Document · Cookie Attack Prevention · Zynkly Admin Platform</span>
+      <span class="hi">Product Requirement Document · Cookie Attack se Bachne ka Plan · Zynkly Admin Platform</span>
+    </p>
+
+    <div class="card card-info">
+      <div class="hinglish-note hi">
+        ⚠️ Ye document English + Hinglish dono mein likha hai taki naye developers easily samajh sakein.
+      </div>
+      <h3>
+        <span class="en">What is this document about?</span>
+        <span class="hi">Ye document kiske baare mein hai?</span>
+      </h3>
+      <p>
+        <span class="en">
+          This document explains two real security attacks we discovered while doing R&amp;D on the
+          Zynkly Admin authentication system — what each attack is, how we prevent the first one
+          (already done in code), and the full plan to prevent the second one in the future.
+        </span>
+        <span class="hi">
+          Ye document do real security attacks explain karta hai jo humne Zynkly Admin ke auth system
+          ka R&amp;D karte waqt discover kiye — kya hai ye attacks, pehle wale ko hum kaise rok rahe
+          hain (code mein ho chuka hai), aur doosre wale ko future mein kaise rokenge uska pura plan.
+        </span>
+      </p>
+    </div>
+  </section>
+
+  <!-- ── THREAT SUMMARY ── -->
+  <section id="threats">
+    <h2>
+      <span class="en">Threat Summary</span>
+      <span class="hi">Threat Summary (Kya Kya Khatre Hain)</span>
+    </h2>
+
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th><span class="en">Attack Name</span><span class="hi">Attack ka Naam</span></th>
+          <th><span class="en">Who can do it</span><span class="hi">Kaun kar sakta hai</span></th>
+          <th><span class="en">Status</span><span class="hi">Status</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>1</strong></td>
+          <td>
+            <span class="en">Fake Cookie Bypass — manually set <code>t = xyz</code> (random value) in browser</span>
+            <span class="hi">Fake Cookie Bypass — browser mein manually <code>t = xyz</code> random value set karna</span>
+          </td>
+          <td>
+            <span class="en">Any person who knows DevTools or Cookies tab</span>
+            <span class="hi">Jo bhi DevTools ya Cookies tab jaanta ho</span>
+          </td>
+          <td><span class="badge badge-green">✓ SOLVED</span></td>
+        </tr>
+        <tr>
+          <td><strong>2</strong></td>
+          <td>
+            <span class="en">Cookie Theft — use Cookie Editor extension to copy &amp; paste JWT to another browser</span>
+            <span class="hi">Cookie Theft — Cookie Editor extension se JWT copy karke doosre browser mein paste karna</span>
+          </td>
+          <td>
+            <span class="en">Logged-in user or someone with physical access to their PC</span>
+            <span class="hi">Logged-in user ya koi jo unka PC use kar sake</span>
+          </td>
+          <td><span class="badge badge-yellow">⏳ FUTURE PLAN</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+
+  <!-- ════════════════════════════════════════════════════════════════════
+       PROBLEM 1
+  ═════════════════════════════════════════════════════════════════════ -->
+  <div class="problem-header p1" id="p1-attack">
+    <div class="problem-number">1</div>
+    <div>
+      <h2>Problem 1 — Fake Cookie Attack <span class="badge badge-green">✓ SOLVED</span></h2>
+      <p style="margin:0;font-size:13px;color:var(--muted)">
+        <span class="en">Hacker opens DevTools → Application → Cookies → sets <code>t = xyz</code> → tries to access dashboard</span>
+        <span class="hi">Hacker DevTools → Application → Cookies kholke <code>t = xyz</code> set karta hai → dashboard access karne ki koshish karta hai</span>
+      </p>
+    </div>
+  </div>
+
+  <div class="card card-problem">
+    <h3>
+      <span class="en">What exactly does the hacker do?</span>
+      <span class="hi">Hacker exactly kya karta hai?</span>
+    </h3>
+    <ul>
+      <li>
+        <span class="en">Opens browser DevTools (F12) → Application tab → Cookies → <code>http://localhost:5174</code></span>
+        <span class="hi">Browser DevTools (F12) kholta hai → Application tab → Cookies → <code>http://localhost:5174</code></span>
+      </li>
+      <li>
+        <span class="en">Manually adds or edits a cookie: <strong>Name = t, Value = anyrandomtext123</strong></span>
+        <span class="hi">Manually ek cookie add ya edit karta hai: <strong>Name = t, Value = anyrandomtext123</strong></span>
+      </li>
+      <li>
+        <span class="en">Navigates to <code>/dashboard/admin</code> — hoping the frontend trusts the cookie blindly</span>
+        <span class="hi"><code>/dashboard/admin</code> pe navigate karta hai — sochta hai frontend cookie ko blindly trust karega</span>
+      </li>
+    </ul>
+  </div>
+
+  <div class="attack-flow">
+    <span class="step-bad">HACKER sets cookie:  t = "randomXYZvalue"</span><br>
+    <span class="arrow">    ↓</span><br>
+    <span class="step-mid">Browser navigates to /dashboard/admin</span><br>
+    <span class="arrow">    ↓</span><br>
+    <span class="step-mid">ProtectedRoute checks: isLoading=false? initDone=true?</span><br>
+    <span class="arrow">    ↓  (initDone is FALSE — re-hydration still running)</span><br>
+    <span class="step-mid">ProtectedRoute shows &lt;LoaderOverlay /&gt; — page NOT shown yet</span><br>
+    <span class="arrow">    ↓</span><br>
+    <span class="step-mid">AuthContext calls  GET /auth/profile  with token "randomXYZvalue"</span><br>
+    <span class="arrow">    ↓</span><br>
+    <span class="step-bad">API returns 401 Unauthorized — token is fake, signature invalid</span><br>
+    <span class="arrow">    ↓</span><br>
+    <span class="step-good">Cookie "t" is removed  →  isAuthenticated = false  →  initDone = true</span><br>
+    <span class="arrow">    ↓</span><br>
+    <span class="step-good">ProtectedRoute redirects → /login  ✅  HACKER BLOCKED</span>
+  </div>
+
+  <!-- HOW IT IS PREVENTED -->
+  <h2 id="p1-how">
+    <span class="en">How It's Prevented (Technical Explanation)</span>
+    <span class="hi">Ye Kaise Roka Jaata Hai (Technical Explanation)</span>
+  </h2>
+
+  <div class="card card-solved">
+    <h3>
+      <span class="en">The 3-Layer Guard System in ProtectedRoute</span>
+      <span class="hi">ProtectedRoute mein 3-Layer Guard System</span>
+    </h3>
+    <ul class="steps">
+      <li>
+        <div class="step-num">1</div>
+        <div>
+          <strong><span class="en">Init Check</span><span class="hi">Init Check</span></strong><br>
+          <span class="en">
+            When the page loads, <code>initDone</code> starts as <code>false</code> if a cookie exists.
+            ProtectedRoute shows a loading spinner — it does NOT render the dashboard yet.
+            This buys time for the real server verification to happen.
+          </span>
+          <span class="hi">
+            Jab page load hota hai, agar cookie exist karti hai to <code>initDone</code> start mein <code>false</code> hota hai.
+            ProtectedRoute ek loading spinner dikhata hai — dashboard abhi render NAHI karta.
+            Ye time deta hai real server verification hone ka.
+          </span>
+        </div>
+      </li>
+      <li>
+        <div class="step-num">2</div>
+        <div>
+          <strong><span class="en">Server Verification (Re-hydration)</span><span class="hi">Server Verification (Re-hydration)</span></strong><br>
+          <span class="en">
+            AuthContext calls <code>GET /auth/profile</code> using the cookie token.
+            The server validates the JWT signature. A random/fake token has no valid signature → server returns 401.
+          </span>
+          <span class="hi">
+            AuthContext cookie token use karke <code>GET /auth/profile</code> call karta hai.
+            Server JWT signature validate karta hai. Random/fake token ki koi valid signature nahi hoti → server 401 return karta hai.
+          </span>
+        </div>
+      </li>
+      <li>
+        <div class="step-num">3</div>
+        <div>
+          <strong><span class="en">Auto Cleanup &amp; Redirect</span><span class="hi">Auto Cleanup &amp; Redirect</span></strong><br>
+          <span class="en">
+            On 401: cookie is removed, Redux is cleared, <code>isAuthenticated</code> becomes false,
+            <code>initDone</code> becomes true → ProtectedRoute redirects to <code>/login</code>.
+          </span>
+          <span class="hi">
+            401 aate hi: cookie remove ho jaati hai, Redux clear ho jaata hai, <code>isAuthenticated</code> false ho jaata hai,
+            <code>initDone</code> true ho jaata hai → ProtectedRoute <code>/login</code> pe redirect karta hai.
+          </span>
+        </div>
+      </li>
+    </ul>
+  </div>
+
+  <div class="card card-solved">
+    <h3>
+      <span class="en">Additional: Client-side JWT Expiry Check</span>
+      <span class="hi">Additional: Client-side JWT Expiry Check</span>
+    </h3>
+    <p>
+      <span class="en">
+        Even before hitting the server, we decode the JWT payload and check the <code>exp</code> field.
+        If the token is expired, it is treated as <code>null</code> instantly — no API call needed.
+        A random string like "xyz" is not a valid JWT, so <code>atob()</code> throws → treated as expired → cookie removed.
+      </span>
+      <span class="hi">
+        Server hit karne se pehle bhi, hum JWT payload decode karke <code>exp</code> field check karte hain.
+        Agar token expired hai to use turant <code>null</code> treat kiya jaata hai — koi API call nahi chahiye.
+        "xyz" jaisi random string valid JWT nahi hai, isliye <code>atob()</code> throw karta hai → expired treat hota hai → cookie remove ho jaati hai.
+      </span>
+    </p>
+  </div>
+
+  <!-- CODE LOCATION -->
+  <h2 id="p1-code">
+    <span class="en">Where Is This Code? (File Locations)</span>
+    <span class="hi">Ye Code Kahan Likha Hai? (File Locations)</span>
+  </h2>
+
+  <div class="card card-code">
+    <h3>File 1 — AuthContext.tsx</h3>
+    <div class="file-pill">src/context/AuthContext.tsx</div>
+    <p style="margin-top:10px">
+      <span class="en"><strong>What to look for:</strong> <code>isTokenExpired()</code> function, <code>initDone</code> state, re-hydration <code>useEffect</code>, and <code>COOKIE_OPTIONS</code>.</span>
+      <span class="hi"><strong>Kya dhundhen:</strong> <code>isTokenExpired()</code> function, <code>initDone</code> state, re-hydration <code>useEffect</code>, aur <code>COOKIE_OPTIONS</code>.</span>
+    </p>
+<pre><span class="c">// ─── 1. JWT Expiry Check (line ~88) ────────────────────────────────
+// Ye function JWT ka exp claim decode karta hai.
+// Agar token random string hai to atob() throw karega → return true (expired)</span>
+<span class="k">function</span> <span class="f">isTokenExpired</span>(token: <span class="s">string</span>): boolean {
+  <span class="k">try</span> {
+    <span class="k">const</span> payload = JSON.<span class="f">parse</span>(<span class="f">atob</span>(token.<span class="f">split</span>(<span class="s">"."</span>)[<span class="n">1</span>]));
+    <span class="k">return</span> <span class="k">typeof</span> payload.exp === <span class="s">"number"</span> &amp;&amp; payload.exp * <span class="n">1000</span> &lt; Date.<span class="f">now</span>();
+  } <span class="k">catch</span> {
+    <span class="k">return</span> <span class="k">true</span>; <span class="c">// malformed / random string → treat as expired</span>
+  }
+}
+
+<span class="c">// ─── 2. Token from cookie — expired ones treated as null ───────────</span>
+<span class="k">const</span> rawToken = cookies?.t ? <span class="f">String</span>(cookies.t) : <span class="k">null</span>;
+<span class="k">const</span> token = rawToken &amp;&amp; !<span class="f">isTokenExpired</span>(rawToken) ? rawToken : <span class="k">null</span>;
+<span class="k">const</span> isAuthenticated = !!token;
+
+<span class="c">// ─── 3. initDone starts FALSE when cookie exists ────────────────────
+// ProtectedRoute will show loader until server responds</span>
+<span class="k">const</span> [initDone, setInitDone] = <span class="f">useState</span>(!token);
+
+<span class="c">// ─── 4. Re-hydration useEffect ──────────────────────────────────────
+// Server validate karta hai token — 401 aane par cookie remove ho jaati hai</span>
+<span class="f">useEffect</span>(() => {
+  <span class="k">if</span> (!token || userData.user_id || initRef.current) {
+    <span class="k">if</span> (rawToken &amp;&amp; !token) <span class="f">removeCookie</span>(<span class="s">"t"</span>, { path: <span class="s">"/"</span> }); <span class="c">// stale cookie clean</span>
+    <span class="f">setInitDone</span>(<span class="k">true</span>);
+    <span class="k">return</span>;
+  }
+  initRef.current = <span class="k">true</span>;
+  <span class="f">fetchProfileApi</span>(token)
+    .<span class="f">then</span>((res) => <span class="f">applyProfile</span>(res.data))
+    .<span class="f">catch</span>(() => { <span class="f">removeCookie</span>(<span class="s">"t"</span>, { path: <span class="s">"/"</span> }); }) <span class="c">// 401 → cookie hatao</span>
+    .<span class="f">finally</span>(() => { <span class="f">setIsLoading</span>(<span class="k">false</span>); <span class="f">setInitDone</span>(<span class="k">true</span>); });
+}, []);</pre>
+
+    <h3 style="margin-top:20px">File 2 — AppRoutes.tsx</h3>
+    <div class="file-pill">src/routes/AppRoutes.tsx</div>
+    <p style="margin-top:10px">
+      <span class="en"><strong>What to look for:</strong> The <code>ProtectedRoute</code> component — specifically Layer 1 (init check).</span>
+      <span class="hi"><strong>Kya dhundhen:</strong> <code>ProtectedRoute</code> component — specifically Layer 1 (init check).</span>
+    </p>
+<pre><span class="c">// ─── ProtectedRoute — Layer 1 (line ~108) ──────────────────────────
+// Jab tak initDone false hai, loader dikhao — dashboard mat dikhao
+// Ye ensure karta hai ki fake cookie wala dashboard kabhi nahi dekh sakta</span>
+<span class="k">if</span> (isLoading || !initDone) <span class="k">return</span> &lt;LoaderOverlay show /&gt;;
+
+<span class="c">// Layer 2 — Auth check (cookie removed ho gayi to isAuthenticated false)</span>
+<span class="k">if</span> (!isAuthenticated) <span class="k">return</span> &lt;Navigate to=<span class="s">"/login"</span> replace /&gt;;</pre>
+
+    <h3 style="margin-top:20px">File 3 — axiosAuthInterceptor.ts</h3>
+    <div class="file-pill">src/lib/axiosAuthInterceptor.ts</div>
+    <p style="margin-top:10px">
+      <span class="en"><strong>What to look for:</strong> The 401 response interceptor — auto logout on invalid token.</span>
+      <span class="hi"><strong>Kya dhundhen:</strong> 401 response interceptor — invalid token aane par auto logout.</span>
+    </p>
+<pre><span class="c">// ─── 401 Interceptor — sab axios instances pe laga hai ─────────────
+// Agar server koi bhi request pe 401 de to:
+// cookies clear karo → Redux clear karo → /login pe bhejo</span>
+<span class="k">if</span> (error.response?.status === <span class="n">401</span>) {
+  <span class="f">clearClientAuthState</span>(); <span class="c">// cookies + localStorage</span>
+  <span class="f">clearReduxAuthState</span>();  <span class="c">// Redux store</span>
+  <span class="f">redirectToLogin</span>();      <span class="c">// window.location → /login</span>
+}</pre>
+  </div>
+
+  <!-- FULL FLOW DIAGRAM -->
+  <h2 id="p1-flow">
+    <span class="en">Complete Flow Diagram — Problem 1</span>
+    <span class="hi">Complete Flow Diagram — Problem 1</span>
+  </h2>
+  <div class="card">
+    <div class="attack-flow">
+<span class="step-bad">👤 HACKER opens DevTools → sets cookie t = "abc123random"</span>
+<span class="arrow">         ↓</span>
+<span class="step-mid">🌐 Browser loads /dashboard/admin</span>
+<span class="arrow">         ↓</span>
+<span class="step-mid">⚛️  React starts, AuthContext reads cookie: rawToken = "abc123random"</span>
+<span class="arrow">         ↓</span>
+<span class="step-mid">🔍 isTokenExpired("abc123random") called</span>
+<span class="arrow">         │  atob("abc123random") → fails OR exp missing → returns true</span>
+<span class="arrow">         ↓</span>
+<span class="step-good">✅ token = null  →  initDone starts as TRUE  →  cookie removed</span>
+<span class="arrow">         ↓</span>
+<span class="step-good">🚪 ProtectedRoute: isAuthenticated = false → Navigate to /login</span>
+<span class="arrow">         ↓</span>
+<span class="step-good">🔒 BLOCKED — Hacker sees login page ✅</span>
+
+<span class="c" style="margin-top:12px;display:block">— — — ALTERNATE PATH (if token looks like a valid JWT format) — — —</span>
+
+<span class="step-bad">👤 HACKER sets a well-formed but INVALID JWT token</span>
+<span class="arrow">         ↓</span>
+<span class="step-mid">⚛️  isTokenExpired() passes (exp field exists, not expired)</span>
+<span class="arrow">         ↓</span>
+<span class="step-mid">⏳ initDone = false → ProtectedRoute shows &lt;LoaderOverlay&gt;</span>
+<span class="arrow">         ↓</span>
+<span class="step-mid">🌐 AuthContext calls GET /auth/profile with fake JWT</span>
+<span class="arrow">         ↓</span>
+<span class="step-bad">❌ Server returns 401 — signature mismatch</span>
+<span class="arrow">         ↓</span>
+<span class="step-good">✅ .catch() → removeCookie("t") → token = null → initDone = true</span>
+<span class="arrow">         ↓</span>
+<span class="step-good">🚪 ProtectedRoute redirects → /login ✅ BLOCKED</span>
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════════════════════════════
+       PROBLEM 2
+  ═════════════════════════════════════════════════════════════════════ -->
+  <div class="problem-header p2" id="p2-attack">
+    <div class="problem-number">2</div>
+    <div>
+      <h2>Problem 2 — Cookie Theft Attack <span class="badge badge-yellow">⏳ FUTURE PLAN</span></h2>
+      <p style="margin:0;font-size:13px;color:var(--muted)">
+        <span class="en">Valid user uses Cookie Editor extension → exports JWT → pastes in another browser → accesses CRM</span>
+        <span class="hi">Valid user Cookie Editor extension use karta hai → JWT export karta hai → doosre browser mein paste karta hai → CRM access kar leta hai</span>
+      </p>
+    </div>
+  </div>
+
+  <div class="card card-problem">
+    <h3>
+      <span class="en">What exactly does the attacker do?</span>
+      <span class="hi">Attacker exactly kya karta hai?</span>
+    </h3>
+    <ul>
+      <li>
+        <span class="en">Logs in with valid credentials → gets a real, signed JWT token stored in cookie <code>t</code></span>
+        <span class="hi">Valid credentials se login karta hai → real, signed JWT token cookie <code>t</code> mein store ho jaata hai</span>
+      </li>
+      <li>
+        <span class="en">Opens Cookie Editor browser extension → clicks <strong>Export as JSON</strong></span>
+        <span class="hi">Cookie Editor browser extension kholata hai → <strong>Export as JSON</strong> pe click karta hai</span>
+      </li>
+      <li>
+        <span class="en">Copies the JSON (which contains the full JWT value) → opens a different browser or incognito tab</span>
+        <span class="hi">JSON copy karta hai (jisme full JWT value hoti hai) → alag browser ya incognito tab kholata hai</span>
+      </li>
+      <li>
+        <span class="en">Imports the cookie → the browser now has a <strong>valid, real JWT</strong> in cookie <code>t</code></span>
+        <span class="hi">Cookie import karta hai → browser mein ab cookie <code>t</code> mein <strong>valid, real JWT</strong> hai</span>
+      </li>
+      <li>
+        <span class="en">Navigates to <code>/dashboard/admin</code> — server accepts the JWT (signature is valid) → <strong>FULL ACCESS</strong></span>
+        <span class="hi"><code>/dashboard/admin</code> pe jaata hai — server JWT accept karta hai (signature valid hai) → <strong>FULL ACCESS</strong></span>
+      </li>
+    </ul>
+  </div>
+
+  <div class="attack-flow">
+<span class="step-bad">👤 ATTACKER logs in with real credentials → gets valid JWT</span>
+<span class="arrow">         ↓</span>
+<span class="step-bad">🍪 Opens Cookie Editor → Export JSON → copies JWT value</span>
+<span class="arrow">         ↓</span>
+<span class="step-bad">🌐 Opens new browser → imports cookie t = &lt;stolen JWT&gt;</span>
+<span class="arrow">         ↓</span>
+<span class="step-mid">⚛️  AuthContext reads token — isTokenExpired() → false (JWT is real, not expired)</span>
+<span class="arrow">         ↓</span>
+<span class="step-mid">🌐 Calls GET /auth/profile with stolen JWT</span>
+<span class="arrow">         ↓</span>
+<span class="step-bad">✅ Server returns 200 — JWT signature IS valid (it's the real token!)</span>
+<span class="arrow">         ↓</span>
+<span class="step-bad">😱 Attacker gets FULL ACCESS as the original user ❌ NOT BLOCKED (yet)</span>
+  </div>
+
+  <div class="card card-problem">
+    <h3>
+      <span class="en">Why can't the frontend stop this alone?</span>
+      <span class="hi">Frontend akela ye kyun nahi rok sakta?</span>
+    </h3>
+    <p>
+      <span class="en">
+        The JWT token is <strong>cryptographically valid</strong>. It was signed by the server's secret key.
+        The frontend has no way to tell the difference between the original user and someone who copied the cookie —
+        both are sending the exact same token. Only the <strong>backend</strong> can enforce session binding.
+      </span>
+      <span class="hi">
+        JWT token <strong>cryptographically valid</strong> hai. Ise server ke secret key se sign kiya gaya tha.
+        Frontend ke paas original user aur copy karne wale mein farq karne ka koi tarika nahi hai —
+        dono exactly same token bhej rahe hain. Sirf <strong>backend</strong> hi session binding enforce kar sakta hai.
+      </span>
+    </p>
+  </div>
+
+  <!-- ENTERPRISE SOLUTION -->
+  <h2 id="p2-solution">
+    <span class="en">Enterprise Solution — The Complete Plan</span>
+    <span class="hi">Enterprise Solution — Pura Plan</span>
+  </h2>
+
+  <div class="card card-info">
+    <h3>
+      <span class="en">Strategy: Short-lived Access Token + HttpOnly Refresh Token</span>
+      <span class="hi">Strategy: Short-lived Access Token + HttpOnly Refresh Token</span>
+    </h3>
+    <p>
+      <span class="en">
+        This is the <strong>industry standard</strong> used by companies like Google, GitHub, and Stripe.
+        Instead of one long-lived JWT (7 days), we use two tokens:
+      </span>
+      <span class="hi">
+        Ye <strong>industry standard</strong> hai jo Google, GitHub, aur Stripe jaise companies use karti hain.
+        Ek long-lived JWT (7 din) ki jagah hum do tokens use karte hain:
+      </span>
+    </p>
+    <table>
+      <thead>
+        <tr>
+          <th><span class="en">Token</span><span class="hi">Token</span></th>
+          <th><span class="en">Expiry</span><span class="hi">Expiry</span></th>
+          <th><span class="en">Stored Where</span><span class="hi">Kahan Store Hoga</span></th>
+          <th><span class="en">Purpose</span><span class="hi">Purpose</span></th>
+          <th><span class="en">Stealable?</span><span class="hi">Chori Ho Sakta Hai?</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Access Token</strong></td>
+          <td><span class="badge badge-green">15 min</span></td>
+          <td>
+            <span class="en">Frontend memory (React state / Redux) — NOT in cookie</span>
+            <span class="hi">Frontend memory (React state / Redux) — cookie mein NAHI</span>
+          </td>
+          <td>
+            <span class="en">Sent with every API request as Bearer token</span>
+            <span class="hi">Har API request ke saath Bearer token ke roop mein bheja jaata hai</span>
+          </td>
+          <td><span class="badge badge-green">Very Hard</span></td>
+        </tr>
+        <tr>
+          <td><strong>Refresh Token</strong></td>
+          <td><span class="badge badge-yellow">7 days</span></td>
+          <td>
+            <span class="en"><code>httpOnly + Secure</code> cookie set by <strong>server</strong> — JavaScript CANNOT read it</span>
+            <span class="hi"><code>httpOnly + Secure</code> cookie — <strong>server</strong> set karta hai — JavaScript PADH NAHI sakta</span>
+          </td>
+          <td>
+            <span class="en">Used silently to get new access tokens when they expire</span>
+            <span class="hi">Expire hone par silently naya access token lene ke liye use hota hai</span>
+          </td>
+          <td><span class="badge badge-red">JS can't read it</span></td>
+        </tr>
+      </tbody>
+    </table>
+    <p style="margin-top:12px">
+      <span class="en">
+        <strong>Key insight:</strong> Cookie Editor extension can only read cookies that JavaScript can read.
+        <code>httpOnly</code> cookies are set by the server response header — they are invisible to <code>document.cookie</code>
+        and to Cookie Editor. Even if visible in DevTools Network tab, they cannot be exported and re-used
+        because they are bound to the browser session by the server.
+      </span>
+      <span class="hi">
+        <strong>Key insight:</strong> Cookie Editor extension sirf wahi cookies padh sakta hai jo JavaScript padh sakti hai.
+        <code>httpOnly</code> cookies server response header se set hoti hain — ye <code>document.cookie</code>
+        aur Cookie Editor ke liye invisible hoti hain. DevTools Network tab mein dikhein bhi, to export karke
+        reuse nahi ho sakti kyunki server ne unhe browser session se bind kiya hota hai.
+      </span>
+    </p>
+  </div>
+
+  <!-- FRONTEND CHANGES -->
+  <h2 id="p2-frontend">
+    <span class="en">Frontend Changes Required</span>
+    <span class="hi">Frontend Mein Kya Kya Badalna Hai</span>
+  </h2>
+
+  <div class="card card-code">
+    <h3>
+      <span class="en">Step 1 — Store Access Token in Memory (NOT cookie)</span>
+      <span class="hi">Step 1 — Access Token Memory Mein Store Karo (Cookie Mein NAHI)</span>
+    </h3>
+    <div class="file-pill">src/context/AuthContext.tsx</div>
+    <p style="margin-top:10px">
+      <span class="en">Change the login flow to store the access token in React state, NOT in a cookie. On page refresh, use the refresh token (httpOnly cookie) to silently get a new access token.</span>
+      <span class="hi">Login flow change karo taaki access token React state mein store ho, cookie mein NAHI. Page refresh par refresh token (httpOnly cookie) use karke silently naya access token lo.</span>
+    </p>
+<pre><span class="c">// ─── BEFORE (current — token in cookie, stealable) ─────────────────</span>
+setCookie(<span class="s">"t"</span>, tok, COOKIE_OPTIONS); <span class="c">// ❌ Cookie Editor can see this</span>
+
+<span class="c">// ─── AFTER (secure — token in memory only) ─────────────────────────</span>
+<span class="c">// Remove setCookie. Store in state only:</span>
+<span class="f">setAccessToken</span>(tok); <span class="c">// React useState — disappears on page refresh</span>
+
+<span class="c">// On page refresh: call refresh endpoint using httpOnly cookie
+// httpOnly cookie automatically sent by browser — no JS needed</span>
+<span class="k">const</span> refreshResult = <span class="k">await</span> <span class="f">postData</span>({ endpoint: <span class="s">"auth/refresh"</span>, instance: <span class="s">"identity"</span> });
+<span class="f">setAccessToken</span>(refreshResult.data.token); <span class="c">// new short-lived token</span></pre>
+
+    <h3 style="margin-top:20px">
+      <span class="en">Step 2 — Auto Silent Refresh Before Token Expires</span>
+      <span class="hi">Step 2 — Token Expire Hone Se Pehle Auto Silent Refresh</span>
+    </h3>
+    <div class="file-pill">src/context/AuthContext.tsx</div>
+<pre><span class="c">// ─── Silent refresh: 2 minutes before access token expires ─────────
+// Ye user ko logout feel nahi hone deta</span>
+<span class="k">useEffect</span>(() => {
+  <span class="k">if</span> (!accessToken) <span class="k">return</span>;
+  <span class="k">const</span> payload = JSON.<span class="f">parse</span>(<span class="f">atob</span>(accessToken.<span class="f">split</span>(<span class="s">"."</span>)[<span class="n">1</span>]));
+  <span class="k">const</span> msUntilExpiry = payload.exp * <span class="n">1000</span> - Date.<span class="f">now</span>();
+  <span class="k">const</span> refreshIn = msUntilExpiry - <span class="n">2</span> * <span class="n">60</span> * <span class="n">1000</span>; <span class="c">// 2 min before expiry</span>
+  <span class="k">if</span> (refreshIn &lt;= <span class="n">0</span>) { <span class="f">silentRefresh</span>(); <span class="k">return</span>; }
+  <span class="k">const</span> timer = <span class="f">setTimeout</span>(<span class="f">silentRefresh</span>, refreshIn);
+  <span class="k">return</span> () => <span class="f">clearTimeout</span>(timer);
+}, [accessToken]);</pre>
+
+    <h3 style="margin-top:20px">
+      <span class="en">Step 3 — Inject Access Token from State (not cookie) into Requests</span>
+      <span class="hi">Step 3 — Requests Mein Cookie Ki Jagah State Se Token Inject Karo</span>
+    </h3>
+    <div class="file-pill">src/services/crmServices/identityinstance.ts</div>
+    <div class="file-pill">src/services/crmServices/axios.ts</div>
+<pre><span class="c">// ─── Request interceptor: read token from Redux store (state) ───────
+// Not from cookie — so Cookie Editor export is useless</span>
+identityInstance.interceptors.request.<span class="f">use</span>((config) => {
+  <span class="k">const</span> token = store.<span class="f">getState</span>().auth?.accessToken; <span class="c">// from Redux, not cookie</span>
+  <span class="k">if</span> (token) config.headers[<span class="s">"Authorization"</span>] = <span class="s">`Bearer </span>${token}<span class="s">`</span>;
+  <span class="k">return</span> config;
+});</pre>
+  </div>
+
+  <!-- BACKEND CHANGES -->
+  <h2 id="p2-backend">
+    <span class="en">Backend Changes Required (Most Important)</span>
+    <span class="hi">Backend Mein Kya Kya Badalna Hai (Sabse Important)</span>
+  </h2>
+
+  <div class="card card-code">
+    <h3>
+      <span class="en">Step 1 — Login Endpoint: Return Two Tokens</span>
+      <span class="hi">Step 1 — Login Endpoint: Do Tokens Return Karo</span>
+    </h3>
+    <p>
+      <span class="en">Change <code>POST /auth/login</code> to return a short-lived access token in the response body AND set a long-lived refresh token as a <code>httpOnly + Secure</code> cookie via response header.</span>
+      <span class="hi"><code>POST /auth/login</code> change karo: response body mein short-lived access token return karo AUR response header se long-lived refresh token ko <code>httpOnly + Secure</code> cookie ke roop mein set karo.</span>
+    </p>
+<pre><span class="c">// Node.js / Express example</span>
+<span class="c">// ─── Login route ────────────────────────────────────────────────────</span>
+app.<span class="f">post</span>(<span class="s">"/auth/login"</span>, async (req, res) => {
+  <span class="c">// ... validate credentials ...</span>
+
+  <span class="k">const</span> accessToken  = <span class="f">signJWT</span>({ user_id }, <span class="s">"15m"</span>);   <span class="c">// short-lived</span>
+  <span class="k">const</span> refreshToken = <span class="f">signJWT</span>({ user_id }, <span class="s">"7d"</span>);    <span class="c">// long-lived</span>
+
+  <span class="c">// ✅ Refresh token: httpOnly cookie — JS cannot read it, Cookie Editor cannot see it</span>
+  res.<span class="f">cookie</span>(<span class="s">"rt"</span>, refreshToken, {
+    httpOnly: <span class="k">true</span>,   <span class="c">// JS nahi padh sakta</span>
+    secure:   <span class="k">true</span>,   <span class="c">// HTTPS only</span>
+    sameSite: <span class="s">"strict"</span>,
+    maxAge:   <span class="n">7</span> * <span class="n">24</span> * <span class="n">60</span> * <span class="n">60</span> * <span class="n">1000</span>,
+  });
+
+  <span class="c">// ✅ Access token: response body — frontend store karega memory mein</span>
+  res.<span class="f">json</span>({ success: <span class="k">true</span>, data: { token: accessToken, user: { ... } } });
+});</pre>
+
+    <h3 style="margin-top:20px">
+      <span class="en">Step 2 — New Endpoint: POST /auth/refresh</span>
+      <span class="hi">Step 2 — Naya Endpoint: POST /auth/refresh</span>
+    </h3>
+<pre><span class="c">// ─── Refresh route ───────────────────────────────────────────────────
+// Frontend page refresh par ye call karega
+// Browser automatically httpOnly cookie bhejega — no JS needed</span>
+app.<span class="f">post</span>(<span class="s">"/auth/refresh"</span>, async (req, res) => {
+  <span class="k">const</span> rt = req.cookies.rt; <span class="c">// httpOnly cookie automatically aata hai</span>
+  <span class="k">if</span> (!rt) <span class="k">return</span> res.<span class="f">status</span>(<span class="n">401</span>).<span class="f">json</span>({ message: <span class="s">"No refresh token"</span> });
+
+  <span class="k">const</span> payload = <span class="f">verifyJWT</span>(rt);
+  <span class="k">const</span> newAccessToken = <span class="f">signJWT</span>({ user_id: payload.user_id }, <span class="s">"15m"</span>);
+
+  res.<span class="f">json</span>({ success: <span class="k">true</span>, data: { token: newAccessToken } });
+});</pre>
+
+    <h3 style="margin-top:20px">
+      <span class="en">Step 3 — Logout: Clear the httpOnly Cookie on Server</span>
+      <span class="hi">Step 3 — Logout: Server Pe httpOnly Cookie Clear Karo</span>
+    </h3>
+<pre><span class="c">// ─── Logout route ───────────────────────────────────────────────────</span>
+app.<span class="f">post</span>(<span class="s">"/auth/logout"</span>, (req, res) => {
+  res.<span class="f">clearCookie</span>(<span class="s">"rt"</span>, { httpOnly: <span class="k">true</span>, secure: <span class="k">true</span>, sameSite: <span class="s">"strict"</span> });
+  res.<span class="f">json</span>({ success: <span class="k">true</span> });
+});</pre>
+
+    <h3 style="margin-top:20px">
+      <span class="en">Step 4 — CORS: Allow Credentials (Required for httpOnly Cookies)</span>
+      <span class="hi">Step 4 — CORS: Credentials Allow Karo (httpOnly Cookies ke liye Zaruri)</span>
+    </h3>
+<pre><span class="c">// ─── CORS config — credentials: true hona chahiye ──────────────────</span>
+app.<span class="f">use</span>(<span class="f">cors</span>({
+  origin: <span class="s">"https://admin.zynkly.com"</span>, <span class="c">// exact origin, * nahi chalega</span>
+  credentials: <span class="k">true</span>, <span class="c">// httpOnly cookies ke liye zaruri hai</span>
+}));
+
+<span class="c">// Frontend axios mein bhi add karo:</span>
+axios.<span class="f">create</span>({ withCredentials: <span class="k">true</span> }); <span class="c">// cookies automatically bhejega</span></pre>
+  </div>
+
+  <!-- FULL FLOW DIAGRAM P2 -->
+  <h2 id="p2-flow">
+    <span class="en">Complete Flow — After Fix Is Implemented</span>
+    <span class="hi">Complete Flow — Fix Implement Hone Ke Baad</span>
+  </h2>
+  <div class="card">
+    <div class="attack-flow">
+<span class="step-good">👤 User logs in → POST /auth/login</span>
+<span class="arrow">         ↓</span>
+<span class="step-good">🖥️  Server returns: accessToken (15min) in body + refreshToken (7d) as httpOnly cookie</span>
+<span class="arrow">         ↓</span>
+<span class="step-good">⚛️  Frontend stores accessToken in Redux state (NOT in cookie)</span>
+<span class="arrow">         ↓</span>
+<span class="step-mid">👿 ATTACKER opens Cookie Editor → sees only refreshToken "rt" (httpOnly — NO export button)</span>
+<span class="arrow">         │  (Cookie Editor cannot export httpOnly cookies)</span>
+<span class="arrow">         │  accessToken is in Redux state — not visible anywhere</span>
+<span class="arrow">         ↓</span>
+<span class="step-good">🔒 Attacker has NOTHING to steal ✅</span>
+<span class="arrow">         ↓</span>
+<span class="step-mid">⏰ 15 minutes later — accessToken expires</span>
+<span class="arrow">         ↓</span>
+<span class="step-good">🔄 Frontend silently calls POST /auth/refresh</span>
+<span class="arrow">         │  Browser auto-sends httpOnly "rt" cookie</span>
+<span class="arrow">         ↓</span>
+<span class="step-good">🖥️  Server validates "rt" → returns new accessToken (15min)</span>
+<span class="arrow">         ↓</span>
+<span class="step-good">⚛️  Redux updated — user stays logged in seamlessly ✅</span>
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════════════════════════════
+       FILES REFERENCE
+  ═════════════════════════════════════════════════════════════════════ -->
+  <h2 id="files">
+    <span class="en">All Files Reference</span>
+    <span class="hi">Saari Files ka Reference</span>
+  </h2>
+
+  <div class="card">
+    <table>
+      <thead>
+        <tr>
+          <th><span class="en">File</span><span class="hi">File</span></th>
+          <th><span class="en">What to change</span><span class="hi">Kya Badalna Hai</span></th>
+          <th><span class="en">Problem</span><span class="hi">Problem</span></th>
+          <th><span class="en">Status</span><span class="hi">Status</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>src/context/AuthContext.tsx</code></td>
+          <td>
+            <span class="en">isTokenExpired(), initDone, re-hydration useEffect, COOKIE_OPTIONS (sameSite strict + secure)</span>
+            <span class="hi">isTokenExpired(), initDone, re-hydration useEffect, COOKIE_OPTIONS (sameSite strict + secure)</span>
+          </td>
+          <td>P1 ✓ &amp; P2 future</td>
+          <td><span class="badge badge-green">Done (P1)</span></td>
+        </tr>
+        <tr>
+          <td><code>src/routes/AppRoutes.tsx</code></td>
+          <td>
+            <span class="en">ProtectedRoute — Layer 1 init check (isLoading || !initDone)</span>
+            <span class="hi">ProtectedRoute — Layer 1 init check (isLoading || !initDone)</span>
+          </td>
+          <td>P1 ✓</td>
+          <td><span class="badge badge-green">Done</span></td>
+        </tr>
+        <tr>
+          <td><code>src/lib/axiosAuthInterceptor.ts</code></td>
+          <td>
+            <span class="en">401 interceptor, clearClientAuthState()</span>
+            <span class="hi">401 interceptor, clearClientAuthState()</span>
+          </td>
+          <td>P1 ✓</td>
+          <td><span class="badge badge-green">Done</span></td>
+        </tr>
+        <tr>
+          <td><code>src/services/crmServices/identityinstance.ts</code></td>
+          <td>
+            <span class="en">P2: Move token injection from cookie to Redux state</span>
+            <span class="hi">P2: Token injection cookie se Redux state mein shift karo</span>
+          </td>
+          <td>P2 future</td>
+          <td><span class="badge badge-yellow">Pending</span></td>
+        </tr>
+        <tr>
+          <td><code>src/services/crmServices/axios.ts</code></td>
+          <td>
+            <span class="en">P2: Same — add request interceptor reading from Redux, add withCredentials: true</span>
+            <span class="hi">P2: Same — Redux se read karne wala interceptor add karo, withCredentials: true add karo</span>
+          </td>
+          <td>P2 future</td>
+          <td><span class="badge badge-yellow">Pending</span></td>
+        </tr>
+        <tr>
+          <td><code>Backend: POST /auth/login</code></td>
+          <td>
+            <span class="en">Return accessToken (15m) in body + set refreshToken (7d) as httpOnly cookie</span>
+            <span class="hi">accessToken (15m) body mein return karo + refreshToken (7d) httpOnly cookie set karo</span>
+          </td>
+          <td>P2 future</td>
+          <td><span class="badge badge-red">Not Started</span></td>
+        </tr>
+        <tr>
+          <td><code>Backend: POST /auth/refresh</code></td>
+          <td>
+            <span class="en">New endpoint — validate httpOnly rt cookie → return new accessToken</span>
+            <span class="hi">Naya endpoint — httpOnly rt cookie validate karo → naya accessToken return karo</span>
+          </td>
+          <td>P2 future</td>
+          <td><span class="badge badge-red">Not Started</span></td>
+        </tr>
+        <tr>
+          <td><code>Backend: POST /auth/logout</code></td>
+          <td>
+            <span class="en">Clear the httpOnly rt cookie via response header</span>
+            <span class="hi">Response header se httpOnly rt cookie clear karo</span>
+          </td>
+          <td>P2 future</td>
+          <td><span class="badge badge-red">Not Started</span></td>
+        </tr>
+        <tr>
+          <td><code>Backend: CORS config</code></td>
+          <td>
+            <span class="en">Add credentials: true, exact origin (no wildcard *)</span>
+            <span class="hi">credentials: true add karo, exact origin (wildcard * nahi chalega)</span>
+          </td>
+          <td>P2 future</td>
+          <td><span class="badge badge-red">Not Started</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════════════════════════════
+       CHECKLIST
+  ═════════════════════════════════════════════════════════════════════ -->
+  <h2 id="checklist">
+    <span class="en">Security Checklist</span>
+    <span class="hi">Security Checklist</span>
+  </h2>
+
+  <div class="card card-solved">
+    <h3>
+      <span class="en">✅ Already Done (Problem 1)</span>
+      <span class="hi">✅ Ho Chuka Hai (Problem 1)</span>
+    </h3>
+    <ul>
+      <li><span class="en">✅ <code>isTokenExpired()</code> — random/malformed tokens rejected client-side instantly</span><span class="hi">✅ <code>isTokenExpired()</code> — random/malformed tokens turant reject ho jaate hain</span></li>
+      <li><span class="en">✅ <code>initDone</code> flag — dashboard never shown before server verification completes</span><span class="hi">✅ <code>initDone</code> flag — server verification se pehle dashboard kabhi nahi dikha</span></li>
+      <li><span class="en">✅ Re-hydration <code>useEffect</code> — calls <code>/auth/profile</code> on every page load, 401 clears cookie</span><span class="hi">✅ Re-hydration <code>useEffect</code> — har page load par <code>/auth/profile</code> call karta hai, 401 aane par cookie hata deta hai</span></li>
+      <li><span class="en">✅ 401 interceptor — all API calls auto-logout on invalid token response</span><span class="hi">✅ 401 interceptor — sabhi API calls par invalid token aane par auto-logout</span></li>
+      <li><span class="en">✅ <code>sameSite: "strict"</code> — cookie not sent on cross-origin requests (CSRF protection)</span><span class="hi">✅ <code>sameSite: "strict"</code> — cookie cross-origin requests pe nahi bheji jaati (CSRF protection)</span></li>
+      <li><span class="en">✅ <code>secure: true</code> in production — cookie only sent over HTTPS</span><span class="hi">✅ <code>secure: true</code> production mein — cookie sirf HTTPS par bheji jaati hai</span></li>
+    </ul>
+  </div>
+
+  <div class="card card-future">
+    <h3>
+      <span class="en">⏳ Future Plan (Problem 2)</span>
+      <span class="hi">⏳ Future Mein Karna Hai (Problem 2)</span>
+    </h3>
+    <ul>
+      <li><span class="en">⬜ Backend: reduce JWT expiry from 7 days → 15 minutes</span><span class="hi">⬜ Backend: JWT expiry 7 din se घटाकर 15 minute karo</span></li>
+      <li><span class="en">⬜ Backend: new <code>POST /auth/refresh</code> endpoint</span><span class="hi">⬜ Backend: naya <code>POST /auth/refresh</code> endpoint banao</span></li>
+      <li><span class="en">⬜ Backend: set refreshToken as <code>httpOnly + Secure</code> cookie in login response</span><span class="hi">⬜ Backend: login response mein refreshToken ko <code>httpOnly + Secure</code> cookie se set karo</span></li>
+      <li><span class="en">⬜ Backend: CORS — add <code>credentials: true</code>, remove wildcard origin</span><span class="hi">⬜ Backend: CORS mein <code>credentials: true</code> add karo, wildcard origin hatao</span></li>
+      <li><span class="en">⬜ Frontend: store access token in Redux state — remove from cookie</span><span class="hi">⬜ Frontend: access token Redux state mein store karo — cookie se hatao</span></li>
+      <li><span class="en">⬜ Frontend: add silent refresh logic in <code>AuthContext.tsx</code></span><span class="hi">⬜ Frontend: <code>AuthContext.tsx</code> mein silent refresh logic add karo</span></li>
+      <li><span class="en">⬜ Frontend: update all pages using <code>cookies.t</code> → <code>useAuthContext().token</code></span><span class="hi">⬜ Frontend: <code>cookies.t</code> use karne wale saare pages ko <code>useAuthContext().token</code> par shift karo</span></li>
+      <li><span class="en">⬜ Frontend: add <code>withCredentials: true</code> to axios instances</span><span class="hi">⬜ Frontend: axios instances mein <code>withCredentials: true</code> add karo</span></li>
+    </ul>
+  </div>
+
+  <div style="height:60px"></div>
+</main>
+
+<script>
+  function setLang(lang) {
+    document.body.classList.toggle('hinglish', lang === 'hi');
+    document.getElementById('btn-en').classList.toggle('active', lang === 'en');
+    document.getElementById('btn-hi').classList.toggle('active', lang === 'hi');
+  }
+
+  // Highlight active nav link on scroll
+  const sections = document.querySelectorAll('section[id], div[id]');
+  const navLinks = document.querySelectorAll('nav a');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        navLinks.forEach(l => l.classList.remove('active'));
+        const active = document.querySelector(`nav a[href="#${entry.target.id}"]`);
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+  sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>
