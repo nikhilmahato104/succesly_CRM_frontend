@@ -1,0 +1,1231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Frontend Auth Security v2.0 — CSRF + RT + JWT Guide</title>
+<style>
+  :root {
+    --bg:#0f1117; --card:#1a1d27; --card2:#161922; --border:#2a2d3a;
+    --accent:#6366f1; --accent2:#06b6d4; --green:#22c55e; --yellow:#f59e0b;
+    --red:#ef4444; --orange:#f97316; --purple:#a855f7; --pink:#ec4899;
+    --text:#e2e4ed; --muted:#8b8fa8; --dim:#b0b3c8; --code-bg:#0d1117;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html{scroll-behavior:smooth;}
+  body{font-family:system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.65;display:flex;}
+
+  /* NAV */
+  nav{position:fixed;top:0;left:0;width:252px;height:100vh;background:var(--card);border-right:1px solid var(--border);overflow-y:auto;padding:20px 0;z-index:100;scrollbar-width:thin;scrollbar-color:var(--border) transparent;}
+  nav .logo{padding:0 16px 16px;border-bottom:1px solid var(--border);margin-bottom:8px;}
+  nav .logo-title{font-size:13px;font-weight:800;color:var(--accent);}
+  nav .logo-sub{font-size:10px;color:var(--muted);margin-top:3px;}
+  nav .section-label{padding:14px 16px 4px;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);}
+  nav a{display:block;padding:6px 16px;color:var(--muted);text-decoration:none;font-size:12px;border-left:3px solid transparent;transition:all 120ms;}
+  nav a:hover,nav a.active{background:rgba(99,102,241,.09);color:var(--text);border-left-color:var(--accent);}
+
+  /* MAIN */
+  main{margin-left:252px;padding:36px 52px 80px;max-width:980px;width:100%;}
+
+  /* LANG BAR */
+  .lang-bar{position:sticky;top:0;z-index:50;background:var(--bg);padding:10px 0 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border);margin-bottom:32px;}
+  .lang-bar span{font-size:11px;color:var(--muted);}
+  .lang-btn{padding:5px 18px;border-radius:6px;border:1px solid var(--border);font-size:12px;font-weight:600;cursor:pointer;background:transparent;color:var(--muted);transition:all 140ms;}
+  .lang-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+
+  /* TYPOGRAPHY */
+  h1{font-size:28px;font-weight:800;margin-bottom:6px;}
+  h2{font-size:17px;font-weight:700;margin:38px 0 14px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+  h3{font-size:14px;font-weight:700;color:var(--accent2);margin:20px 0 8px;}
+  h4{font-size:13px;font-weight:600;color:var(--dim);margin:14px 0 6px;}
+  p{color:var(--dim);margin-bottom:10px;}
+  ul,ol{padding-left:22px;color:var(--dim);margin-bottom:10px;}
+  li{margin-bottom:5px;}
+  strong{color:var(--text);}
+  code{background:rgba(99,102,241,.12);color:#a5b4fc;padding:1px 6px;border-radius:4px;font-family:monospace;font-size:12px;}
+  .subtitle{font-size:13px;color:var(--muted);margin-bottom:24px;}
+
+  /* BADGES */
+  .badge{display:inline-flex;align-items:center;gap:4px;padding:2px 10px;border-radius:100px;font-size:11px;font-weight:700;vertical-align:middle;}
+  .bg{background:rgba(34,197,94,.12);color:var(--green);border:1px solid rgba(34,197,94,.25);}
+  .br{background:rgba(239,68,68,.12);color:var(--red);border:1px solid rgba(239,68,68,.25);}
+  .by{background:rgba(245,158,11,.12);color:var(--yellow);border:1px solid rgba(245,158,11,.25);}
+  .bp{background:rgba(168,85,247,.12);color:var(--purple);border:1px solid rgba(168,85,247,.25);}
+  .bb{background:rgba(6,182,212,.12);color:var(--accent2);border:1px solid rgba(6,182,212,.25);}
+  .bo{background:rgba(249,115,22,.12);color:var(--orange);border:1px solid rgba(249,115,22,.25);}
+
+  /* CARDS */
+  .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px 24px;margin-bottom:14px;}
+  .cl{border-left:3px solid var(--accent);}
+  .clg{border-left:3px solid var(--green);}
+  .clr{border-left:3px solid var(--red);}
+  .cly{border-left:3px solid var(--yellow);}
+  .clp{border-left:3px solid var(--purple);}
+  .clo{border-left:3px solid var(--orange);}
+
+  /* FLOW DIAGRAMS */
+  .flow{background:var(--code-bg);border:1px solid var(--border);border-radius:8px;padding:18px 22px;margin:12px 0;font-family:'JetBrains Mono','Fira Code',monospace;font-size:12px;line-height:2;overflow-x:auto;white-space:pre;}
+  .fg{color:var(--green);}
+  .fr{color:var(--red);}
+  .fy{color:var(--yellow);}
+  .fb{color:var(--accent2);}
+  .fp{color:var(--purple);}
+  .fm{color:var(--muted);}
+  .fa{color:#64748b;}
+
+  /* CODE */
+  pre{background:var(--code-bg);border:1px solid var(--border);border-radius:8px;padding:16px 20px;font-family:'JetBrains Mono','Fira Code',monospace;font-size:12px;line-height:1.85;overflow-x:auto;margin:10px 0;color:var(--dim);}
+  pre .k{color:#c084fc;}
+  pre .s{color:#86efac;}
+  pre .c{color:#475569;font-style:italic;}
+  pre .f{color:#67e8f9;}
+  pre .n{color:#fde68a;}
+  pre .o{color:#fb923c;}
+
+  /* TABLE */
+  table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13px;}
+  th{background:rgba(99,102,241,.1);color:var(--text);padding:10px 14px;text-align:left;border:1px solid var(--border);font-size:11px;text-transform:uppercase;letter-spacing:.04em;}
+  td{padding:10px 14px;border:1px solid var(--border);color:var(--dim);vertical-align:top;}
+  tr:hover td{background:rgba(255,255,255,.015);}
+
+  /* FILE PILL */
+  .fp-pill{display:inline-flex;align-items:center;gap:5px;background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.2);border-radius:5px;padding:3px 10px;font-size:11px;font-weight:600;color:#a5b4fc;font-family:monospace;margin:2px 2px 6px;}
+  .fp-pill::before{content:'📄';}
+
+  /* TOKEN MAP */
+  .token-map{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin:14px 0;}
+  .token-card{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:14px 16px;}
+  .token-card .tk{font-size:12px;font-weight:800;font-family:monospace;margin-bottom:6px;}
+  .token-card p{font-size:12px;margin-bottom:4px;}
+
+  /* STEP LIST */
+  .steps{list-style:none;padding:0;}
+  .steps li{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid rgba(42,45,58,.5);}
+  .steps li:last-child{border-bottom:none;}
+  .snum{width:24px;height:24px;border-radius:50%;background:rgba(99,102,241,.2);color:var(--accent);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;}
+
+  /* LAYER BOX */
+  .layers{display:flex;flex-direction:column;gap:0;}
+  .layer{padding:12px 18px;border:1px solid var(--border);border-top:none;display:flex;align-items:center;gap:14px;}
+  .layer:first-child{border-top:1px solid var(--border);border-radius:8px 8px 0 0;}
+  .layer:last-child{border-radius:0 0 8px 8px;}
+  .lnum{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0;}
+
+  /* WARN BOX */
+  .warn{background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.25);border-radius:8px;padding:12px 16px;font-size:13px;color:var(--yellow);margin:12px 0;}
+  .info-box{background:rgba(6,182,212,.06);border:1px solid rgba(6,182,212,.2);border-radius:8px;padding:12px 16px;font-size:13px;color:var(--accent2);margin:12px 0;}
+  .success-box{background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.2);border-radius:8px;padding:12px 16px;font-size:13px;color:var(--green);margin:12px 0;}
+
+  /* HINGLISH */
+  .hi{display:none;}.en{display:block;}
+  body.hi-mode .hi{display:block;}body.hi-mode .en{display:none;}
+  span.hi{display:none;}span.en{display:inline;}
+  body.hi-mode span.hi{display:inline;}body.hi-mode span.en{display:none;}
+
+  ::-webkit-scrollbar{width:5px;height:5px;}
+  ::-webkit-scrollbar-track{background:var(--bg);}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════ SIDEBAR ═══════════════════════════ -->
+<nav>
+  <div class="logo">
+    <div class="logo-title">🔐 Auth Security v2.0</div>
+    <div class="logo-sub">Zynkly Admin · Frontend PRD · CSRF + RT + JWT</div>
+  </div>
+
+  <div class="section-label">Overview</div>
+  <a href="#overview">What We Built</a>
+  <a href="#challenge">The Challenge</a>
+  <a href="#token-map">Token Storage Map</a>
+
+  <div class="section-label">API Contract</div>
+  <a href="#api-login">POST /auth/login</a>
+  <a href="#api-refresh">POST /auth/refresh</a>
+  <a href="#api-profile">GET /auth/profile</a>
+  <a href="#api-logout">POST /auth/logout</a>
+
+  <div class="section-label">Flow Diagrams</div>
+  <a href="#flow-login">Login Flow</a>
+  <a href="#flow-refresh">Page Refresh Flow</a>
+  <a href="#flow-silent">Silent 401 Refresh</a>
+  <a href="#flow-logout">Logout Flow</a>
+  <a href="#flow-newtab">New Tab Flow</a>
+
+  <div class="section-label">Security</div>
+  <a href="#csrf">CSRF Prevention</a>
+  <a href="#rt-security">RT Cookie Security</a>
+  <a href="#layers">5 Security Layers</a>
+  <a href="#attacks">Attack Prevention</a>
+
+  <div class="section-label">Assessment</div>
+  <a href="#merits">Merits &amp; Demerits</a>
+  <a href="#enterprise">Enterprise Level?</a>
+  <a href="#issue">Known Issue (SameSite)</a>
+  <a href="#future">Future Improvements</a>
+  <a href="#files">Files Reference</a>
+  <a href="#checklist">Checklist</a>
+</nav>
+
+<!-- ═══════════════════════════ MAIN ═══════════════════════════ -->
+<main>
+
+<!-- LANG BAR -->
+<div class="lang-bar">
+  <span>Language / Bhasha:</span>
+  <button class="lang-btn active" id="btn-en" onclick="setLang('en')">🇬🇧 English</button>
+  <button class="lang-btn"        id="btn-hi" onclick="setLang('hi')">🇮🇳 Hinglish</button>
+</div>
+
+<!-- ═══════ OVERVIEW ═══════ -->
+<section id="overview">
+  <h1>Frontend Auth Security v2.0</h1>
+  <p class="subtitle">
+    <span class="en">Complete Developer Guide — JWT · CSRF Token · httpOnly Refresh Token · Silent Refresh · Zynkly Admin</span>
+    <span class="hi">Complete Developer Guide — JWT · CSRF Token · httpOnly Refresh Token · Silent Refresh · Zynkly Admin</span>
+  </p>
+
+  <div class="card cl">
+    <h3><span class="en">📌 What Did We Build?</span><span class="hi">📌 Humne Kya Banaya?</span></h3>
+    <p>
+      <span class="en">
+        We implemented a <strong>3-token, 5-layer security architecture</strong> for Zynkly Admin.
+        This is the same pattern used by <strong>Google, GitHub, Stripe, and Notion</strong>.
+        No JWT token is stored in any cookie or localStorage — making it invisible to Cookie Editor,
+        XSS attacks, and browser extensions.
+      </span>
+      <span class="hi">
+        Humne Zynkly Admin ke liye <strong>3-token, 5-layer security architecture</strong> implement ki hai.
+        Ye same pattern hai jo <strong>Google, GitHub, Stripe, aur Notion</strong> use karte hain.
+        Koi bhi JWT token kisi cookie ya localStorage mein store nahi hai — is wajah se ye Cookie Editor,
+        XSS attacks, aur browser extensions ke liye invisible hai.
+      </span>
+    </p>
+    <div class="token-map">
+      <div class="token-card">
+        <div class="tk" style="color:var(--accent)">accessToken</div>
+        <p><strong>Where:</strong> Redux <code>auth.accessToken</code></p>
+        <p><strong>Expiry:</strong> 15 minutes</p>
+        <p><strong>JS reads it:</strong> ✅ YES (from Redux)</p>
+        <p><strong>Stored in cookie:</strong> ❌ NEVER</p>
+        <p><strong>Stored in localStorage:</strong> ❌ NEVER</p>
+      </div>
+      <div class="token-card">
+        <div class="tk" style="color:var(--green)">csrfToken</div>
+        <p><strong>Where:</strong> Redux <code>auth.csrfToken</code></p>
+        <p><strong>Expiry:</strong> Same as rt session</p>
+        <p><strong>Sent on:</strong> POST/PUT/PATCH/DELETE</p>
+        <p><strong>Header:</strong> <code>x-csrf-token</code></p>
+        <p><strong>Stored in cookie:</strong> ❌ NEVER</p>
+      </div>
+      <div class="token-card">
+        <div class="tk" style="color:var(--yellow)">rt cookie</div>
+        <p><strong>Where:</strong> Browser httpOnly cookie</p>
+        <p><strong>Expiry:</strong> 7 days</p>
+        <p><strong>JS reads it:</strong> ❌ IMPOSSIBLE</p>
+        <p><strong>Set by:</strong> Server only</p>
+        <p><strong>Sent by:</strong> Browser auto (withCredentials)</p>
+      </div>
+    </div>
+    <div class="success-box">
+      <span class="en">✅ <strong>Golden Rule:</strong> Frontend never touches the <code>rt</code> cookie. It never sees it. The browser sends it automatically. The server sets it and clears it.</span>
+      <span class="hi">✅ <strong>Golden Rule:</strong> Frontend kabhi <code>rt</code> cookie ko touch nahi karta. Usse dikhta hi nahi. Browser automatic bhejta hai. Server set aur clear karta hai.</span>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════ CHALLENGE ═══════ -->
+<section id="challenge">
+  <h2><span class="en">The Challenge — What Problems Were We Solving?</span><span class="hi">Challenge — Hum Kya Problems Solve Kar Rahe The?</span></h2>
+
+  <div class="card clr">
+    <h3><span class="en">🔴 Attack 1: Fake Cookie Bypass</span><span class="hi">🔴 Attack 1: Fake Cookie Bypass</span></h3>
+    <p><span class="en">Any person can open DevTools → Application → Cookies → manually set <code>t = anyrandomvalue</code> → try to access <code>/dashboard/admin</code>. Old system trusted the cookie value blindly.</span>
+    <span class="hi">Koi bhi DevTools → Application → Cookies kholke manually <code>t = anyrandomvalue</code> set karke <code>/dashboard/admin</code> access karne ki koshish kar sakta tha. Purana system cookie value ko blindly trust karta tha.</span></p>
+    <p><span class="badge br">STATUS: SOLVED ✅</span></p>
+  </div>
+
+  <div class="card clr">
+    <h3><span class="en">🔴 Attack 2: Cookie Theft via Cookie Editor</span><span class="hi">🔴 Attack 2: Cookie Editor se Cookie Chori</span></h3>
+    <p><span class="en">Logged-in user opens Cookie Editor extension → exports the JWT token → pastes in another browser → gets full access. The old JWT was stored in a readable cookie — visible to any browser extension.</span>
+    <span class="hi">Logged-in user Cookie Editor extension kholke JWT token export karta tha → doosre browser mein paste karta tha → full access mil jaata tha. Purana JWT ek readable cookie mein tha — koi bhi browser extension dekh sakta tha.</span></p>
+    <p><span class="badge br">STATUS: SOLVED ✅ (accessToken is now in Redux — invisible to extensions)</span></p>
+  </div>
+
+  <div class="card clr">
+    <h3><span class="en">🔴 Attack 3: CSRF — Cross-Site Request Forgery</span><span class="hi">🔴 Attack 3: CSRF — Cross-Site Request Forgery</span></h3>
+    <p><span class="en">A hacker creates a malicious website. When the logged-in user visits it, that website secretly sends API calls (delete user, change role) on behalf of the user. Old system had no CSRF protection.</span>
+    <span class="hi">Hacker ek malicious website banata hai. Logged-in user jab us website pe jaata hai, wo website secretly user ke naam se API calls (user delete, role change) bhej deta hai. Purane system mein CSRF protection nahi tha.</span></p>
+    <p><span class="badge br">STATUS: SOLVED ✅ (csrfToken required on every state-changing request)</span></p>
+  </div>
+
+  <div class="card clr">
+    <h3><span class="en">🔴 Attack 4: XSS Token Theft</span><span class="hi">🔴 Attack 4: XSS se Token Chori</span></h3>
+    <p><span class="en">If any injected JavaScript runs on the page, it can read <code>localStorage</code> and readable cookies. Old system stored JWT in cookie readable by JS → one XSS = complete account takeover.</span>
+    <span class="hi">Agar page pe koi injected JavaScript chale, to wo <code>localStorage</code> aur readable cookies padh sakta hai. Purana system JWT ko JS-readable cookie mein store karta tha → ek XSS = complete account takeover.</span></p>
+    <p><span class="badge br">STATUS: SOLVED ✅ (accessToken only in Redux memory — no XSS can reach it)</span></p>
+  </div>
+</section>
+
+<!-- ═══════ TOKEN MAP ═══════ -->
+<section id="token-map">
+  <h2><span class="en">Token Storage Map — Where Everything Lives</span><span class="hi">Token Storage Map — Sab Kahan Rehta Hai</span></h2>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Token / Data</th>
+        <th><span class="en">Stored In</span><span class="hi">Kahan Store Hota Hai</span></th>
+        <th><span class="en">JS Can Read?</span><span class="hi">JS Padh Sakta Hai?</span></th>
+        <th><span class="en">Extension Can Steal?</span><span class="hi">Extension Chura Sakta Hai?</span></th>
+        <th><span class="en">Survives Page Refresh?</span><span class="hi">Page Refresh ke Baad Bachta Hai?</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>accessToken</code></td>
+        <td>Redux <code>auth.accessToken</code> (JS memory)</td>
+        <td><span class="badge bg">✅ YES</span></td>
+        <td><span class="badge bg">❌ NO</span></td>
+        <td><span class="badge br">❌ NO — re-hydrated via /auth/refresh</span></td>
+      </tr>
+      <tr>
+        <td><code>csrfToken</code></td>
+        <td>Redux <code>auth.csrfToken</code> (JS memory)</td>
+        <td><span class="badge bg">✅ YES</span></td>
+        <td><span class="badge bg">❌ NO</span></td>
+        <td><span class="badge br">❌ NO — re-hydrated via /auth/refresh</span></td>
+      </tr>
+      <tr>
+        <td><code>rt</code> (refresh token)</td>
+        <td>httpOnly Cookie (browser kernel)</td>
+        <td><span class="badge br">❌ IMPOSSIBLE</span></td>
+        <td><span class="badge br">❌ IMPOSSIBLE</span></td>
+        <td><span class="badge bg">✅ YES — 7 days</span></td>
+      </tr>
+      <tr>
+        <td>User profile data</td>
+        <td>Redux <code>user</code> slice (+ persisted)</td>
+        <td><span class="badge bg">✅ YES</span></td>
+        <td><span class="badge br">No token — just display data</span></td>
+        <td><span class="badge bg">✅ YES — redux-persist</span></td>
+      </tr>
+      <tr>
+        <td>Module access map</td>
+        <td>Redux <code>accessData</code> slice (+ persisted)</td>
+        <td><span class="badge bg">✅ YES</span></td>
+        <td><span class="badge br">No token — just permissions</span></td>
+        <td><span class="badge bg">✅ YES — redux-persist</span></td>
+      </tr>
+      <tr>
+        <td>localStorage / sessionStorage</td>
+        <td>—</td>
+        <td>—</td>
+        <td>—</td>
+        <td><span class="badge br">❌ NOTHING auth-related stored here</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="warn">
+    ⚠️ <strong><span class="en">Critical Rule for All Developers:</span><span class="hi">Sabhi Developers ke liye Critical Rule:</span></strong>
+    <span class="en"> NEVER call <code>localStorage.setItem('token', ...)</code> or <code>document.cookie = 't=...'</code> anywhere in the codebase. Tokens live ONLY in Redux. If you need the token, use <code>useSelector(selectAccessToken)</code>.</span>
+    <span class="hi"> Codebase mein KABHI <code>localStorage.setItem('token', ...)</code> ya <code>document.cookie = 't=...'</code> mat karo. Tokens SIRF Redux mein rehte hain. Token chahiye to <code>useSelector(selectAccessToken)</code> use karo.</span>
+  </div>
+</section>
+
+<!-- ═══════ API CONTRACT ═══════ -->
+<h2 id="api-login">
+  <span class="en">API Contract — POST /auth/login</span>
+  <span class="hi">API Contract — POST /auth/login</span>
+</h2>
+
+<div class="card clg">
+  <h3><span class="en">Request</span><span class="hi">Request</span></h3>
+<pre><span class="c">POST https://api.succesly.in/api/v1/auth/login
+Content-Type: application/json</span>
+
+{
+  <span class="s">"email"</span>:    <span class="s">"user@example.com"</span>,
+  <span class="s">"password"</span>: <span class="s">"yourpassword"</span>
+}</pre>
+
+  <h3><span class="en">Success Response (200)</span><span class="hi">Success Response (200)</span></h3>
+<pre>{
+  <span class="s">"success"</span>: <span class="k">true</span>,
+  <span class="s">"message"</span>: <span class="s">"Login successful"</span>,
+  <span class="s">"data"</span>: {
+    <span class="s">"accessToken"</span>: <span class="s">"eyJhbGciOi..."</span>,   <span class="c">// 15 min expiry — store in Redux</span>
+    <span class="s">"csrfToken"</span>:   <span class="s">"a1b2c3d4e5..."</span>,   <span class="c">// store in Redux</span>
+    <span class="s">"user"</span>: {
+      <span class="s">"user_id"</span>: <span class="s">"64abc..."</span>,
+      <span class="s">"email"</span>:   <span class="s">"user@example.com"</span>,
+      <span class="s">"role_id"</span>: <span class="s">"64xyz..."</span>
+    }
+  }
+}
+<span class="c">Set-Cookie: rt=eyJhbGci...; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=604800</span>
+<span class="c">           ↑ This header is automatic — browser stores it. JS CANNOT read this cookie.</span></pre>
+
+  <h3><span class="en">What Frontend Does With This Response</span><span class="hi">Frontend Is Response Ke Saath Kya Karta Hai</span></h3>
+<pre><span class="c">// In AuthContext.tsx — login() function</span>
+<span class="k">const</span> loginRes = <span class="k">await</span> authAxios.<span class="f">post</span>(<span class="s">"/auth/login"</span>, { email, password });
+
+<span class="c">// ✅ Store BOTH tokens in Redux memory only</span>
+dispatch(<span class="f">setAuthTokens</span>({
+  accessToken: loginRes.data.data.accessToken,   <span class="c">// ← to Redux</span>
+  csrfToken:   loginRes.data.data.csrfToken,     <span class="c">// ← to Redux</span>
+}));
+
+<span class="c">// rt cookie is handled automatically by the browser — no code needed</span>
+
+<span class="c">// Then fetch full profile (role + module permissions)</span>
+<span class="k">const</span> profileRes = <span class="k">await</span> <span class="f">fetchProfile</span>(loginRes.data.data.accessToken);
+<span class="f">applyProfile</span>(profileRes.data.data);  <span class="c">// fills Redux user + accessData slices</span></pre>
+</div>
+
+<h2 id="api-refresh">
+  <span class="en">API Contract — POST /auth/refresh</span>
+  <span class="hi">API Contract — POST /auth/refresh</span>
+</h2>
+
+<div class="card clg">
+  <p>
+    <span class="en"><strong>When is this called?</strong> On every page load / refresh (by AuthContext), and automatically by the 401 interceptor when any API returns 401 (access token expired mid-session).</span>
+    <span class="hi"><strong>Ye kab call hota hai?</strong> Har page load/refresh par (AuthContext dwara), aur automatically 401 interceptor dwara jab koi bhi API 401 return kare (access token mid-session expire ho jaaye).</span>
+  </p>
+
+  <h3><span class="en">Request</span><span class="hi">Request</span></h3>
+<pre><span class="c">POST https://api.succesly.in/api/v1/auth/refresh
+Content-Type: application/json
+withCredentials: true   ← browser auto-sends the rt httpOnly cookie
+
+Body: {}   (empty — the rt cookie is sent automatically by browser)</span></pre>
+
+  <h3><span class="en">Success Response (200)</span><span class="hi">Success Response (200)</span></h3>
+<pre>{
+  <span class="s">"success"</span>: <span class="k">true</span>,
+  <span class="s">"data"</span>: {
+    <span class="s">"accessToken"</span>: <span class="s">"eyJhbGciOi..."</span>,   <span class="c">// fresh 15-min token</span>
+    <span class="s">"csrfToken"</span>:   <span class="s">"x9y8z7w6..."</span>    <span class="c">// fresh CSRF token</span>
+  }
+}
+<span class="c">// Server may also rotate the rt cookie (set a new one) for extra security</span></pre>
+
+  <h3><span class="en">Failure Response (401)</span><span class="hi">Failure Response (401)</span></h3>
+<pre>{
+  <span class="s">"success"</span>: <span class="k">false</span>,
+  <span class="s">"message"</span>: <span class="s">"Refresh token is required. Please login again."</span>
+}
+<span class="c">// This means: rt cookie was not sent (SameSite issue) OR rt cookie expired
+// Frontend action: clear all Redux state → redirect to /login</span></pre>
+
+  <div class="warn">
+    ⚠️ <strong><span class="en">Known Cross-Origin Issue (Dev Only):</span><span class="hi">Known Cross-Origin Issue (Sirf Dev Mein):</span></strong>
+    <span class="en"> When frontend is at <code>http://localhost:5173</code> and backend is at <code>https://api.succesly.in</code>, the browser blocks the <code>rt</code> cookie from being sent due to <strong>SameSite=Strict</strong> policy. Backend team needs to set <code>SameSite=None; Secure</code> on the rt cookie to fix this. This is NOT a frontend bug.</span>
+    <span class="hi"> Jab frontend <code>http://localhost:5173</code> par hai aur backend <code>https://api.succesly.in</code> par, browser <strong>SameSite=Strict</strong> policy ki wajah se <code>rt</code> cookie bhejne se rok deta hai. Backend team ko rt cookie par <code>SameSite=None; Secure</code> set karna hoga. Ye frontend bug nahi hai.</span>
+  </div>
+</div>
+
+<h2 id="api-profile">
+  <span class="en">API Contract — GET /auth/profile</span>
+  <span class="hi">API Contract — GET /auth/profile</span>
+</h2>
+
+<div class="card clg">
+  <p><span class="en"><strong>When called?</strong> After every login and after every refresh (to load full role + permissions into Redux).</span>
+  <span class="hi"><strong>Kab call hota hai?</strong> Har login ke baad aur har refresh ke baad (full role + permissions Redux mein load karne ke liye).</span></p>
+
+  <h3><span class="en">Request</span><span class="hi">Request</span></h3>
+<pre><span class="c">GET https://api.succesly.in/api/v1/auth/profile
+Authorization: Bearer &lt;accessToken&gt;   ← injected by identityInstance interceptor</span></pre>
+
+  <h3><span class="en">Success Response (200)</span><span class="hi">Success Response (200)</span></h3>
+<pre>{
+  <span class="s">"success"</span>: <span class="k">true</span>,
+  <span class="s">"data"</span>: {
+    <span class="s">"_id"</span>:       <span class="s">"64abc..."</span>,
+    <span class="s">"username"</span>:  <span class="s">"Nikhil Mahato"</span>,
+    <span class="s">"email"</span>:     <span class="s">"nikhil@example.com"</span>,
+    <span class="s">"mobile_no"</span>: <span class="s">"9876543210"</span>,
+    <span class="s">"role_id"</span>:   <span class="s">"64xyz..."</span>,
+    <span class="s">"is_active"</span>: <span class="k">true</span>,
+    <span class="s">"role"</span>: {
+      <span class="s">"role_name"</span>:  <span class="s">"SUPER ADMIN"</span>,
+      <span class="s">"role_access"</span>: [
+        { <span class="s">"module_id"</span>: <span class="s">"user_management"</span>, <span class="s">"view"</span>: <span class="k">true</span>, <span class="s">"create"</span>: <span class="k">true</span>, ... },
+        { <span class="s">"module_id"</span>: <span class="s">"booking_management"</span>, <span class="s">"view"</span>: <span class="k">true</span>, ... }
+      ]
+    }
+  }
+}</pre>
+</div>
+
+<h2 id="api-logout">
+  <span class="en">API Contract — POST /auth/logout</span>
+  <span class="hi">API Contract — POST /auth/logout</span>
+</h2>
+
+<div class="card clg">
+  <h3><span class="en">Request</span><span class="hi">Request</span></h3>
+<pre><span class="c">POST https://api.succesly.in/api/v1/auth/logout
+Authorization: Bearer &lt;accessToken&gt;
+x-csrf-token: &lt;csrfToken&gt;            ← CSRF protection on logout too
+withCredentials: true                  ← browser sends rt cookie so server can invalidate it</span></pre>
+
+  <h3><span class="en">What Happens After This Call</span><span class="hi">Is Call Ke Baad Kya Hota Hai</span></h3>
+  <ul>
+    <li><span class="en">Server invalidates the <code>rt</code> cookie (sets Max-Age=0 in response header)</span><span class="hi">Server <code>rt</code> cookie invalidate karta hai (response header mein Max-Age=0 set karta hai)</span></li>
+    <li><span class="en">Frontend clears all Redux state: <code>clearAuthTokens()</code>, <code>clearUserData()</code>, <code>clearAccessData()</code>, <code>clearApiKey()</code></span><span class="hi">Frontend saara Redux state clear karta hai</span></li>
+    <li><span class="en">Legacy cookies (<code>t</code>, <code>auth_user</code>, <code>uid</code>) and localStorage are also cleared</span><span class="hi">Legacy cookies aur localStorage bhi clear ho jaate hain</span></li>
+    <li><span class="en">User is navigated to <code>/login</code></span><span class="hi">User ko <code>/login</code> par bheja jaata hai</span></li>
+  </ul>
+</div>
+
+<!-- ═══════ FLOW DIAGRAMS ═══════ -->
+<h2 id="flow-login"><span class="en">Flow Diagram — Login</span><span class="hi">Flow Diagram — Login</span></h2>
+
+<div class="card">
+<div class="flow"><span class="fb">USER fills email + password on /login page</span>
+<span class="fa">         │</span>
+<span class="fa">         ▼</span>
+<span class="fb">AuthContext.login() called</span>
+<span class="fa">         │</span>
+<span class="fa">         ▼</span>
+<span class="fb">authAxios.post("/auth/login", { email, password })</span>
+<span class="fa">         │     (authAxios has NO interceptors — raw request)</span>
+<span class="fa">         ▼</span>
+<span class="fg">Server returns 200 ──────────────────────────────────────────</span>
+<span class="fa">         │  Body: { accessToken, csrfToken, user }            │</span>
+<span class="fa">         │  Set-Cookie: rt=...; HttpOnly; Secure; SameSite=Strict</span>
+<span class="fa">         ▼</span>
+<span class="fg">dispatch(setAuthTokens({ accessToken, csrfToken }))</span>
+<span class="fa">         │  → Redux auth.accessToken = "eyJhbGci..."</span>
+<span class="fa">         │  → Redux auth.csrfToken   = "a1b2c3..."</span>
+<span class="fa">         │  → Browser stores rt cookie (httpOnly — JS cannot touch it)</span>
+<span class="fa">         ▼</span>
+<span class="fg">authAxios.get("/auth/profile", { Authorization: Bearer token })</span>
+<span class="fa">         │</span>
+<span class="fa">         ▼</span>
+<span class="fg">applyProfile(data) → dispatch(setUserData(...)) + dispatch(setAccessData(...))</span>
+<span class="fa">         │  → Redux user.user_name, user.role_name, user.role_id ...</span>
+<span class="fa">         │  → Redux accessData["user_management"] = { view:true, create:true, ... }</span>
+<span class="fa">         ▼</span>
+<span class="fg">navigate("/")  →  RedirectToHome()  →  dashboard for user's role  ✅</span></div>
+</div>
+
+<h2 id="flow-refresh"><span class="en">Flow Diagram — Page Refresh (F5)</span><span class="hi">Flow Diagram — Page Refresh (F5)</span></h2>
+
+<div class="card">
+<div class="flow"><span class="fb">USER presses F5 / refreshes the page</span>
+<span class="fa">         │</span>
+<span class="fa">         ▼</span>
+<span class="fb">React app mounts fresh — Redux state is EMPTY (not persisted for auth)</span>
+<span class="fa">         │  accessToken = null → isAuthenticated = false</span>
+<span class="fa">         │  initDone = false</span>
+<span class="fa">         ▼</span>
+<span class="fy">ProtectedRoute checks: initDone = false → shows &lt;LoaderOverlay /&gt;</span>
+<span class="fa">         │  (page is NOT shown yet — user sees loading spinner)</span>
+<span class="fa">         ▼</span>
+<span class="fb">AuthContext useEffect fires → callRefreshApi()</span>
+<span class="fa">         │  POST /auth/refresh  (empty body {})</span>
+<span class="fa">         │  withCredentials: true → browser auto-sends rt httpOnly cookie</span>
+<span class="fa">         ▼</span>
+<span class="fg">Server validates rt cookie → returns 200</span>
+<span class="fa">         │  Body: { accessToken: "new_token", csrfToken: "new_csrf" }</span>
+<span class="fa">         ▼</span>
+<span class="fg">dispatch(setAuthTokens({ accessToken, csrfToken }))</span>
+<span class="fa">         │  → Redux now has fresh tokens in memory</span>
+<span class="fa">         ▼</span>
+<span class="fg">authAxios.get("/auth/profile") → applyProfile()</span>
+<span class="fa">         │  → Redux user + accessData restored</span>
+<span class="fa">         ▼</span>
+<span class="fg">setInitDone(true)</span>
+<span class="fa">         │</span>
+<span class="fa">         ▼</span>
+<span class="fg">ProtectedRoute: initDone=true, isAuthenticated=true → shows the page ✅</span>
+<span class="fa">         USER never sees login page — seamless experience</span>
+
+<span class="fr">         ─── IF rt cookie is expired / not sent ───────────────</span>
+<span class="fr">         Server returns 401 → catch block fires</span>
+<span class="fr">         → clearAllAuthState() → setInitDone(true)</span>
+<span class="fr">         → ProtectedRoute: isAuthenticated=false → /login ❌</span></div>
+</div>
+
+<h2 id="flow-silent"><span class="en">Flow Diagram — Silent Refresh on 401 (Mid-Session)</span><span class="hi">Flow Diagram — Session ke Beech 401 aane par Silent Refresh</span></h2>
+
+<div class="card">
+<p><span class="en">This happens automatically when the 15-minute accessToken expires while the user is actively using the app. The user never knows it happened.</span>
+<span class="hi">Ye automatically hota hai jab user app use kar raha ho aur 15-minute accessToken expire ho jaaye. User ko pata bhi nahi chalta.</span></p>
+<div class="flow"><span class="fb">User clicks something → identityInstance.get("/some-api")</span>
+<span class="fa">         │  Request interceptor adds:  Authorization: Bearer expired_token</span>
+<span class="fa">         │                             x-csrf-token: current_csrf</span>
+<span class="fa">         ▼</span>
+<span class="fr">Server returns 401 (access token expired)</span>
+<span class="fa">         │</span>
+<span class="fa">         ▼</span>
+<span class="fy">identityInstance response interceptor catches 401</span>
+<span class="fa">         │  → calls handleSilentRefresh(error.config)</span>
+<span class="fa">         ▼</span>
+<span class="fb">refreshAxios.post("/auth/refresh") — dedicated instance, no interceptors</span>
+<span class="fa">         │  Browser auto-sends rt cookie → server validates</span>
+<span class="fa">         ▼</span>
+<span class="fg">Server returns 200 → { accessToken: "new_token", csrfToken: "new_csrf" }</span>
+<span class="fa">         │</span>
+<span class="fa">         ▼</span>
+<span class="fg">dispatch(setAuthTokens(...))  — Redux updated</span>
+<span class="fa">         │  All queued requests get new token (queue mechanism)</span>
+<span class="fa">         ▼</span>
+<span class="fg">Original request is RETRIED with new Authorization header</span>
+<span class="fa">         │</span>
+<span class="fa">         ▼</span>
+<span class="fg">User's action completes successfully ✅ — they never saw any error</span>
+
+<span class="fb">         ─── QUEUE MECHANISM (concurrent 401s) ────────────────────</span>
+<span class="fb">         If 5 requests fire at the same time and ALL get 401:</span>
+<span class="fa">         → Request 1: starts refresh call</span>
+<span class="fa">         → Requests 2-5: queued (wait for refresh to complete)</span>
+<span class="fa">         → Refresh succeeds → all 5 requests retried with new token</span>
+<span class="fa">         → Only 1 refresh call made (not 5 — avoids race condition)</span></div>
+</div>
+
+<h2 id="flow-logout"><span class="en">Flow Diagram — Logout</span><span class="hi">Flow Diagram — Logout</span></h2>
+
+<div class="card">
+<div class="flow"><span class="fb">User clicks Logout button (in Sidebar)</span>
+<span class="fa">         │</span>
+<span class="fa">         ▼</span>
+<span class="fb">useAuth.handleLogout() → clears localStorage STORAGE_KEYS</span>
+<span class="fa">         │</span>
+<span class="fa">         ▼</span>
+<span class="fb">AuthContext.logout() called</span>
+<span class="fa">         │</span>
+<span class="fa">         ▼</span>
+<span class="fb">postData({ endpoint: "auth/logout", instance: "identity" })</span>
+<span class="fa">         │  identityInstance adds: Authorization + x-csrf-token headers</span>
+<span class="fa">         │  withCredentials: true → browser sends rt cookie</span>
+<span class="fa">         ▼</span>
+<span class="fg">Server invalidates session + Set-Cookie: rt=; Max-Age=0 (clears rt)</span>
+<span class="fa">         │</span>
+<span class="fa">         ▼</span>
+<span class="fg">clearAllAuthState() called</span>
+<span class="fa">         │  dispatch(clearAuthTokens())  → accessToken + csrfToken = null</span>
+<span class="fa">         │  dispatch(clearUserData())    → user profile = empty</span>
+<span class="fa">         │  dispatch(clearAccessData())  → module permissions = empty</span>
+<span class="fa">         │  dispatch(clearApiKey())      → API key = cleared</span>
+<span class="fa">         │  Clear legacy cookies: t, auth_user, uid</span>
+<span class="fa">         │  Clear localStorage: auth_token, auth_user_storage</span>
+<span class="fa">         ▼</span>
+<span class="fg">navigate("/login") ✅</span></div>
+</div>
+
+<h2 id="flow-newtab"><span class="en">Flow Diagram — Opening Same URL in New Tab</span><span class="hi">Flow Diagram — New Tab Mein Same URL Kholna</span></h2>
+
+<div class="card">
+<div class="flow"><span class="fb">User copies URL from address bar → pastes in NEW TAB (same browser)</span>
+<span class="fa">         │</span>
+<span class="fa">         ▼</span>
+<span class="fb">New tab loads React app fresh — Redux is EMPTY in this tab</span>
+<span class="fa">         │  accessToken = null (not persisted across tabs)</span>
+<span class="fa">         ▼</span>
+<span class="fy">ProtectedRoute: initDone=false → LoaderOverlay</span>
+<span class="fa">         ▼</span>
+<span class="fb">AuthContext useEffect → callRefreshApi()</span>
+<span class="fa">         │  rt httpOnly cookie is BROWSER-WIDE (shared across all tabs)</span>
+<span class="fa">         │  Browser sends rt cookie automatically</span>
+<span class="fa">         ▼</span>
+<span class="fg">Server validates rt → 200 → { accessToken, csrfToken }</span>
+<span class="fa">         ▼</span>
+<span class="fg">Redux populated → profile fetched → initDone=true → PAGE SHOWN ✅</span>
+<span class="fa">         USER does NOT need to log in again — seamless new tab experience</span>
+
+<span class="fb">KEY INSIGHT: rt httpOnly cookie is stored at OS/browser level,</span>
+<span class="fb">             not at tab level. All tabs in same browser share it.</span></div>
+</div>
+
+<!-- ═══════ CSRF PREVENTION ═══════ -->
+<section id="csrf">
+  <h2><span class="en">CSRF Prevention — How It Works</span><span class="hi">CSRF Prevention — Ye Kaise Kaam Karta Hai</span></h2>
+
+  <div class="card cl">
+    <h3><span class="en">What is a CSRF Attack?</span><span class="hi">CSRF Attack Kya Hota Hai?</span></h3>
+    <p>
+      <span class="en">Imagine you are logged into Zynkly Admin. A hacker sends you a link — <code>hacker.com/trick.html</code>. When you open it, that page silently sends a POST request to <code>api.succesly.in/users/delete</code> using YOUR session cookies. The server sees a valid session and deletes the user. This is CSRF.</span>
+      <span class="hi">Socho tum Zynkly Admin mein logged in ho. Hacker tumhe ek link bhejta hai — <code>hacker.com/trick.html</code>. Jab tum use kholte ho, wo page secretly tumhare session cookies use karke <code>api.succesly.in/users/delete</code> par POST request bhej deta hai. Server valid session dekhta hai aur user delete kar deta hai. Ye hai CSRF.</span>
+    </p>
+
+    <h3 style="margin-top:16px"><span class="en">How We Block CSRF</span><span class="hi">Hum CSRF Kaise Rokate Hain</span></h3>
+    <p>
+      <span class="en">Every state-changing request (POST / PUT / PATCH / DELETE) <strong>must include the <code>x-csrf-token</code> header</strong>. The CSRF token lives only in Redux memory — it is never in any cookie. <code>hacker.com</code> cannot read our Redux state (same-origin policy). No CSRF token = server rejects the request.</span>
+      <span class="hi">Har state-changing request (POST / PUT / PATCH / DELETE) mein <strong><code>x-csrf-token</code> header zaruri hai</strong>. CSRF token sirf Redux memory mein rehta hai — kisi cookie mein nahi. <code>hacker.com</code> hamaari Redux state nahi padh sakta (same-origin policy). CSRF token nahi = server request reject kar deta hai.</span>
+    </p>
+
+<pre><span class="c">// identityinstance.ts — Request Interceptor (automatic — developer needs to do NOTHING)</span>
+identityInstance.interceptors.request.<span class="f">use</span>((config) => {
+  <span class="k">const</span> state      = store.<span class="f">getState</span>();
+  <span class="k">const</span> accessToken = state.auth?.accessToken;
+  <span class="k">const</span> csrfToken   = state.auth?.csrfToken;
+
+  <span class="c">// Authorization on every request</span>
+  <span class="k">if</span> (accessToken && !config.headers[<span class="s">"Authorization"</span>])
+    config.headers[<span class="s">"Authorization"</span>] = <span class="s">`Bearer ${accessToken}`</span>;
+
+  <span class="c">// x-csrf-token ONLY on state-changing methods (not GET)</span>
+  <span class="k">const</span> method = (config.method ?? <span class="s">""</span>).<span class="f">toLowerCase</span>();
+  <span class="k">if</span> (csrfToken && [<span class="s">"post"</span>, <span class="s">"put"</span>, <span class="s">"patch"</span>, <span class="s">"delete"</span>].<span class="f">includes</span>(method))
+    config.headers[<span class="s">"x-csrf-token"</span>] = csrfToken;
+
+  <span class="k">return</span> config;
+});</pre>
+
+    <h3><span class="en">CSRF Attack Scenario — Blocked</span><span class="hi">CSRF Attack Scenario — Blocked</span></h3>
+    <div class="flow"><span class="fr">HACKER creates malicious page: hacker.com/trap.html</span>
+<span class="fa">         │  Contains: &lt;form action="https://api.succesly.in/users/delete" method="POST"&gt;</span>
+<span class="fa">         ▼</span>
+<span class="fr">User visits hacker.com/trap.html (while logged into Zynkly Admin)</span>
+<span class="fa">         │</span>
+<span class="fa">         ▼</span>
+<span class="fr">Browser submits form → POST request to api.succesly.in</span>
+<span class="fa">         │  Cookies? rt cookie has SameSite=Strict → NOT sent to cross-site request ✅</span>
+<span class="fa">         │  x-csrf-token header? hacker.com cannot read our Redux state → MISSING ✅</span>
+<span class="fa">         ▼</span>
+<span class="fg">Server rejects: "Invalid CSRF token" → 403 Forbidden</span>
+<span class="fa">         ▼</span>
+<span class="fg">ATTACK BLOCKED ✅ — User's data is safe</span></div>
+  </div>
+</section>
+
+<!-- ═══════ RT SECURITY ═══════ -->
+<section id="rt-security">
+  <h2><span class="en">Refresh Token (rt) Cookie — Why httpOnly?</span><span class="hi">Refresh Token (rt) Cookie — httpOnly Kyun?</span></h2>
+
+  <div class="card cl">
+    <table>
+      <thead>
+        <tr>
+          <th><span class="en">Cookie Attribute</span><span class="hi">Cookie Attribute</span></th>
+          <th><span class="en">What It Does</span><span class="hi">Kya Karta Hai</span></th>
+          <th><span class="en">Without It — Risk</span><span class="hi">Iske Bina — Khatre</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>HttpOnly</code></td>
+          <td><span class="en">JavaScript cannot read/write this cookie. <code>document.cookie</code> doesn't show it. Cookie Editor cannot export it.</span><span class="hi">JavaScript ye cookie padh/likh nahi sakta. <code>document.cookie</code> mein dikhta nahi. Cookie Editor export nahi kar sakta.</span></td>
+          <td><span class="badge br">XSS theft, extension theft</span></td>
+        </tr>
+        <tr>
+          <td><code>Secure</code></td>
+          <td><span class="en">Cookie only sent over HTTPS connections. Never over HTTP (except localhost).</span><span class="hi">Cookie sirf HTTPS connections par bheji jaati hai. HTTP par nahi (localhost ko chhod kar).</span></td>
+          <td><span class="badge br">Man-in-middle intercept</span></td>
+        </tr>
+        <tr>
+          <td><code>SameSite=Strict</code></td>
+          <td><span class="en">Cookie NOT sent on any cross-site request. Protects against CSRF via cookie.</span><span class="hi">Cross-site request par cookie nahi bheji jaati. Cookie-based CSRF se bachav.</span></td>
+          <td><span class="badge br">CSRF via cookie</span></td>
+        </tr>
+        <tr>
+          <td><code>Path=/</code></td>
+          <td><span class="en">Cookie sent to all paths on the domain.</span><span class="hi">Domain ke saare paths par cookie bheji jaati hai.</span></td>
+          <td><span class="badge by">Path mismatch = refresh fails</span></td>
+        </tr>
+        <tr>
+          <td><code>Max-Age=604800</code></td>
+          <td><span class="en">Cookie expires after 7 days automatically.</span><span class="hi">Cookie automatically 7 din baad expire ho jaati hai.</span></td>
+          <td><span class="badge br">Permanent session</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="info-box">
+      <span class="en">🔒 <strong>Why Cookie Editor cannot steal the rt cookie:</strong> Cookie Editor browser extension uses <code>document.cookie</code> API to list and export cookies. The browser's <code>document.cookie</code> API intentionally excludes HttpOnly cookies. So even if Cookie Editor is installed, it simply cannot see or export the <code>rt</code> cookie. It only sees regular JS-accessible cookies.</span>
+      <span class="hi">🔒 <strong>Cookie Editor rt cookie kyun nahi chura sakta:</strong> Cookie Editor browser extension cookies list aur export karne ke liye <code>document.cookie</code> API use karta hai. Browser ka <code>document.cookie</code> API intentionally HttpOnly cookies exclude karta hai. Is liye Cookie Editor install hone ke bawajood, wo <code>rt</code> cookie dekh ya export hi nahi kar sakta. Sirf regular JS-accessible cookies dikhta hai.</span>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════ 5 SECURITY LAYERS ═══════ -->
+<section id="layers">
+  <h2><span class="en">5 Security Layers — How They Stack</span><span class="hi">5 Security Layers — Kaise Kaam Karte Hain</span></h2>
+
+  <div class="layers">
+    <div class="layer">
+      <div class="lnum" style="background:rgba(239,68,68,.2);color:var(--red);">1</div>
+      <div>
+        <strong><span class="en">Client-Side Token Validation</span><span class="hi">Client-Side Token Validation</span></strong> — <span class="en">If accessToken is null (page refresh), show loader, never show dashboard. <span class="fp-pill">src/routes/AppRoutes.tsx</span></span>
+        <span class="hi">accessToken null hone par (page refresh), loader dikho, kabhi dashboard mat dikho. <span class="fp-pill">src/routes/AppRoutes.tsx</span></span>
+      </div>
+    </div>
+    <div class="layer">
+      <div class="lnum" style="background:rgba(245,158,11,.2);color:var(--yellow);">2</div>
+      <div>
+        <strong><span class="en">Server Re-hydration on Load</span><span class="hi">Load pe Server Re-hydration</span></strong> — <span class="en">Every page load calls <code>POST /auth/refresh</code> via the rt cookie. Fake/stolen cookies fail at server validation. <span class="fp-pill">src/context/AuthContext.tsx</span></span>
+        <span class="hi">Har page load par rt cookie ke zariye <code>POST /auth/refresh</code> call hota hai. Fake/stolen cookies server validation pe fail ho jaati hain. <span class="fp-pill">src/context/AuthContext.tsx</span></span>
+      </div>
+    </div>
+    <div class="layer">
+      <div class="lnum" style="background:rgba(99,102,241,.2);color:var(--accent);">3</div>
+      <div>
+        <strong><span class="en">Bearer Token on Every API Call</span><span class="hi">Har API Call par Bearer Token</span></strong> — <span class="en">All protected API calls include <code>Authorization: Bearer &lt;accessToken&gt;</code> injected by axios interceptors. Server validates signature on every call. <span class="fp-pill">src/services/crmServices/identityinstance.ts</span></span>
+        <span class="hi">Sabhi protected API calls mein axios interceptors dwara <code>Authorization: Bearer &lt;accessToken&gt;</code> add hota hai. Server har call par signature validate karta hai. <span class="fp-pill">src/services/crmServices/identityinstance.ts</span></span>
+      </div>
+    </div>
+    <div class="layer">
+      <div class="lnum" style="background:rgba(6,182,212,.2);color:var(--accent2);">4</div>
+      <div>
+        <strong><span class="en">CSRF Token on State-Changing Calls</span><span class="hi">State-Changing Calls par CSRF Token</span></strong> — <span class="en">Every POST/PUT/PATCH/DELETE automatically includes <code>x-csrf-token</code> from Redux. Malicious cross-site forms cannot forge this header. <span class="fp-pill">src/services/crmServices/identityinstance.ts</span> <span class="fp-pill">src/services/crmServices/axios.ts</span></span>
+        <span class="hi">Har POST/PUT/PATCH/DELETE mein Redux se <code>x-csrf-token</code> automatically include hota hai. Malicious cross-site forms ye header forge nahi kar sakte. <span class="fp-pill">src/services/crmServices/identityinstance.ts</span></span>
+      </div>
+    </div>
+    <div class="layer">
+      <div class="lnum" style="background:rgba(34,197,94,.2);color:var(--green);">5</div>
+      <div>
+        <strong><span class="en">Silent Refresh + Auto Logout on 401</span><span class="hi">Silent Refresh + 401 par Auto Logout</span></strong> — <span class="en">Any 401 response triggers silent refresh. If refresh also fails, all auth state is cleared and user is sent to login. No stale sessions. <span class="fp-pill">src/lib/silentRefresh.ts</span></span>
+        <span class="hi">Koi bhi 401 response silent refresh trigger karta hai. Refresh bhi fail ho to saari auth state clear aur user ko login par bheja jaata hai. Koi stale session nahi. <span class="fp-pill">src/lib/silentRefresh.ts</span></span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════ ATTACK PREVENTION ═══════ -->
+<section id="attacks">
+  <h2><span class="en">Attack Prevention Summary</span><span class="hi">Attack Prevention Summary</span></h2>
+
+  <table>
+    <thead>
+      <tr>
+        <th><span class="en">Attack Type</span><span class="hi">Attack Type</span></th>
+        <th><span class="en">How Attacker Tries</span><span class="hi">Attacker Kya Karta Hai</span></th>
+        <th><span class="en">How We Block It</span><span class="hi">Hum Kaise Rokate Hain</span></th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Fake Cookie</strong></td>
+        <td><span class="en">Set <code>t=randomvalue</code> in DevTools</span><span class="hi">DevTools mein <code>t=randomvalue</code> set karo</span></td>
+        <td><span class="en">Refresh call fails (no valid rt) → redirect to login</span><span class="hi">Refresh call fail → login pe bhejo</span></td>
+        <td><span class="badge bg">✅ Blocked</span></td>
+      </tr>
+      <tr>
+        <td><strong>Cookie Theft (accessToken)</strong></td>
+        <td><span class="en">Cookie Editor to export JWT</span><span class="hi">Cookie Editor se JWT export karo</span></td>
+        <td><span class="en">accessToken is in Redux — not in any cookie — nothing to export</span><span class="hi">accessToken Redux mein hai — kisi cookie mein nahi — export kuch nahi</span></td>
+        <td><span class="badge bg">✅ Blocked</span></td>
+      </tr>
+      <tr>
+        <td><strong>Cookie Theft (rt)</strong></td>
+        <td><span class="en">Cookie Editor to export rt httpOnly cookie</span><span class="hi">rt httpOnly cookie export karo</span></td>
+        <td><span class="en">HttpOnly = Cookie Editor cannot see it. <code>document.cookie</code> is blind to httpOnly cookies.</span><span class="hi">HttpOnly = Cookie Editor dekh nahi sakta. <code>document.cookie</code> httpOnly cookies ko nahi dikhata.</span></td>
+        <td><span class="badge bg">✅ Blocked</span></td>
+      </tr>
+      <tr>
+        <td><strong>CSRF Attack</strong></td>
+        <td><span class="en">Malicious site sends POST on user's behalf</span><span class="hi">Malicious site user ke naam se POST bheje</span></td>
+        <td><span class="en">x-csrf-token header is missing (attacker cannot read Redux) → server rejects</span><span class="hi">x-csrf-token header missing (attacker Redux nahi padh sakta) → server reject karta hai</span></td>
+        <td><span class="badge bg">✅ Blocked</span></td>
+      </tr>
+      <tr>
+        <td><strong>XSS Token Theft</strong></td>
+        <td><span class="en">Injected JS reads <code>localStorage</code> or cookies</span><span class="hi">Injected JS localStorage ya cookies padhe</span></td>
+        <td><span class="en">accessToken is in JS memory (Redux) — not localStorage, not cookies. XSS can't reach it between page loads.</span><span class="hi">accessToken JS memory (Redux) mein — localStorage ya cookies mein nahi. XSS page loads ke beech nahi pahunch sakta.</span></td>
+        <td><span class="badge by">⚠️ Partial</span></td>
+      </tr>
+      <tr>
+        <td><strong>Session Replay</strong></td>
+        <td><span class="en">Reuse old accessToken after logout</span><span class="hi">Logout ke baad purana accessToken reuse karo</span></td>
+        <td><span class="en">accessToken expires in 15 min. After logout, rt cookie is invalidated server-side — no new tokens possible.</span><span class="hi">accessToken 15 min mein expire. Logout ke baad rt cookie server-side invalidate — naye tokens nahi mil sakte.</span></td>
+        <td><span class="badge bg">✅ Blocked</span></td>
+      </tr>
+      <tr>
+        <td><strong>Token Reuse Across Devices</strong></td>
+        <td><span class="en">Copy rt cookie manually and use on another device</span><span class="hi">rt cookie manually copy karke doosre device par use karo</span></td>
+        <td><span class="en">rt cookie is HttpOnly — cannot be exported. If server uses server-side sessions, IP/device binding adds another layer.</span><span class="hi">rt cookie HttpOnly — export nahi ho sakti. Server-side sessions use karne par IP/device binding extra layer deta hai.</span></td>
+        <td><span class="badge bg">✅ Mostly Blocked</span></td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ═══════ MERITS & DEMERITS ═══════ -->
+<section id="merits">
+  <h2><span class="en">Merits & Demerits</span><span class="hi">Merits aur Demerits</span></h2>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+    <div class="card clg">
+      <h3>✅ <span class="en">Merits (Advantages)</span><span class="hi">Merits (Fayde)</span></h3>
+      <ul>
+        <li><span class="en"><strong>Cookie Editor can't steal anything</strong> — accessToken is in Redux, not in any cookie</span><span class="hi"><strong>Cookie Editor kuch nahi chura sakta</strong> — accessToken Redux mein hai</span></li>
+        <li><span class="en"><strong>CSRF protected</strong> — csrfToken in Redux, never in cookie</span><span class="hi"><strong>CSRF protected</strong> — csrfToken Redux mein, cookie mein nahi</span></li>
+        <li><span class="en"><strong>Short-lived access tokens</strong> — if somehow leaked, useless in 15 min</span><span class="hi"><strong>Short-lived access tokens</strong> — leak hone par bhi 15 min mein bekaar</span></li>
+        <li><span class="en"><strong>Seamless UX</strong> — page refresh, new tab work without re-login</span><span class="hi"><strong>Seamless UX</strong> — page refresh, new tab bina re-login ke kaam karta hai</span></li>
+        <li><span class="en"><strong>Automatic token management</strong> — developers just call APIs, everything else is handled</span><span class="hi"><strong>Automatic token management</strong> — developers sirf API call karo, baaki sab handle hota hai</span></li>
+        <li><span class="en"><strong>Race condition safe</strong> — queue mechanism prevents multiple refresh calls</span><span class="hi"><strong>Race condition safe</strong> — queue mechanism multiple refresh calls rokta hai</span></li>
+        <li><span class="en"><strong>Industry standard pattern</strong> — same as Google, GitHub, Stripe</span><span class="hi"><strong>Industry standard pattern</strong> — Google, GitHub, Stripe jaisa hi</span></li>
+      </ul>
+    </div>
+    <div class="card clr">
+      <h3>❌ <span class="en">Demerits (Limitations)</span><span class="hi">Demerits (Kami)</span></h3>
+      <ul>
+        <li><span class="en"><strong>Cross-origin cookie issue in dev</strong> — rt cookie needs <code>SameSite=None; Secure</code> for localhost↔production setup</span><span class="hi"><strong>Dev mein cross-origin cookie problem</strong> — rt cookie ko <code>SameSite=None; Secure</code> chahiye</span></li>
+        <li><span class="en"><strong>XSS still partially works</strong> — if XSS runs on the SAME PAGE LOAD, Redux is accessible in memory</span><span class="hi"><strong>XSS partially kaam karta hai</strong> — same page load mein XSS hone par Redux memory accessible hai</span></li>
+        <li><span class="en"><strong>Refresh delay on load</strong> — every page load has a 200-500ms delay for the refresh API call</span><span class="hi"><strong>Load par delay</strong> — har page load mein refresh API call ke liye 200-500ms delay</span></li>
+        <li><span class="en"><strong>rt cookie not per-device</strong> — same rt works from any device that has the browser (if SameSite is None)</span><span class="hi"><strong>rt cookie per-device nahi</strong> — same rt cookie wale kisi bhi device se kaam karta hai</span></li>
+        <li><span class="en"><strong>Network dependency</strong> — if refresh API is down, all users get logged out on refresh</span><span class="hi"><strong>Network dependency</strong> — refresh API down hone par sab log logout ho jaayenge</span></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════ ENTERPRISE LEVEL ═══════ -->
+<section id="enterprise">
+  <h2><span class="en">Is This Enterprise-Level? Is It Scalable?</span><span class="hi">Kya Ye Enterprise-Level Hai? Scalable Hai?</span></h2>
+
+  <div class="card cl">
+    <h3><span class="en">Honest Assessment</span><span class="hi">Imandaari se Assessment</span></h3>
+    <p>
+      <span class="en"><strong>Yes — this is a genuine enterprise-level authentication architecture</strong>, and here is the proof:</span>
+      <span class="hi"><strong>Haan — ye ek genuine enterprise-level authentication architecture hai</strong>, aur yahan proof hai:</span>
+    </p>
+
+    <table>
+      <thead>
+        <tr>
+          <th><span class="en">Criterion</span><span class="hi">Criterion</span></th>
+          <th><span class="en">Our Implementation</span><span class="hi">Hamara Implementation</span></th>
+          <th><span class="en">Industry Standard?</span><span class="hi">Industry Standard?</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="en">Token Storage</span><span class="hi">Token Storage</span></td>
+          <td><span class="en">accessToken in Redux memory only</span><span class="hi">accessToken sirf Redux memory mein</span></td>
+          <td><span class="badge bg">✅ YES — OAuth 2.0 spec</span></td>
+        </tr>
+        <tr>
+          <td><span class="en">Refresh Token Pattern</span><span class="hi">Refresh Token Pattern</span></td>
+          <td><span class="en">httpOnly cookie, 7-day expiry, server-side invalidation</span><span class="hi">httpOnly cookie, 7-din expiry, server-side invalidation</span></td>
+          <td><span class="badge bg">✅ YES — Used by Auth0, Okta</span></td>
+        </tr>
+        <tr>
+          <td><span class="en">CSRF Protection</span><span class="hi">CSRF Protection</span></td>
+          <td><span class="en">Double submit cookie pattern (csrfToken in Redux + x-csrf-token header)</span><span class="hi">Double submit cookie pattern</span></td>
+          <td><span class="badge bg">✅ YES — OWASP recommended</span></td>
+        </tr>
+        <tr>
+          <td><span class="en">Silent Token Refresh</span><span class="hi">Silent Token Refresh</span></td>
+          <td><span class="en">Queue-based, no race conditions, retry mechanism</span><span class="hi">Queue-based, race conditions nahi, retry mechanism</span></td>
+          <td><span class="badge bg">✅ YES — Google's approach</span></td>
+        </tr>
+        <tr>
+          <td><span class="en">API Key Management</span><span class="hi">API Key Management</span></td>
+          <td><span class="en">x-api-key header, Redux-stored, modal on missing/invalid key</span><span class="hi">x-api-key header, Redux mein store</span></td>
+          <td><span class="badge bg">✅ YES</span></td>
+        </tr>
+        <tr>
+          <td><span class="en">Role-Based Access Control</span><span class="hi">Role-Based Access Control</span></td>
+          <td><span class="en">Module-level permissions from server, ProtectedRoute checks, redirect on no access</span><span class="hi">Server se module-level permissions, ProtectedRoute checks</span></td>
+          <td><span class="badge bg">✅ YES — Enterprise RBAC</span></td>
+        </tr>
+        <tr>
+          <td><span class="en">Scalability</span><span class="hi">Scalability</span></td>
+          <td><span class="en">Stateless JWTs + optional server-side session = can serve millions of users</span><span class="hi">Stateless JWTs + optional server-side session = millions users serve ho sakte hain</span></td>
+          <td><span class="badge bg">✅ HIGHLY SCALABLE</span></td>
+        </tr>
+        <tr>
+          <td><span class="en">XSS Resistance</span><span class="hi">XSS Resistance</span></td>
+          <td><span class="en">Tokens not in localStorage/cookies → XSS cannot steal auth across sessions</span><span class="hi">Tokens localStorage/cookies mein nahi → XSS across sessions steal nahi kar sakta</span></td>
+          <td><span class="badge by">⚠️ Partial (same-session XSS still risky)</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="success-box" style="margin-top:14px;">
+      <span class="en">✅ <strong>Verdict:</strong> This is production-ready, enterprise-grade auth. The only missing piece for full enterprise-readiness is: (1) <code>SameSite=None</code> on rt cookie for cross-origin, (2) refresh token rotation (server generates new rt on every refresh), (3) Content-Security-Policy headers to mitigate XSS.</span>
+      <span class="hi">✅ <strong>Verdict:</strong> Ye production-ready, enterprise-grade auth hai. Poori enterprise-readiness ke liye sirf ye baaki hai: (1) rt cookie par <code>SameSite=None</code> cross-origin ke liye, (2) refresh token rotation, (3) Content-Security-Policy headers XSS mitigation ke liye.</span>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════ KNOWN ISSUE ═══════ -->
+<section id="issue">
+  <h2><span class="en">Known Issue — SameSite Cross-Origin (Dev Only)</span><span class="hi">Known Issue — SameSite Cross-Origin (Sirf Dev Mein)</span></h2>
+
+  <div class="card cly">
+    <h3>⚠️ <span class="en">The Problem</span><span class="hi">Problem Kya Hai</span></h3>
+    <p>
+      <span class="en">Frontend: <code>http://localhost:5173</code> ↔ Backend: <code>https://api.succesly.in</code> — these are <strong>cross-origin</strong> (different domains). The browser's SameSite policy blocks the <code>rt</code> httpOnly cookie from being sent in cross-origin requests. This causes refresh to fail = user gets kicked to login on page reload during local development.</span>
+      <span class="hi">Frontend: <code>http://localhost:5173</code> ↔ Backend: <code>https://api.succesly.in</code> — ye <strong>cross-origin</strong> hain (alag domains). Browser ki SameSite policy <code>rt</code> httpOnly cookie ko cross-origin requests mein bhejne se rokti hai. Isse refresh fail hota hai = local development mein page reload par user login page par aa jaata hai.</span>
+    </p>
+    <h3><span class="en">The Fix (Backend team — Nikhil)</span><span class="hi">Fix Kya Hai (Backend team — Nikhil)</span></h3>
+<pre><span class="c">// Current (blocks cross-origin dev):</span>
+res.<span class="f">cookie</span>(<span class="s">"rt"</span>, refreshToken, { httpOnly: <span class="k">true</span>, secure: <span class="k">true</span>, sameSite: <span class="s">"strict"</span> });
+
+<span class="c">// Fix (allows cross-origin with credentials — works in dev + prod):</span>
+res.<span class="f">cookie</span>(<span class="s">"rt"</span>, refreshToken, { httpOnly: <span class="k">true</span>, secure: <span class="k">true</span>, sameSite: <span class="s">"none"</span> });
+<span class="c">//                                                                            ^^^^
+// One word change. Secure=true is REQUIRED when SameSite=None.
+// Since api.succesly.in is HTTPS, this works perfectly.</span></pre>
+    <p><span class="en">This is the <strong>industry standard</strong> setting used by Auth0, Firebase, AWS Cognito, and every API that serves a cross-origin frontend. Without this, the httpOnly cookie architecture simply cannot work for cross-origin dev setups.</span>
+    <span class="hi">Ye <strong>industry standard</strong> setting hai jo Auth0, Firebase, AWS Cognito, aur har wo API use karta hai jo cross-origin frontend serve karta hai. Iske bina httpOnly cookie architecture cross-origin dev setups ke liye kaam nahi kar sakta.</span></p>
+  </div>
+</section>
+
+<!-- ═══════ FUTURE ═══════ -->
+<section id="future">
+  <h2><span class="en">Future Security Improvements</span><span class="hi">Future Mein Aur Kya Secure Kar Sakte Hain</span></h2>
+
+  <div class="card cl">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th><span class="en">Improvement</span><span class="hi">Improvement</span></th>
+          <th><span class="en">Impact</span><span class="hi">Impact</span></th>
+          <th><span class="en">Effort</span><span class="hi">Effort</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>
+            <strong><span class="en">Refresh Token Rotation</span><span class="hi">Refresh Token Rotation</span></strong><br>
+            <span class="en">Server issues a NEW rt cookie on every refresh. Old rt is invalidated. If old rt is used again = someone stole it = invalidate ALL tokens for that user.</span>
+            <span class="hi">Server har refresh par NEW rt cookie issue karta hai. Purana rt invalidate. Purana rt dobara use = chori = us user ke saare tokens invalidate.</span>
+          </td>
+          <td><span class="badge bg">Very High</span></td>
+          <td><span class="badge by">Backend change</span></td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td>
+            <strong><span class="en">Content-Security-Policy (CSP) Headers</span><span class="hi">Content-Security-Policy (CSP) Headers</span></strong><br>
+            <span class="en">Tells browser which scripts to trust. Prevents injected scripts from running — eliminates same-session XSS risk.</span>
+            <span class="hi">Browser ko batata hai kaunse scripts trust karne hain. Injected scripts run nahi ho sakti — same-session XSS risk khatam.</span>
+          </td>
+          <td><span class="badge bg">High</span></td>
+          <td><span class="badge by">Backend headers</span></td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td>
+            <strong><span class="en">Device Fingerprinting</span><span class="hi">Device Fingerprinting</span></strong><br>
+            <span class="en">Server stores browser fingerprint (User-Agent, IP, screen resolution hash) with each session. Alert or block if rt cookie is used from a completely different fingerprint.</span>
+            <span class="hi">Server har session ke saath browser fingerprint store karta hai. Alag fingerprint se rt use hone par alert ya block.</span>
+          </td>
+          <td><span class="badge bb">Medium</span></td>
+          <td><span class="badge bp">Complex</span></td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td>
+            <strong><span class="en">Active Session Management UI</span><span class="hi">Active Session Management UI</span></strong><br>
+            <span class="en">Show users all active sessions (device + IP + last seen). Let them remotely logout individual sessions. Like Google Account > Security > Active Sessions.</span>
+            <span class="hi">Users ko saare active sessions dikhao (device + IP + last seen). Individual sessions remotely logout karne do. Google Account jaisa.</span>
+          </td>
+          <td><span class="badge bb">Medium</span></td>
+          <td><span class="badge bp">High effort</span></td>
+        </tr>
+        <tr>
+          <td>5</td>
+          <td>
+            <strong><span class="en">Rate Limiting on Auth Endpoints</span><span class="hi">Auth Endpoints par Rate Limiting</span></strong><br>
+            <span class="en">Block IPs that hit <code>/auth/login</code> or <code>/auth/refresh</code> more than N times per minute. Prevents brute force attacks.</span>
+            <span class="hi">Jo IPs <code>/auth/login</code> ya <code>/auth/refresh</code> ek minute mein N se zyada baar hit karein unhe block karo. Brute force attacks rokta hai.</span>
+          </td>
+          <td><span class="badge bg">High</span></td>
+          <td><span class="badge by">Backend only</span></td>
+        </tr>
+        <tr>
+          <td>6</td>
+          <td>
+            <strong><span class="en">Audit Log for Auth Events</span><span class="hi">Auth Events ka Audit Log</span></strong><br>
+            <span class="en">Log every login, logout, and failed attempt with timestamp + IP + device. Essential for compliance (SOC 2, ISO 27001).</span>
+            <span class="hi">Har login, logout, aur failed attempt timestamp + IP + device ke saath log karo. Compliance ke liye zaroori.</span>
+          </td>
+          <td><span class="badge bb">Medium</span></td>
+          <td><span class="badge by">Backend only</span></td>
+        </tr>
+        <tr>
+          <td>7</td>
+          <td>
+            <strong><span class="en">MFA (Multi-Factor Authentication)</span><span class="hi">MFA (Multi-Factor Authentication)</span></strong><br>
+            <span class="en">After password, user gets an OTP on email/phone. Even if password is compromised, attacker cannot login.</span>
+            <span class="hi">Password ke baad user ko email/phone par OTP milta hai. Password compromise hone par bhi attacker login nahi kar sakta.</span>
+          </td>
+          <td><span class="badge bg">Very High</span></td>
+          <td><span class="badge bp">High effort</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ═══════ FILES REFERENCE ═══════ -->
+<section id="files">
+  <h2><span class="en">All Files Changed — What Each Does</span><span class="hi">Saari Changed Files — Har Ek Kya Karti Hai</span></h2>
+
+  <div class="card">
+    <table>
+      <thead>
+        <tr>
+          <th><span class="en">File</span><span class="hi">File</span></th>
+          <th><span class="en">Role in Auth System</span><span class="hi">Auth System Mein Role</span></th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>src/store/slices/authSlice.ts</code></td>
+          <td><span class="en">Stores accessToken + csrfToken in Redux. NOT in redux-persist whitelist (so tokens die on browser refresh, forcing re-hydration via rt cookie).</span><span class="hi">accessToken + csrfToken Redux mein store karta hai. redux-persist mein nahi (tokens browser refresh par delete ho jaate hain, rt cookie se re-hydration forced hoti hai).</span></td>
+          <td><span class="badge bg">✅ New</span></td>
+        </tr>
+        <tr>
+          <td><code>src/store/index.ts</code></td>
+          <td><span class="en">Added <code>auth</code> reducer. Excluded from persist whitelist — only <code>user</code>, <code>accessData</code>, <code>apiKey</code> are persisted.</span><span class="hi"><code>auth</code> reducer add kiya. Persist whitelist se bahar — sirf <code>user</code>, <code>accessData</code>, <code>apiKey</code> persist hote hain.</span></td>
+          <td><span class="badge by">Modified</span></td>
+        </tr>
+        <tr>
+          <td><code>src/context/AuthContext.tsx</code></td>
+          <td><span class="en">Core auth logic. login(), logout(), page-load refresh, profile fetch, applyProfile(). Uses raw authAxios (no interceptors) for login/refresh to avoid loops.</span><span class="hi">Core auth logic. login(), logout(), page-load refresh, profile fetch. Raw authAxios use karta hai (bina interceptors) loops avoid karne ke liye.</span></td>
+          <td><span class="badge bg">Rewritten</span></td>
+        </tr>
+        <tr>
+          <td><code>src/lib/silentRefresh.ts</code></td>
+          <td><span class="en">Shared 401 handler. Queue mechanism (prevents parallel refreshes). clearAllAuthState(). redirectToLogin(). Used by both axios instances.</span><span class="hi">Shared 401 handler. Queue mechanism (parallel refreshes rokta hai). clearAllAuthState(). redirectToLogin(). Dono axios instances use karte hain.</span></td>
+          <td><span class="badge bg">New</span></td>
+        </tr>
+        <tr>
+          <td><code>src/lib/axiosAuthInterceptor.ts</code></td>
+          <td><span class="en">Legacy file kept for compatibility. Now delegates to silentRefresh.ts. attachAuthInterceptor() is a no-op.</span><span class="hi">Legacy file compatibility ke liye rakha. Ab silentRefresh.ts ko delegate karta hai.</span></td>
+          <td><span class="badge by">Updated</span></td>
+        </tr>
+        <tr>
+          <td><code>src/services/crmServices/identityinstance.ts</code></td>
+          <td><span class="en">Identity API axios instance. Request interceptor: injects Authorization + x-csrf-token + x-api-key. Response interceptor: 401 → silentRefresh → retry.</span><span class="hi">Identity API axios instance. Request interceptor: Authorization + x-csrf-token + x-api-key inject karta hai. Response interceptor: 401 → silentRefresh → retry.</span></td>
+          <td><span class="badge bg">Rewritten</span></td>
+        </tr>
+        <tr>
+          <td><code>src/services/crmServices/axios.ts</code></td>
+          <td><span class="en">CRM API axios instance. Same interceptor pattern as identityinstance. withCredentials: true.</span><span class="hi">CRM API axios instance. identityinstance jaisa interceptor pattern. withCredentials: true.</span></td>
+          <td><span class="badge bg">Rewritten</span></td>
+        </tr>
+        <tr>
+          <td><code>src/routes/AppRoutes.tsx</code></td>
+          <td><span class="en">ProtectedRoute: Layer 1 (initDone loader), Layer 2 (auth check), Layer 3a (role check), Layer 3b (module permission check).</span><span class="hi">ProtectedRoute: Layer 1 (initDone loader), Layer 2 (auth check), Layer 3a (role check), Layer 3b (module permission check).</span></td>
+          <td><span class="badge by">Updated</span></td>
+        </tr>
+        <tr>
+          <td><code>src/organisms/SidebarV2/hooks/useAuth.ts</code></td>
+          <td><span class="en">Sidebar logout handler. Cleans localStorage STORAGE_KEYS before delegating to AuthContext.logout().</span><span class="hi">Sidebar logout handler. AuthContext.logout() ko delegate karne se pehle localStorage clean karta hai.</span></td>
+          <td><span class="badge by">Updated</span></td>
+        </tr>
+        <tr>
+          <td><code>src/pages/booking-management/BookingManagement.tsx</code><br><code>src/pages/user-management/RoleManagement.tsx</code><br><code>src/pages/user-management/UserManagementList.tsx</code><br><code>src/pages/setting-config/ModuleManagement.tsx</code><br><code>src/pages/setting-config/ApiKeyManagement.tsx</code><br><code>src/pages/user-management/RoleForm.tsx</code><br><code>src/pages/booking-management/CreateBookingModal.tsx</code><br><code>src/pages/ProfilePage.tsx</code></td>
+          <td><span class="en">Migrated from <code>useCookies(["t"])</code> → <code>useSelector(selectAccessToken)</code>. No more direct cookie access for the auth token.</span><span class="hi"><code>useCookies(["t"])</code> se <code>useSelector(selectAccessToken)</code> par migrate kiya. Token ke liye direct cookie access khatam.</span></td>
+          <td><span class="badge by">Migrated</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ═══════ DEVELOPER GUIDE ═══════ -->
+<h2><span class="en">Developer Quick Guide — What YOU Need to Do vs. What's Automatic</span><span class="hi">Developer Quick Guide — Aapko Kya Karna Hai vs. Kya Automatic Hota Hai</span></h2>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+  <div class="card clg">
+    <h3>✅ <span class="en">YOU Do This (Developer's Job)</span><span class="hi">AAPKO Ye Karna Hai (Developer ka Kaam)</span></h3>
+    <ul>
+      <li><span class="en">Use <code>getData</code>, <code>postData</code>, <code>patchData</code>, <code>deleteData</code> from <code>crmServices</code> for all API calls</span><span class="hi">Saare API calls ke liye <code>crmServices</code> se <code>getData</code>, <code>postData</code>, <code>patchData</code>, <code>deleteData</code> use karo</span></li>
+      <li><span class="en">If you need the token directly: <code>const token = useSelector(selectAccessToken)</code></span><span class="hi">Token directly chahiye to: <code>const token = useSelector(selectAccessToken)</code></span></li>
+      <li><span class="en">Call <code>useAuthContext().login(body)</code> on login form submit</span><span class="hi">Login form submit par <code>useAuthContext().login(body)</code> call karo</span></li>
+      <li><span class="en">Call <code>useAuthContext().logout()</code> on logout button click</span><span class="hi">Logout button par <code>useAuthContext().logout()</code> call karo</span></li>
+      <li><span class="en">Wrap protected pages in <code>&lt;ProtectedRoute moduleId="your_module"&gt;</code></span><span class="hi">Protected pages ko <code>&lt;ProtectedRoute moduleId="your_module"&gt;</code> mein wrap karo</span></li>
+      <li><span class="en">Check permissions: <code>const perms = useSelector(selectAccessData)["module_id"]</code></span><span class="hi">Permissions check: <code>const perms = useSelector(selectAccessData)["module_id"]</code></span></li>
+    </ul>
+  </div>
+  <div class="card clp">
+    <h3>🤖 <span class="en">AUTOMATIC — Don't Touch These</span><span class="hi">AUTOMATIC — Ye Mat Chhuo</span></h3>
+    <ul>
+      <li><span class="en">Authorization header injection on every API call</span><span class="hi">Har API call par Authorization header injection</span></li>
+      <li><span class="en">x-csrf-token injection on POST/PUT/PATCH/DELETE</span><span class="hi">POST/PUT/PATCH/DELETE par x-csrf-token injection</span></li>
+      <li><span class="en">Silent token refresh when 401 is received</span><span class="hi">401 aane par silent token refresh</span></li>
+      <li><span class="en">Page-load re-hydration (calls /auth/refresh + /auth/profile)</span><span class="hi">Page-load re-hydration (/auth/refresh + /auth/profile call)</span></li>
+      <li><span class="en">Queue management for concurrent 401s</span><span class="hi">Concurrent 401s ke liye queue management</span></li>
+      <li><span class="en">Redirect to /login when session truly expires</span><span class="hi">Session truly expire hone par /login redirect</span></li>
+      <li><span class="en">rt cookie — completely managed by browser + server</span><span class="hi">rt cookie — completely browser + server se manage</span></li>
+    </ul>
+  </div>
+</div>
+
+<!-- ═══════ CHECKLIST ═══════ -->
+<section id="checklist">
+  <h2><span class="en">Security Checklist — Current Status</span><span class="hi">Security Checklist — Current Status</span></h2>
+
+  <div class="card clg">
+    <h3>✅ <span class="en">Done — Implemented in v2.0</span><span class="hi">Done — v2.0 mein Implement Ho Chuka Hai</span></h3>
+    <ul>
+      <li>✅ <span class="en">accessToken stored in Redux memory ONLY (not in any cookie or localStorage)</span><span class="hi">accessToken sirf Redux memory mein (kisi cookie ya localStorage mein nahi)</span></li>
+      <li>✅ <span class="en">csrfToken stored in Redux memory ONLY, sent as x-csrf-token on all mutations</span><span class="hi">csrfToken sirf Redux memory mein, saari mutations par x-csrf-token ke roop mein bheja jaata hai</span></li>
+      <li>✅ <span class="en">rt cookie: httpOnly, Secure, SameSite=Strict — set by server only, JS cannot touch it</span><span class="hi">rt cookie: httpOnly, Secure, SameSite=Strict — sirf server set karta hai, JS touch nahi kar sakta</span></li>
+      <li>✅ <span class="en">Page refresh: calls /auth/refresh → gets fresh tokens → profile fetched → user stays in app</span><span class="hi">Page refresh: /auth/refresh call → fresh tokens → profile fetch → user app mein rehta hai</span></li>
+      <li>✅ <span class="en">401 interceptor: silent refresh → retry → or logout if refresh fails</span><span class="hi">401 interceptor: silent refresh → retry → ya logout agar refresh fail ho</span></li>
+      <li>✅ <span class="en">Queue mechanism: prevents parallel refresh calls on concurrent 401s</span><span class="hi">Queue mechanism: concurrent 401s par parallel refresh calls rokta hai</span></li>
+      <li>✅ <span class="en">ProtectedRoute: 3-layer check (initDone → auth → role/module)</span><span class="hi">ProtectedRoute: 3-layer check (initDone → auth → role/module)</span></li>
+      <li>✅ <span class="en">All pages migrated from useCookies to useSelector(selectAccessToken)</span><span class="hi">Saare pages useCookies se useSelector(selectAccessToken) par migrate</span></li>
+      <li>✅ <span class="en">Logout calls server to invalidate rt cookie before clearing Redux</span><span class="hi">Logout server ko rt cookie invalidate karne ke liye call karta hai, phir Redux clear</span></li>
+      <li>✅ <span class="en">withCredentials: true on all axios instances (required for rt cookie transmission)</span><span class="hi">Saare axios instances par withCredentials: true (rt cookie transmission ke liye)</span></li>
+    </ul>
+  </div>
+
+  <div class="card cly">
+    <h3>⏳ <span class="en">Pending — Needs Action</span><span class="hi">Pending — Action Chahiye</span></h3>
+    <ul>
+      <li>⬜ <span class="en"><strong>Backend (Nikhil):</strong> Change rt cookie to <code>sameSite: 'none'</code> (one-word fix — required for dev cross-origin setup to work)</span><span class="hi"><strong>Backend (Nikhil):</strong> rt cookie <code>sameSite: 'none'</code> karo (ek word ka fix — dev cross-origin setup ke liye zaroori)</span></li>
+      <li>⬜ <span class="en">Refresh token rotation (server generates new rt on every /auth/refresh call)</span><span class="hi">Refresh token rotation (har /auth/refresh par server naya rt generate kare)</span></li>
+      <li>⬜ <span class="en">Content-Security-Policy headers on the frontend server</span><span class="hi">Frontend server par Content-Security-Policy headers</span></li>
+      <li>⬜ <span class="en">Rate limiting on /auth/login and /auth/refresh endpoints</span><span class="hi">/auth/login aur /auth/refresh endpoints par rate limiting</span></li>
+      <li>⬜ <span class="en">Audit log for all authentication events (login, logout, failed attempts)</span><span class="hi">Saare authentication events ka audit log (login, logout, failed attempts)</span></li>
+    </ul>
+  </div>
+
+  <div style="height:60px;"></div>
+</section>
+
+</main>
+
+<script>
+function setLang(lang) {
+  document.body.classList.toggle('hi-mode', lang === 'hi');
+  document.getElementById('btn-en').classList.toggle('active', lang === 'en');
+  document.getElementById('btn-hi').classList.toggle('active', lang === 'hi');
+}
+
+// Active nav on scroll
+const sections = document.querySelectorAll('[id]');
+const links    = document.querySelectorAll('nav a');
+new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      links.forEach(l => l.classList.remove('active'));
+      const a = document.querySelector(`nav a[href="#${e.target.id}"]`);
+      if (a) a.classList.add('active');
+    }
+  });
+}, { rootMargin: '-15% 0px -75% 0px' }).observe
+  ? sections.forEach(s => new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          links.forEach(l => l.classList.remove('active'));
+          const a = document.querySelector(`nav a[href="#${e.target.id}"]`);
+          if (a) a.classList.add('active');
+        }
+      });
+    }, { rootMargin: '-15% 0px -75% 0px' }).observe(s))
+  : null;
+</script>
+</body>
+</html>

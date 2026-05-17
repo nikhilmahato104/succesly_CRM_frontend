@@ -18,11 +18,16 @@ import { MyInput } from '../atoms/MyInput';
 import { MyButton } from '../atoms/MyButton';
 import { showToast } from '../atoms/MyToast';
 import { formatDistanceToNow } from 'date-fns';
-import { useCookies } from 'react-cookie';
+import { useSelector } from 'react-redux';
 import { getData, patchData, postData } from '../services/crmServices';
+import { selectAccessToken } from '../store/slices/authSlice';
+import { selectUserData } from '../store/slices/userSlice';
 
 export const ProfilePage: React.FC = () => {
-  const [cookies] = useCookies(['uid', 't']);
+  const authToken = useSelector(selectAccessToken);
+  const userData  = useSelector(selectUserData);
+  // compat shim — pages below still use cookies.uid / cookies.t variable names
+  const cookies = { uid: userData.user_id, t: authToken };
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState('profile');
   const [showPasswordForm, setShowPasswordForm] = useState(false);

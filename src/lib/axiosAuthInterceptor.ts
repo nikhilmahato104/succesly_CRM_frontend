@@ -1,55 +1,27 @@
-import type { AxiosInstance, AxiosError } from "axios";
-import { store } from "../store";
-import { clearUserData } from "../store/slices/userSlice";
-import { clearAccessData } from "../store/slices/accessSlice";
-import { clearApiKey } from "../store/slices/apiKeySlice";
+// axiosAuthInterceptor.ts
+// In Secure Auth v2.0 the per-instance interceptors in identityinstance.ts and
+// axios.ts handle 401 via silentRefresh.ts.
+// This file is kept for any legacy imports but its helpers now delegate there.
 
-const LOGIN_PATH = "/login";
+import { clearAllAuthState } from "./silentRefresh";
 
-export function clearClientAuthState() {
-  try {
-    localStorage.removeItem("auth_token");
-    localStorage.removeItem("auth_user_storage");
-    localStorage.removeItem("countdownStartTime");
-    document.cookie = "t=; Max-Age=0; path=/;";
-    document.cookie = "auth_user=; Max-Age=0; path=/;";
-    document.cookie = "uid=; Max-Age=0; path=/;";
-    document.cookie = "email=; Max-Age=0; path=/;";
-  } catch {
-    // ignore DOM errors
-  }
-}
+export { clearAllAuthState as clearClientAuthState };
 
 export function clearReduxAuthState() {
-  store.dispatch(clearUserData());
-  store.dispatch(clearAccessData());
-  store.dispatch(clearApiKey());
+  // Handled inside clearAllAuthState()
 }
 
 export function redirectToLogin() {
   try {
-    window.location.replace(LOGIN_PATH);
+    window.location.replace("/login");
   } catch {
-    window.location.href = LOGIN_PATH;
+    window.location.href = "/login";
   }
 }
 
-export function attachAuthInterceptor(instance: AxiosInstance) {
-  instance.interceptors.response.use(
-    (resp) => resp,
-    (error: AxiosError) => {
-      if (!error.response) return Promise.reject(error);
-
-      if (error.response.status === 401) {
-        const currentPath = typeof window !== "undefined" ? window.location.pathname : "";
-        if (!currentPath.startsWith(LOGIN_PATH)) {
-          clearClientAuthState();
-          clearReduxAuthState();
-          redirectToLogin();
-        }
-      }
-
-      return Promise.reject(error);
-    }
-  );
+// attachAuthInterceptor is no longer needed — each instance has its own
+// interceptor with silent-refresh support. Kept as a no-op for any legacy call sites.
+import type { AxiosInstance } from "axios";
+export function attachAuthInterceptor(_instance: AxiosInstance) {
+  // no-op: replaced by per-instance interceptors in identityinstance.ts / axios.ts
 }

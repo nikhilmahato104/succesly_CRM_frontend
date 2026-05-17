@@ -1,6 +1,6 @@
 import React, { useCallback, useRef, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useCookies } from "react-cookie";
+import { selectAccessToken } from "../../store/slices/authSlice";
 import { ListFilter, Plus, AlertTriangle } from "lucide-react";
 import { CustomDatagrid, type GridColumn } from "../../atoms/CustomDatagrid";
 import { showToastnew } from "../../services/toastifynewService/toastifynewService";
@@ -108,7 +108,7 @@ const PER_PAGE = 25;
 // ── Component ──────────────────────────────────────────────────────────────
 
 const ApiKeyManagement: React.FC = () => {
-  const [cookies] = useCookies(["t"]);
+  const token = useSelector(selectAccessToken);
   const dispatch  = useDispatch();
   const apiKey    = useSelector((s: RootState) => selectApiKey(s));
   const access    = useSelector((s: RootState) => selectAccessData(s));
@@ -161,7 +161,7 @@ const ApiKeyManagement: React.FC = () => {
       try {
         const res = await getData<ApiKeysApiResponse>({
           endpoint: "api-keys",
-          token: cookies.t,
+          token: token,
           instance: "identity",
           params: buildParams(page),
         });
@@ -176,7 +176,7 @@ const ApiKeyManagement: React.FC = () => {
         append ? setLoadingMore(false) : setLoading(false);
       }
     },
-    [apiKey, cookies.t, buildParams, dispatch],
+    [apiKey, token, buildParams, dispatch],
   );
 
   React.useEffect(() => { pageRef.current = 1; setData([]); fetchPage(1, false); }, [fetchPage]);
@@ -190,16 +190,16 @@ const ApiKeyManagement: React.FC = () => {
   }, []);
 
   const handleBulkDelete = useCallback(async (ids: (string | number)[]) => {
-    await Promise.all(ids.map((id) => deleteData({ endpoint: `api-keys/${id}`, token: cookies.t, instance: "identity" })));
+    await Promise.all(ids.map((id) => deleteData({ endpoint: `api-keys/${id}`, token: token, instance: "identity" })));
     showToastnew.success(`${ids.length} key${ids.length > 1 ? "s" : ""} deactivated`);
     handleRefresh();
-  }, [cookies.t, handleRefresh]);
+  }, [token, handleRefresh]);
 
   const handleDeactivate = async () => {
     if (!deleteModal.id) return;
     setDeleteLoading(true);
     try {
-      await deleteData({ endpoint: `api-keys/${deleteModal.id}`, token: cookies.t, instance: "identity" });
+      await deleteData({ endpoint: `api-keys/${deleteModal.id}`, token: token, instance: "identity" });
       showToastnew.success("API key deactivated");
       setDeleteModal(CLOSE_DELETE);
       handleRefresh();
@@ -336,7 +336,7 @@ const ApiKeyManagement: React.FC = () => {
         zIndex={99999}
       >
         <ApiKeyForm
-          token={cookies.t}
+          token={token}
           initialValues={editItem ?? undefined}
           onSuccess={() => { setShowModal(false); setEditItem(null); handleRefresh(); }}
           onCreated={() => { handleRefresh(); }}

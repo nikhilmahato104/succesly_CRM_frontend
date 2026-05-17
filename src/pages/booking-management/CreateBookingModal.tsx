@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useBlocker } from "react-router-dom";
-import { useCookies } from "react-cookie";
 import { useSelector } from "react-redux";
+import { selectAccessToken } from "../../store/slices/authSlice";
 import { Plus, Trash2, ChevronDown, ChevronUp, AlertTriangle, CheckCircle, XCircle } from "lucide-react";
 import { showToastnew } from "../../services/toastifynewService/toastifynewService";
 import { postData } from "../../services/crmServices";
@@ -324,7 +324,7 @@ const ClearDraftConfirm: React.FC<{ isOpen: boolean; onCancel: () => void; onCon
 // ── Main Modal ─────────────────────────────────────────────────────────────
 
 const CreateBookingModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => {
-  const [cookies]                           = useCookies(["t"]);
+  const cookies = { t: useSelector(selectAccessToken) }; // compat shim — read from Redux
   const user                                = useSelector((s: any) => s.user?.userData || s.user);
 
   const [entries,          setEntries]      = useState<BookingEntry[]>([emptyEntry()]);

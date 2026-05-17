@@ -1,6 +1,6 @@
 import React, { useCallback, useRef, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useCookies } from "react-cookie";
+import { selectAccessToken } from "../../store/slices/authSlice";
 import {
   CalendarRange,
   ListFilter,
@@ -228,7 +228,7 @@ const panelStyle: React.CSSProperties = {
 // ── Component ──────────────────────────────────────────────────────────────────
 
 const BookingManagement: React.FC = () => {
-  const [cookies] = useCookies(["t"]);
+  const token = useSelector(selectAccessToken);
   const dispatch = useDispatch();
   const apiKey = useSelector((s: RootState) => selectApiKey(s));
   const access = useSelector((s: RootState) => selectAccessData(s));
@@ -303,7 +303,7 @@ const BookingManagement: React.FC = () => {
       try {
         const res = await getData<BookingsApiResponse>({
           endpoint: "bookings",
-          token: cookies.t,
+          token: token,
           instance: "identity",
           params: buildParams(page),
         });
@@ -319,7 +319,7 @@ const BookingManagement: React.FC = () => {
         if (!append) requestAnimationFrame(() => requestAnimationFrame(() => emitNavDone()));
       }
     },
-    [apiKey, cookies.t, buildParams, dispatch],
+    [apiKey, token, buildParams, dispatch],
   );
 
   useEffect(() => {
@@ -342,18 +342,18 @@ const BookingManagement: React.FC = () => {
   }, []);
 
   const handleDelete = useCallback(async (row: BookingApiItem) => {
-    await deleteData({ endpoint: `bookings/${row._id}`, token: cookies.t, instance: "identity" });
+    await deleteData({ endpoint: `bookings/${row._id}`, token: token, instance: "identity" });
     showToastnew.success("Booking deleted");
     handleRefresh();
-  }, [cookies.t, handleRefresh]);
+  }, [token, handleRefresh]);
 
   const handleBulkDelete = useCallback(async (ids: (string | number)[]) => {
     await Promise.all(
-      ids.map((id) => deleteData({ endpoint: `bookings/${id}`, token: cookies.t, instance: "identity" }))
+      ids.map((id) => deleteData({ endpoint: `bookings/${id}`, token: token, instance: "identity" }))
     );
     showToastnew.success(`${ids.length} booking${ids.length > 1 ? "s" : ""} deleted`);
     handleRefresh();
-  }, [cookies.t, handleRefresh]);
+  }, [token, handleRefresh]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden", background: "var(--dt-bg)" }}>

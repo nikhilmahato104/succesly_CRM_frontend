@@ -6,11 +6,12 @@ import user from "./slices/userSlice";
 import accessData from "./slices/accessSlice";
 import loader from "./slices/loaderSlice";
 import apiKey from "./slices/apiKeySlice";
+import auth from "./slices/authSlice"; // NOT in whitelist — tokens stay in memory only
 
 const persistConfig = {
   key: "root",
   storage,
-  whitelist: ["user", "accessData", "apiKey"],
+  whitelist: ["user", "accessData", "apiKey"], // "auth" intentionally excluded
 };
 
 const rootReducer = combineReducers({
@@ -18,6 +19,7 @@ const rootReducer = combineReducers({
   accessData,
   loader,
   apiKey,
+  auth,
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

@@ -4,7 +4,8 @@ import * as Yup from "yup";
 import { showToastnew } from "../../services/toastifynewService/toastifynewService";
 import { postData, patchData, getData } from "../../services/crmServices";
 import { Check } from "lucide-react";
-import { useCookies } from "react-cookie";
+import { useSelector } from "react-redux";
+import { selectAccessToken } from "../../store/slices/authSlice";
 import { CleanInput, CleanButton } from "../../atoms/my_clean_code_atoms";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -56,20 +57,20 @@ const PermCheckbox: React.FC<{ checked: boolean; onToggle: () => void; ariaLabel
 // ── Component ──────────────────────────────────────────────────────────────
 
 const RoleForm: React.FC<RoleFormProps> = ({ token, initialValues, onSuccess }) => {
-  const [cookies]       = useCookies(["t"]);
+  const authToken = useSelector(selectAccessToken);
   const [modules,       setModules]       = React.useState<ModuleFromAPI[]>([]);
   const [loadingModules, setLoadingModules] = React.useState(true);
 
   React.useEffect(() => {
     setLoadingModules(true);
     getData<{ success: boolean; data: { data: ModuleFromAPI[]; total: number } }>({
-      endpoint: "modules", token: cookies.t || token, instance: "identity",
+      endpoint: "modules", token: authToken || token, instance: "identity",
       params: { page: 1, limit: 100 },
     })
       .then((res) => setModules(res?.data?.data ?? []))
       .catch(() => { showToastnew.error("Failed to load modules"); setModules([]); })
       .finally(() => setLoadingModules(false));
-  }, [cookies.t, token]);
+  }, [authToken, token]);
 
   const validationSchema = Yup.object({
     role_name: Yup.string().trim().required("Role name is required"),
@@ -101,11 +102,11 @@ const RoleForm: React.FC<RoleFormProps> = ({ token, initialValues, onSuccess }) 
   const handleSubmit = async (values: any, { setSubmitting, resetForm }: any) => {
     try {
       if (initialValues?._id) {
-        await patchData({ endpoint: `roles/${initialValues._id}`, token: cookies.t || token, instance: "identity", data: buildPayload(values) });
+        await patchData({ endpoint: `roles/${initialValues._id}`, token: authToken || token, instance: "identity", data: buildPayload(values) });
         showToastnew.success("Role updated successfully");
         onSuccess();
       } else {
-        await postData({ endpoint: "roles", token: cookies.t || token, instance: "identity", data: buildPayload(values) });
+        await postData({ endpoint: "roles", token: authToken || token, instance: "identity", data: buildPayload(values) });
         showToastnew.success("Role created successfully");
         resetForm();
         onSuccess();

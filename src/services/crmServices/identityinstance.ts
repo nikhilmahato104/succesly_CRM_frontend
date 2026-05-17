@@ -1,10 +1,19 @@
+// identityinstance.ts — Secure Auth v2.0
+//
+// REQUEST INTERCEPTOR:
+//   • Authorization: Bearer <accessToken>  — on every request (from Redux)
+//   • x-csrf-token: <csrfToken>            — on POST / PUT / PATCH / DELETE
+//   • x-api-key                            — from Redux apiKey slice
+//
+// RESPONSE INTERCEPTOR:
+//   • 401 → call silentRefresh → update Redux → retry original request
+//   • If refresh also fails → clearAllAuthState → redirect to /login
+
 import axios, { AxiosInstance, AxiosError } from "axios";
 import { store } from "../../store";
 import { openApiKeyModal, clearApiKey } from "../../store/slices/apiKeySlice";
-import { clearUserData } from "../../store/slices/userSlice";
-import { clearAccessData } from "../../store/slices/accessSlice";
 import { showToastnew } from "../toastifynewService/toastifynewService";
-import { clearClientAuthState, redirectToLogin } from "../../lib/axiosAuthInterceptor";
+import { handleSilentRefresh, clearAllAuthState } from "../../lib/silentRefresh";
 
 const identityBaseURL = (import.meta.env.VITE_IDENTITY_API_URL as string | undefined) ?? "";
 
@@ -16,69 +25,50 @@ if (!identityBaseURL) {
 const identityInstance: AxiosInstance = axios.create({
   baseURL: identityBaseURL,
   headers: { "Content-Type": "application/json" },
+  withCredentials: true, // required: sends rt httpOnly cookie automatically
 });
 
-// Inject API key on every request.
-// TODO (backend step): Once the API adds x-device-id + x-session-nonce to
-// Access-Control-Allow-Headers, uncomment the two lines below to enable
-// session binding and prevent cookie-sharing attacks.
+// ── Request interceptor ──────────────────────────────────────────────────────
+// Injects Authorization, x-csrf-token, and x-api-key on every outgoing request.
 identityInstance.interceptors.request.use((config) => {
-  const apiKey = store.getState().apiKey?.key;
-  if (apiKey) config.headers["x-api-key"] = apiKey;
+  const state = store.getState();
 
-  // const deviceId = localStorage.getItem("_did");
-  // const sessionNonce = sessionStorage.getItem("_sn");
-  // if (deviceId) config.headers["x-device-id"] = deviceId;
-  // if (sessionNonce) config.headers["x-session-nonce"] = sessionNonce;
+  const accessToken = state.auth?.accessToken;
+  const csrfToken   = state.auth?.csrfToken;
+  const apiKey      = state.apiKey?.key;
+
+  // Authorization header — only if not already explicitly set
+  if (accessToken && !config.headers["Authorization"]) {
+    config.headers["Authorization"] = `Bearer ${accessToken}`;
+  }
+
+  // CSRF header — only on state-changing methods
+  const method = (config.method ?? "").toLowerCase();
+  if (csrfToken && ["post", "put", "patch", "delete"].includes(method)) {
+    config.headers["x-csrf-token"] = csrfToken;
+  }
+
+  if (apiKey) config.headers["x-api-key"] = apiKey;
 
   return config;
 });
 
-// ---- Error classifiers ----
+// ── Error classifiers ────────────────────────────────────────────────────────
 
-function isMissingKey(msg: string): boolean {
-  return msg.toLowerCase().includes("api key is required");
-}
+function isMissingKey(msg: string)   { return msg.toLowerCase().includes("api key is required"); }
+function isInvalidKey(msg: string)   { return msg.toLowerCase().includes("invalid api key"); }
+function isKeyLimitExceeded(msg: string) { return msg.toLowerCase().includes("api key usage limit exceeded"); }
 
-function isInvalidKey(msg: string): boolean {
-  return msg.toLowerCase().includes("invalid api key");
-}
-
-function isKeyLimitExceeded(msg: string): boolean {
-  return msg.toLowerCase().includes("api key usage limit exceeded");
-}
-
-// ---- Shared clear helper ----
-
-function clearAllState(): void {
-  store.dispatch(clearUserData());
-  store.dispatch(clearAccessData());
-  store.dispatch(clearApiKey());
-  clearClientAuthState();
-}
-
-function handleInvalidKeyError(msg: string): void {
-  showToastnew.error(msg || "Invalid API key");
-  clearAllState();
-  const currentPath = typeof window !== "undefined" ? window.location.pathname : "";
-  if (!currentPath.startsWith("/login")) {
-    redirectToLogin();
-  }
-}
-
-// ---- Response interceptor — handles ALL identity auth cases ----
-// NOTE: attachAuthInterceptor is intentionally NOT used here.
-// The identity service has its own 3-case logic:
-//   1. API key missing   → show the API key modal
-//   2. API key invalid   → toast + clear everything + redirect to /login
-//   3. Other 401 (JWT)   → clear everything + redirect to /login
+// ── Response interceptor ─────────────────────────────────────────────────────
 
 identityInstance.interceptors.response.use(
   (resp) => resp,
-  (error: AxiosError) => {
+  async (error: AxiosError) => {
     const data = error.response?.data as { message?: string } | undefined;
-    const msg = data?.message ?? "";
+    const msg  = data?.message ?? "";
+    const status = error.response?.status;
 
+    // ── API key errors ───────────────────────────────────────────────────────
     if (isMissingKey(msg)) {
       store.dispatch(openApiKeyModal(false));
       return Promise.reject(error);
@@ -92,15 +82,21 @@ identityInstance.interceptors.response.use(
     }
 
     if (isInvalidKey(msg)) {
-      handleInvalidKeyError(msg);
+      showToastnew.error(msg || "Invalid API key");
+      clearAllAuthState();
       return Promise.reject(error);
     }
 
-    if (error.response?.status === 401) {
-      clearAllState();
+    // ── 401 → silent refresh + retry ─────────────────────────────────────────
+    if (status === 401) {
       const currentPath = typeof window !== "undefined" ? window.location.pathname : "";
-      if (!currentPath.startsWith("/login")) {
-        redirectToLogin();
+      if (currentPath.startsWith("/login")) return Promise.reject(error);
+
+      try {
+        const retryConfig = await handleSilentRefresh(error.config ?? {});
+        return identityInstance(retryConfig);
+      } catch {
+        return Promise.reject(error);
       }
     }
 

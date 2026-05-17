@@ -1,5 +1,5 @@
 import React, { useCallback, useRef, useMemo } from "react";
-import { useCookies } from "react-cookie";
+import { selectAccessToken } from "../../store/slices/authSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { Plus } from "lucide-react";
 import { CustomDatagrid, type GridColumn } from "../../atoms/CustomDatagrid";
@@ -41,7 +41,7 @@ const PER_PAGE = 25;
 // ── Component ──────────────────────────────────────────────────────────────
 
 const RoleManagement: React.FC = () => {
-  const [cookies]  = useCookies(["t"]);
+  const token = useSelector(selectAccessToken);
   const dispatch   = useDispatch();
   const apiKey     = useSelector((s: RootState) => selectApiKey(s));
   const access     = useSelector((s: RootState) => selectAccessData(s));
@@ -75,7 +75,7 @@ const RoleManagement: React.FC = () => {
       append ? setLoadingMore(true) : setLoading(true);
       try {
         const res = await getData<RolesApiResponse>({
-          endpoint: "roles", token: cookies.t, instance: "identity", params: buildParams(page),
+          endpoint: "roles", token: token, instance: "identity", params: buildParams(page),
         });
         const items = res.data.data.map(mapRole);
         setData((prev) => (append ? [...prev, ...items] : items));
@@ -85,7 +85,7 @@ const RoleManagement: React.FC = () => {
       } catch { showToastnew.error("Failed to fetch roles"); }
       finally   { append ? setLoadingMore(false) : setLoading(false); }
     },
-    [apiKey, cookies.t, buildParams, dispatch],
+    [apiKey, token, buildParams, dispatch],
   );
 
   React.useEffect(() => { pageRef.current = 1; setData([]); fetchPage(1, false); }, [fetchPage]);
@@ -95,16 +95,16 @@ const RoleManagement: React.FC = () => {
 
   const handleEdit   = useCallback((row: RoleItem) => { setEditItem(row); setShowModal(true); }, []);
   const handleDelete = useCallback(async (row: RoleItem) => {
-    await deleteData({ endpoint: `roles/${row._id}`, token: cookies.t, instance: "identity" });
+    await deleteData({ endpoint: `roles/${row._id}`, token: token, instance: "identity" });
     showToastnew.success("Role deleted successfully");
     handleRefresh();
-  }, [cookies.t, handleRefresh]);
+  }, [token, handleRefresh]);
 
   const handleBulkDelete = useCallback(async (ids: (string | number)[]) => {
-    await Promise.all(ids.map((id) => deleteData({ endpoint: `roles/${id}`, token: cookies.t, instance: "identity" })));
+    await Promise.all(ids.map((id) => deleteData({ endpoint: `roles/${id}`, token: token, instance: "identity" })));
     showToastnew.success(`${ids.length} role${ids.length > 1 ? "s" : ""} deleted`);
     handleRefresh();
-  }, [cookies.t, handleRefresh]);
+  }, [token, handleRefresh]);
 
   const columns = useMemo<GridColumn<RoleItem>[]>(() => [
     { field: "role_name", headerName: "Role", minWidth: 200, sortable: true },
@@ -181,7 +181,7 @@ const RoleManagement: React.FC = () => {
         zIndex={99999}
       >
         <RoleForm
-          token={cookies.t}
+          token={token}
           initialValues={editItem ?? undefined}
           onSuccess={() => { setShowModal(false); setEditItem(null); handleRefresh(); }}
         />

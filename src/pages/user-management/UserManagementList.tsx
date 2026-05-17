@@ -1,5 +1,5 @@
 import React, { useCallback, useRef, useMemo } from "react";
-import { useCookies } from "react-cookie";
+import { selectAccessToken } from "../../store/slices/authSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { ListFilter, Plus, AlertTriangle } from "lucide-react";
 import { CustomDatagrid, type GridColumn } from "../../atoms/CustomDatagrid";
@@ -81,7 +81,7 @@ const PER_PAGE = 25;
 // ── Component ──────────────────────────────────────────────────────────────
 
 const UserManagementList: React.FC = () => {
-  const [cookies]  = useCookies(["t"]);
+  const token = useSelector(selectAccessToken);
   const dispatch   = useDispatch();
   const apiKey     = useSelector(selectApiKey);
   const access     = useSelector((s: RootState) => selectAccessData(s));
@@ -133,7 +133,7 @@ const UserManagementList: React.FC = () => {
       append ? setLoadingMore(true) : setLoading(true);
       try {
         const res = await getData<UsersApiResponse>({
-          endpoint: "users", token: cookies.t, instance: "identity", params: buildParams(page),
+          endpoint: "users", token: token, instance: "identity", params: buildParams(page),
         });
         const items = res.data.data.map(mapUser);
         setData((prev) => (append ? [...prev, ...items] : items));
@@ -143,7 +143,7 @@ const UserManagementList: React.FC = () => {
       } catch { showToastnew.error("Failed to fetch users"); }
       finally   { append ? setLoadingMore(false) : setLoading(false); if (!append) requestAnimationFrame(() => requestAnimationFrame(() => emitNavDone())); }
     },
-    [apiKey, cookies.t, buildParams, dispatch],
+    [apiKey, token, buildParams, dispatch],
   );
 
   React.useEffect(() => { pageRef.current = 1; setData([]); fetchPage(1, false); }, [fetchPage]);
@@ -153,23 +153,23 @@ const UserManagementList: React.FC = () => {
 
   const handleEdit   = useCallback((row: UserItem) => { setEditItem(row); setShowModal(true); }, []);
   const handleDelete = useCallback(async (row: UserItem) => {
-    await deleteData({ endpoint: `users/${row._id}`, token: cookies.t, instance: "identity" });
+    await deleteData({ endpoint: `users/${row._id}`, token: token, instance: "identity" });
     showToastnew.success("User deleted");
     handleRefresh();
-  }, [cookies.t, handleRefresh]);
+  }, [token, handleRefresh]);
 
   const handleBulkDelete = useCallback(async (ids: (string | number)[]) => {
-    await Promise.all(ids.map((id) => deleteData({ endpoint: `users/${id}`, token: cookies.t, instance: "identity" })));
+    await Promise.all(ids.map((id) => deleteData({ endpoint: `users/${id}`, token: token, instance: "identity" })));
     showToastnew.success(`${ids.length} user${ids.length > 1 ? "s" : ""} deleted`);
     handleRefresh();
-  }, [cookies.t, handleRefresh]);
+  }, [token, handleRefresh]);
 
   const handleStatusToggle = async () => {
     if (!statusModal.id) return;
     setStatusLoading(true);
     try {
       await patchData({
-        endpoint: `users/${statusModal.id}`, token: cookies.t, instance: "identity",
+        endpoint: `users/${statusModal.id}`, token: token, instance: "identity",
         data: { is_active: !statusModal.is_active },
       });
       showToastnew.success(statusModal.is_active ? "User deactivated" : "User activated");
@@ -302,7 +302,7 @@ const UserManagementList: React.FC = () => {
         zIndex={99999}
       >
         <UserForm
-          token={cookies.t}
+          token={token}
           initialValues={editItem ?? undefined}
           onSuccess={() => { setShowModal(false); setEditItem(null); handleRefresh(); }}
         />
