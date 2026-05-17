@@ -1,7 +1,7 @@
 
 // import React from "react";
 // import loginImage from "../assets/images/auth_bg_dark.png";
-// import ZynklyLogo from "../assets/images/Zynkly2.png";
+// import SucceslyLogo from "../assets/images/Succesly2.png";
 
 // interface AuthLayoutProps {
 //   children: React.ReactNode;
@@ -45,8 +45,8 @@
 //           {/* Logo */}
 //           {/* <div style={{ display: "flex", justifyContent: "center", marginBottom: "52px" }}>
 //             <img
-//               src={ZynklyLogo}
-//               alt="Zynkly"
+//               src={SucceslyLogo}
+//               alt="Succesly"
 //               style={{
 //                 height: "44px",
 //                 width: "auto",
@@ -56,8 +56,8 @@
 //           </div> */}
 //           <div style={{ display: "flex", justifyContent: "center", marginBottom: "52px" }}>
 //   <img
-//     src={ZynklyLogo}
-//     alt="Zynkly"
+//     src={SucceslyLogo}
+//     alt="Succesly"
 //     style={{
 //       height: "80px",
 //       width: "auto",
@@ -80,7 +80,7 @@
 //           paddingBottom: "24px",
 //           textAlign: "center",
 //         }}>
-//           © 2026 Zynkly · Contact us
+//           © 2026 Succesly · Contact us
 //         </p>
 //       </div>
 //     </div>
@@ -158,7 +158,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({ children }) => {
                   fontFamily: "inherit", // uses whatever global font is set
                 }}
               >
-                Zynkly
+                Succesly
               </span>
             </div>
 
@@ -178,7 +178,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({ children }) => {
             flexShrink: 0,
           }}
         >
-          © 2026 Zynkly · Contact us
+          © 2026 Succesly · Contact us
         </p>
       </div>
     </div>

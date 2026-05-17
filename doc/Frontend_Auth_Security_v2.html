@@ -133,7 +133,7 @@
 <nav>
   <div class="logo">
     <div class="logo-title">🔐 Auth Security v2.0</div>
-    <div class="logo-sub">Zynkly Admin · Frontend PRD · CSRF + RT + JWT</div>
+    <div class="logo-sub">Succesly Admin · Frontend PRD · CSRF + RT + JWT</div>
   </div>
 
   <div class="section-label">Overview</div>
@@ -183,21 +183,21 @@
 <section id="overview">
   <h1>Frontend Auth Security v2.0</h1>
   <p class="subtitle">
-    <span class="en">Complete Developer Guide — JWT · CSRF Token · httpOnly Refresh Token · Silent Refresh · Zynkly Admin</span>
-    <span class="hi">Complete Developer Guide — JWT · CSRF Token · httpOnly Refresh Token · Silent Refresh · Zynkly Admin</span>
+    <span class="en">Complete Developer Guide — JWT · CSRF Token · httpOnly Refresh Token · Silent Refresh · Succesly Admin</span>
+    <span class="hi">Complete Developer Guide — JWT · CSRF Token · httpOnly Refresh Token · Silent Refresh · Succesly Admin</span>
   </p>
 
   <div class="card cl">
     <h3><span class="en">📌 What Did We Build?</span><span class="hi">📌 Humne Kya Banaya?</span></h3>
     <p>
       <span class="en">
-        We implemented a <strong>3-token, 5-layer security architecture</strong> for Zynkly Admin.
+        We implemented a <strong>3-token, 5-layer security architecture</strong> for Succesly Admin.
         This is the same pattern used by <strong>Google, GitHub, Stripe, and Notion</strong>.
         No JWT token is stored in any cookie or localStorage — making it invisible to Cookie Editor,
         XSS attacks, and browser extensions.
       </span>
       <span class="hi">
-        Humne Zynkly Admin ke liye <strong>3-token, 5-layer security architecture</strong> implement ki hai.
+        Humne Succesly Admin ke liye <strong>3-token, 5-layer security architecture</strong> implement ki hai.
         Ye same pattern hai jo <strong>Google, GitHub, Stripe, aur Notion</strong> use karte hain.
         Koi bhi JWT token kisi cookie ya localStorage mein store nahi hai — is wajah se ye Cookie Editor,
         XSS attacks, aur browser extensions ke liye invisible hai.
@@ -652,8 +652,8 @@ withCredentials: true                  ← browser sends rt cookie so server can
   <div class="card cl">
     <h3><span class="en">What is a CSRF Attack?</span><span class="hi">CSRF Attack Kya Hota Hai?</span></h3>
     <p>
-      <span class="en">Imagine you are logged into Zynkly Admin. A hacker sends you a link — <code>hacker.com/trick.html</code>. When you open it, that page silently sends a POST request to <code>api.succesly.in/users/delete</code> using YOUR session cookies. The server sees a valid session and deletes the user. This is CSRF.</span>
-      <span class="hi">Socho tum Zynkly Admin mein logged in ho. Hacker tumhe ek link bhejta hai — <code>hacker.com/trick.html</code>. Jab tum use kholte ho, wo page secretly tumhare session cookies use karke <code>api.succesly.in/users/delete</code> par POST request bhej deta hai. Server valid session dekhta hai aur user delete kar deta hai. Ye hai CSRF.</span>
+      <span class="en">Imagine you are logged into Succesly Admin. A hacker sends you a link — <code>hacker.com/trick.html</code>. When you open it, that page silently sends a POST request to <code>api.succesly.in/users/delete</code> using YOUR session cookies. The server sees a valid session and deletes the user. This is CSRF.</span>
+      <span class="hi">Socho tum Succesly Admin mein logged in ho. Hacker tumhe ek link bhejta hai — <code>hacker.com/trick.html</code>. Jab tum use kholte ho, wo page secretly tumhare session cookies use karke <code>api.succesly.in/users/delete</code> par POST request bhej deta hai. Server valid session dekhta hai aur user delete kar deta hai. Ye hai CSRF.</span>
     </p>
 
     <h3 style="margin-top:16px"><span class="en">How We Block CSRF</span><span class="hi">Hum CSRF Kaise Rokate Hain</span></h3>
@@ -684,7 +684,7 @@ identityInstance.interceptors.request.<span class="f">use</span>((config) => {
     <div class="flow"><span class="fr">HACKER creates malicious page: hacker.com/trap.html</span>
 <span class="fa">         │  Contains: &lt;form action="https://api.succesly.in/users/delete" method="POST"&gt;</span>
 <span class="fa">         ▼</span>
-<span class="fr">User visits hacker.com/trap.html (while logged into Zynkly Admin)</span>
+<span class="fr">User visits hacker.com/trap.html (while logged into Succesly Admin)</span>
 <span class="fa">         │</span>
 <span class="fa">         ▼</span>
 <span class="fr">Browser submits form → POST request to api.succesly.in</span>

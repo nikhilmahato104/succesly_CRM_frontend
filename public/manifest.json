@@ -1,7 +1,7 @@
 {
-  "name": "Zynkly Admin",
+  "name": "Succesly Admin",
   "short_name": "NP Admin",
-  "description": "Zynkly Admin — manage bookings, users, and platform settings.",
+  "description": "Succesly Admin — manage bookings, users, and platform settings.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

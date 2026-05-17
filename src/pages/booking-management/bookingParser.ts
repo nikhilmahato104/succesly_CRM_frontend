@@ -21,7 +21,7 @@ export interface ParsedBookingFields {
 
 const NOISE_PATTERNS: RegExp[] = [
   /^hi\s*$/i, /^hey\s*$/i, /^ok\s*$/i, /^okay\s*$/i, /^yes\s*$/i,
-  /Zynkly/i, /catalogue/i, /wa\.me/i, /preferred timing/i,
+  /Succesly/i, /catalogue/i, /wa\.me/i, /preferred timing/i,
   /choose your/i, /availability/i, /\bthank\b/i, /\bregards\b/i,
   /booking\s*request/i, /dear\s+sir/i, /dear\s+madam/i,
 ];
