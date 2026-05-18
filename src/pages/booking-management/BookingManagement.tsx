@@ -16,7 +16,7 @@ import { emitNavDone } from "../../atoms/NavigationProgress";
 import { selectApiKey, openApiKeyModal } from "../../store/slices/apiKeySlice";
 import { selectAccessData } from "../../store/slices/accessSlice";
 import type { RootState } from "../../store";
-import CreateBookingModal from "./CreateBookingModal";
+import CreateBookingModal, { type InitialBookingData } from "./CreateBookingModal";
 import {
   CleanButton,
   CleanSearchBar,
@@ -241,14 +241,17 @@ const BookingManagement: React.FC = () => {
   const [loading, setLoading] = React.useState(false);
   const [loadingMore, setLoadingMore] = React.useState(false);
   const [hasMore, setHasMore] = React.useState(false);
-  const [showModal, setShowModal] = React.useState(false);
+  const [showModal,      setShowModal]      = React.useState(false);
+  const [modalMode,      setModalMode]      = React.useState<"create" | "view" | "edit">("create");
+  const [selectedBooking,setSelectedBooking]= React.useState<InitialBookingData | null>(null);
 
   const [showDatePanel, setShowDatePanel] = React.useState(false);
   const [showFilterPanel, setShowFilterPanel] = React.useState(false);
   const datePanelRef = useRef<HTMLDivElement>(null);
   const filterPanelRef = useRef<HTMLDivElement>(null);
 
-  const pageRef = useRef(1);
+  const pageRef      = useRef(1);
+  const fetchAbortRef = useRef<AbortController | null>(null);
   const PER_PAGE = 25;
 
   useEffect(() => {
@@ -263,7 +266,8 @@ const BookingManagement: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const id = setTimeout(() => setDebouncedSearch(filters.search.trim()), 350);
+    // 500ms — fires only after the user pauses, not on each keystroke
+    const id = setTimeout(() => setDebouncedSearch(filters.search.trim()), 500);
     return () => clearTimeout(id);
   }, [filters.search]);
 
@@ -299,6 +303,16 @@ const BookingManagement: React.FC = () => {
   const fetchPage = useCallback(
     async (page: number, append: boolean) => {
       if (!apiKey) { dispatch(openApiKeyModal(false)); return; }
+
+      // Abort the previous non-append fetch so stale responses never overwrite
+      // newer results (rapid typing / rapid F5 race condition).
+      let signal: AbortSignal | undefined;
+      if (!append) {
+        fetchAbortRef.current?.abort();
+        fetchAbortRef.current = new AbortController();
+        signal = fetchAbortRef.current.signal;
+      }
+
       append ? setLoadingMore(true) : setLoading(true);
       try {
         const res = await getData<BookingsApiResponse>({
@@ -306,17 +320,25 @@ const BookingManagement: React.FC = () => {
           token: token,
           instance: "identity",
           params: buildParams(page),
+          signal,
         });
         const items = res.data.data;
         setData((prev) => (append ? [...prev, ...items] : items));
         setTotal(res.data.total);
         setHasMore(page < res.data.totalPages);
         pageRef.current = page;
-      } catch {
+      } catch (err: unknown) {
+        // A newer request aborted this one — silently ignore, don't show error
+        const name = (err as any)?.name ?? (err as any)?.code;
+        if (name === "AbortError" || name === "CanceledError" || (err as any)?.message === "canceled") return;
         showToastnew.error("Failed to fetch bookings");
       } finally {
-        append ? setLoadingMore(false) : setLoading(false);
-        if (!append) requestAnimationFrame(() => requestAnimationFrame(() => emitNavDone()));
+        // Skip clearing loading state for aborted requests — the newer request
+        // is still in-flight and owns the loading state.
+        if (!signal?.aborted) {
+          append ? setLoadingMore(false) : setLoading(false);
+          if (!append) requestAnimationFrame(() => requestAnimationFrame(() => emitNavDone()));
+        }
       }
     },
     [apiKey, token, buildParams, dispatch],
@@ -331,15 +353,22 @@ const BookingManagement: React.FC = () => {
   const handleLoadMore = useCallback(() => fetchPage(pageRef.current + 1, true), [fetchPage]);
   const handleRefresh  = useCallback(() => { pageRef.current = 1; setData([]); fetchPage(1, false); }, [fetchPage]);
 
-  // ── Row action handlers ───────────────────────────────────────────────────
-  const handleView = useCallback((row: BookingApiItem) => {
-    showToastnew.info(`View: ${row.reference_id}`);
+  // ── Modal open helpers ────────────────────────────────────────────────────
+  const openModal = useCallback((mode: "create" | "view" | "edit", row?: BookingApiItem) => {
+    setSelectedBooking(row ?? null);
+    setModalMode(mode);
+    setShowModal(true);
   }, []);
 
-  const handleEdit = useCallback((row: BookingApiItem) => {
-    // TODO: call getById, then prefill the edit modal when it exists
-    showToastnew.info(`Edit: ${row.reference_id} — edit modal coming soon`);
+  const closeModal = useCallback(() => {
+    setShowModal(false);
+    setSelectedBooking(null);
+    setModalMode("create");
   }, []);
+
+  // ── Row action handlers ───────────────────────────────────────────────────
+  const handleView = useCallback((row: BookingApiItem) => openModal("view", row), [openModal]);
+  const handleEdit = useCallback((row: BookingApiItem) => openModal("edit", row), [openModal]);
 
   const handleDelete = useCallback(async (row: BookingApiItem) => {
     await deleteData({ endpoint: `bookings/${row._id}`, token: token, instance: "identity" });
@@ -497,7 +526,7 @@ const BookingManagement: React.FC = () => {
             variant="primary"
             size="sm"
             iconLeft={<Plus style={{ width: 13, height: 13 }} />}
-            onClick={() => setShowModal(true)}
+            onClick={() => openModal("create")}
           >
             Create Booking
           </CleanButton>
@@ -533,8 +562,11 @@ const BookingManagement: React.FC = () => {
       {showModal && (
         <CreateBookingModal
           isOpen={showModal}
-          onClose={() => setShowModal(false)}
-          onCreated={() => { setShowModal(false); handleRefresh(); }}
+          onClose={closeModal}
+          onCreated={() => { closeModal(); handleRefresh(); }}
+          onSaved={() => { closeModal(); handleRefresh(); }}
+          mode={modalMode}
+          initialData={selectedBooking ?? undefined}
         />
       )}
     </div>

@@ -586,7 +586,7 @@ const TableSkeleton: React.FC<{
   return (
     <div
       className="overflow-x-auto overflow-y-auto cdg-scroll"
-      style={{ flex: '1 1 0', height: 0, minHeight: 300, background: 'var(--dt-bg)' }}
+      style={{ flex: '1 1 0', height: 0, minHeight: 300, background: 'var(--dt-bg)', scrollbarWidth: 'thin', scrollbarColor: 'var(--dt-scrollbar) transparent' }}
     >
       <table className="w-full border-collapse" style={{ tableLayout: 'fixed', background: 'var(--dt-bg)' }}>
         <thead className="sticky top-0 z-10" style={{ background: 'var(--dt-header)' }}>
@@ -1345,6 +1345,7 @@ export function CustomDatagrid<T extends Record<string, unknown>>({
           flex: '1 1 0', height: 0, minHeight: 300,
           scrollbarWidth: 'thin',
           scrollbarColor: 'var(--dt-scrollbar) transparent',
+          overscrollBehavior: 'contain',
         }}
       >
         <table

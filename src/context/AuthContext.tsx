@@ -108,7 +108,7 @@ function callLoginApi(email: string, password: string) {
   return authAxios.post<LoginResponse>("/auth/login", { email, password });
 }
 
-function callRefreshApi() {
+function callRefreshApiRaw() {
   // rt httpOnly cookie is sent automatically by browser (withCredentials: true)
   return authAxios.post<RefreshResponse>("/auth/refresh", {});
 }
@@ -119,6 +119,66 @@ function fetchProfileApi(accessToken: string) {
     token: accessToken,
     instance: "identity",
   });
+}
+
+// ─── Rapid-refresh guard ──────────────────────────────────────────────────────
+//
+// PROBLEM: rapid F5 presses fire concurrent POST /auth/refresh calls that all
+// carry the same (old) rt httpOnly cookie. The server uses refresh-token rotation
+// with reuse detection:
+//   • First  request → 200 OK, old rt invalidated, new rt issued.
+//   • Second request → reuse of the already-invalidated old rt detected
+//                    → server nukes the entire session AND the newly-issued rt.
+//   • Third  request → uses the new rt, but the session is already dead → 401.
+// Result: user is logged out by pressing F5 a few times quickly.
+//
+// FIX — two serialisation layers:
+//   1. Module-level in-flight promise
+//      Deduplicates calls that happen within the SAME page load
+//      (e.g. React StrictMode double-mount in development).
+//
+//   2. sessionStorage "lock-until" timestamp
+//      Serialises calls across CONSECUTIVE rapid page reloads.
+//      sessionStorage survives F5 within the same browser tab, so page N+1 can
+//      see that page N just started a refresh and should wait for it to settle.
+//      Once the lock window expires the next legitimate load fires immediately.
+
+let _refreshInFlight: ReturnType<typeof callRefreshApiRaw> | null = null;
+
+const _RT_LOCK_KEY      = "__sc_rt_lock";
+const _RT_COOLDOWN_MS   = 2000; // must be > expected max API response time (~500 ms)
+
+function callRefreshApi(): ReturnType<typeof callRefreshApiRaw> {
+  // Layer 1 — within-page dedup
+  if (_refreshInFlight) return _refreshInFlight;
+
+  // Layer 2 — cross-page cooldown
+  let waitMs = 0;
+  try {
+    const lockUntil = Number(sessionStorage.getItem(_RT_LOCK_KEY) || 0);
+    const now       = Date.now();
+    waitMs          = Math.max(0, lockUntil - now);
+    // Extend the lock window so the NEXT rapid page reload also waits
+    sessionStorage.setItem(_RT_LOCK_KEY, String(Math.max(lockUntil, now) + _RT_COOLDOWN_MS));
+  } catch { /* sessionStorage blocked (e.g. some private-mode browsers) — skip guard */ }
+
+  _refreshInFlight = (async () => {
+    if (waitMs > 0) {
+      // Give the previous page's refresh request time to complete and the
+      // browser to store the rotated rt cookie before we send our own call.
+      await new Promise<void>(r => setTimeout(r, waitMs));
+    }
+    try {
+      const result = await callRefreshApiRaw();
+      // On success, clear the lock so a non-rapid refresh later isn't penalised
+      try { sessionStorage.removeItem(_RT_LOCK_KEY); } catch { /* ignore */ }
+      return result;
+    } finally {
+      _refreshInFlight = null;
+    }
+  })();
+
+  return _refreshInFlight;
 }
 
 // ---- Context ----

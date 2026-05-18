@@ -68,12 +68,13 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
     <div
       className="dashboard-shell"
       style={{
-        width:           "100%",
-        overflow:        "hidden",
-        backgroundColor: "var(--sc-shell)",
-        display:         "flex",
-        gap:             isMobileOrTablet ? 0 : "6px",
-        boxSizing:       "border-box",
+        width:            "100%",
+        overflow:         "auto",
+        overscrollBehavior: "none",
+        backgroundColor:  "var(--sc-shell)",
+        display:          "flex",
+        gap:              isMobileOrTablet ? 0 : "6px",
+        boxSizing:        "border-box",
       }}
     >
       {/* ── Sidebar card ─────────────────────────────────────────────────── */}
@@ -113,7 +114,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
           display:       "flex",
           flexDirection: "column",
           height:        "100%",
-          overflow:      "hidden",
+          overflow:      "auto",
         }}
       >
         {isMobileOrTablet && <Navbar />}

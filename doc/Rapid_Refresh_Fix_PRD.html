@@ -1,0 +1,1122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Rapid Refresh Bug Fix PRD — Refresh Token Reuse Detection</title>
+<style>
+  :root {
+    --bg:#0f1117; --card:#1a1d27; --card2:#161922; --border:#2a2d3a;
+    --accent:#6366f1; --accent2:#06b6d4; --green:#22c55e; --yellow:#f59e0b;
+    --red:#ef4444; --orange:#f97316; --purple:#a855f7; --pink:#ec4899;
+    --text:#e2e4ed; --muted:#8b8fa8; --dim:#b0b3c8; --code-bg:#0d1117;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html{scroll-behavior:smooth;}
+  body{font-family:system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.65;display:flex;}
+
+  /* NAV */
+  nav{position:fixed;top:0;left:0;width:252px;height:100vh;background:var(--card);border-right:1px solid var(--border);overflow-y:auto;padding:20px 0;z-index:100;scrollbar-width:thin;scrollbar-color:var(--border) transparent;}
+  nav .logo{padding:0 16px 16px;border-bottom:1px solid var(--border);margin-bottom:8px;}
+  nav .logo-title{font-size:13px;font-weight:800;color:var(--accent);}
+  nav .logo-sub{font-size:10px;color:var(--muted);margin-top:3px;}
+  nav .section-label{padding:14px 16px 4px;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);}
+  nav a{display:block;padding:6px 16px;color:var(--muted);text-decoration:none;font-size:12px;border-left:3px solid transparent;transition:all 120ms;}
+  nav a:hover,nav a.active{background:rgba(99,102,241,.09);color:var(--text);border-left-color:var(--accent);}
+
+  /* MAIN */
+  main{margin-left:252px;padding:36px 52px 80px;max-width:980px;width:100%;}
+
+  /* LANG BAR */
+  .lang-bar{position:sticky;top:0;z-index:50;background:var(--bg);padding:10px 0 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border);margin-bottom:32px;}
+  .lang-bar span{font-size:11px;color:var(--muted);}
+  .lang-btn{padding:5px 18px;border-radius:6px;border:1px solid var(--border);font-size:12px;font-weight:600;cursor:pointer;background:transparent;color:var(--muted);transition:all 140ms;}
+  .lang-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+
+  /* TYPOGRAPHY */
+  h1{font-size:28px;font-weight:800;margin-bottom:6px;}
+  h2{font-size:17px;font-weight:700;margin:38px 0 14px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+  h3{font-size:14px;font-weight:700;color:var(--accent2);margin:20px 0 8px;}
+  h4{font-size:13px;font-weight:600;color:var(--dim);margin:14px 0 6px;}
+  p{color:var(--dim);margin-bottom:10px;}
+  ul,ol{padding-left:22px;color:var(--dim);margin-bottom:10px;}
+  li{margin-bottom:5px;}
+  strong{color:var(--text);}
+  code{background:rgba(99,102,241,.12);color:#a5b4fc;padding:1px 6px;border-radius:4px;font-family:monospace;font-size:12px;}
+  .subtitle{font-size:13px;color:var(--muted);margin-bottom:24px;}
+
+  /* BADGES */
+  .badge{display:inline-flex;align-items:center;gap:4px;padding:2px 10px;border-radius:100px;font-size:11px;font-weight:700;vertical-align:middle;}
+  .bg{background:rgba(34,197,94,.12);color:var(--green);border:1px solid rgba(34,197,94,.25);}
+  .br{background:rgba(239,68,68,.12);color:var(--red);border:1px solid rgba(239,68,68,.25);}
+  .by{background:rgba(245,158,11,.12);color:var(--yellow);border:1px solid rgba(245,158,11,.25);}
+  .bp{background:rgba(168,85,247,.12);color:var(--purple);border:1px solid rgba(168,85,247,.25);}
+  .bb{background:rgba(6,182,212,.12);color:var(--accent2);border:1px solid rgba(6,182,212,.25);}
+  .bo{background:rgba(249,115,22,.12);color:var(--orange);border:1px solid rgba(249,115,22,.25);}
+
+  /* CARDS */
+  .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px 24px;margin-bottom:14px;}
+  .cl{border-left:3px solid var(--accent);}
+  .clg{border-left:3px solid var(--green);}
+  .clr{border-left:3px solid var(--red);}
+  .cly{border-left:3px solid var(--yellow);}
+  .clp{border-left:3px solid var(--purple);}
+  .clo{border-left:3px solid var(--orange);}
+
+  /* FLOW DIAGRAMS */
+  .flow{background:var(--code-bg);border:1px solid var(--border);border-radius:8px;padding:18px 22px;margin:12px 0;font-family:'JetBrains Mono','Fira Code',monospace;font-size:12px;line-height:2;overflow-x:auto;white-space:pre;}
+  .fg{color:var(--green);}
+  .fr{color:var(--red);}
+  .fy{color:var(--yellow);}
+  .fb{color:var(--accent2);}
+  .fp{color:var(--purple);}
+  .fm{color:var(--muted);}
+  .fa{color:#64748b;}
+
+  /* CODE */
+  pre{background:var(--code-bg);border:1px solid var(--border);border-radius:8px;padding:16px 20px;font-family:'JetBrains Mono','Fira Code',monospace;font-size:12px;line-height:1.85;overflow-x:auto;margin:10px 0;color:var(--dim);}
+  pre .k{color:#c084fc;}
+  pre .s{color:#86efac;}
+  pre .c{color:#475569;font-style:italic;}
+  pre .f{color:#67e8f9;}
+  pre .n{color:#fde68a;}
+  pre .o{color:#fb923c;}
+
+  /* TABLE */
+  table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13px;}
+  th{background:rgba(99,102,241,.1);color:var(--text);padding:10px 14px;text-align:left;border:1px solid var(--border);font-size:11px;text-transform:uppercase;letter-spacing:.04em;}
+  td{padding:10px 14px;border:1px solid var(--border);color:var(--dim);vertical-align:top;}
+  tr:hover td{background:rgba(255,255,255,.015);}
+
+  /* FILE PILL */
+  .fp-pill{display:inline-flex;align-items:center;gap:5px;background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.2);border-radius:5px;padding:3px 10px;font-size:11px;font-weight:600;color:#a5b4fc;font-family:monospace;margin:2px 2px 6px;}
+  .fp-pill::before{content:'📄';}
+
+  /* STEP LIST */
+  .steps{list-style:none;padding:0;}
+  .steps li{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid rgba(42,45,58,.5);}
+  .steps li:last-child{border-bottom:none;}
+  .snum{width:24px;height:24px;border-radius:50%;background:rgba(99,102,241,.2);color:var(--accent);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;}
+
+  /* LAYER BOX */
+  .layers{display:flex;flex-direction:column;gap:0;}
+  .layer{padding:12px 18px;border:1px solid var(--border);border-top:none;display:flex;align-items:center;gap:14px;}
+  .layer:first-child{border-top:1px solid var(--border);border-radius:8px 8px 0 0;}
+  .layer:last-child{border-radius:0 0 8px 8px;}
+  .lnum{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0;}
+
+  /* WARN / INFO / SUCCESS BOX */
+  .warn{background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.25);border-radius:8px;padding:12px 16px;font-size:13px;color:var(--yellow);margin:12px 0;}
+  .info-box{background:rgba(6,182,212,.06);border:1px solid rgba(6,182,212,.2);border-radius:8px;padding:12px 16px;font-size:13px;color:var(--accent2);margin:12px 0;}
+  .success-box{background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.2);border-radius:8px;padding:12px 16px;font-size:13px;color:var(--green);margin:12px 0;}
+  .error-box{background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.25);border-radius:8px;padding:12px 16px;font-size:13px;color:var(--red);margin:12px 0;}
+
+  /* TIMELINE */
+  .timeline{position:relative;padding-left:28px;margin:14px 0;}
+  .timeline::before{content:'';position:absolute;left:9px;top:0;bottom:0;width:2px;background:var(--border);}
+  .tl-item{position:relative;margin-bottom:18px;}
+  .tl-dot{position:absolute;left:-28px;top:3px;width:16px;height:16px;border-radius:50%;border:2px solid var(--border);background:var(--card);}
+  .tl-dot.red{border-color:var(--red);background:rgba(239,68,68,.2);}
+  .tl-dot.green{border-color:var(--green);background:rgba(34,197,94,.2);}
+  .tl-dot.yellow{border-color:var(--yellow);background:rgba(245,158,11,.2);}
+
+  /* NETWORK TABLE MOCK */
+  .net-row{display:flex;align-items:center;gap:0;font-family:monospace;font-size:11px;border-bottom:1px solid var(--border);padding:6px 10px;}
+  .net-row:first-child{background:rgba(99,102,241,.08);font-weight:700;font-size:10px;letter-spacing:.05em;text-transform:uppercase;}
+  .net-col-name{width:120px;flex-shrink:0;}
+  .net-col-status{width:80px;flex-shrink:0;}
+  .net-col-cookie{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .net-col-result{width:160px;flex-shrink:0;}
+
+  /* HINGLISH TOGGLE */
+  .hi{display:none;}.en{display:block;}
+  body.hi-mode .hi{display:block;}body.hi-mode .en{display:none;}
+  span.hi{display:none;}span.en{display:inline;}
+  body.hi-mode span.hi{display:inline;}body.hi-mode span.en{display:none;}
+
+  ::-webkit-scrollbar{width:5px;height:5px;}
+  ::-webkit-scrollbar-track{background:var(--bg);}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════ SIDEBAR ═══════════════════════════ -->
+<nav>
+  <div class="logo">
+    <div class="logo-title">🔄 Rapid Refresh Fix</div>
+    <div class="logo-sub">Succesly Admin · Bug Fix PRD · RT Reuse Detection</div>
+  </div>
+
+  <div class="section-label">Overview</div>
+  <a href="#overview">What Was The Bug</a>
+  <a href="#evidence">Network Evidence</a>
+  <a href="#rootcause">Root Cause Deep Dive</a>
+
+  <div class="section-label">How Server Works</div>
+  <a href="#server-rotation">RT Rotation Explained</a>
+  <a href="#reuse-detection">Reuse Detection Logic</a>
+
+  <div class="section-label">Bug Flow</div>
+  <a href="#bug-flow">Before Fix — Bug Timeline</a>
+  <a href="#fix-flow">After Fix — Fixed Timeline</a>
+
+  <div class="section-label">The Fix</div>
+  <a href="#two-layers">Two-Layer Solution</a>
+  <a href="#layer1">Layer 1 — In-Flight Dedup</a>
+  <a href="#layer2">Layer 2 — SessionStorage Lock</a>
+  <a href="#math">Wait Time Math</a>
+
+  <div class="section-label">Code</div>
+  <a href="#code-before">Code Before Fix</a>
+  <a href="#code-after">Code After Fix</a>
+  <a href="#files-changed">Files Changed</a>
+
+  <div class="section-label">Verification</div>
+  <a href="#testing">How To Test</a>
+  <a href="#edge-cases">Edge Cases</a>
+  <a href="#tradeoffs">Trade-offs</a>
+  <a href="#checklist">Fix Checklist</a>
+</nav>
+
+<!-- ═══════════════════════════ MAIN ═══════════════════════════ -->
+<main>
+
+<!-- LANG BAR -->
+<div class="lang-bar">
+  <span>Language / Bhasha:</span>
+  <button class="lang-btn active" id="btn-en" onclick="setLang('en')">🇬🇧 English</button>
+  <button class="lang-btn"        id="btn-hi" onclick="setLang('hi')">🇮🇳 Hinglish</button>
+</div>
+
+<!-- ═══════ OVERVIEW ═══════ -->
+<section id="overview">
+  <h1>
+    <span class="en">Rapid Refresh Bug Fix PRD</span>
+    <span class="hi">Rapid Refresh Bug Fix PRD</span>
+  </h1>
+  <p class="subtitle">
+    <span class="en">Refresh Token Reuse Detection — How We Fixed the "User Gets Logged Out on Rapid F5" Bug · Succesly Admin</span>
+    <span class="hi">Refresh Token Reuse Detection — "Rapid F5 Marne se User Logout Ho Jaata Tha" Bug Ko Kaise Fix Kiya · Succesly Admin</span>
+  </p>
+
+  <div class="card cl">
+    <h3><span class="en">📌 Bug Summary (One Line)</span><span class="hi">📌 Bug Summary (Ek Line)</span></h3>
+    <p>
+      <span class="en">
+        When a user rapidly pressed <strong>F5 (browser refresh) multiple times</strong>, they were <strong>automatically logged out</strong>
+        and redirected to the login page — even though their session was valid.
+        The root cause was concurrent <code>POST /auth/refresh</code> requests carrying the same refresh token,
+        which triggered the server's <strong>Refresh Token Reuse Detection</strong> and caused it to
+        <strong>nuke the entire session</strong>.
+      </span>
+      <span class="hi">
+        Jab user rapidly <strong>F5 (browser refresh) kaafi baar daba deta tha</strong>, to woh <strong>automatic logout</strong> ho jaata tha
+        aur login page pe redirect ho jaata tha — jabki uski session valid thi.
+        Root cause tha concurrent <code>POST /auth/refresh</code> requests jo same refresh token le jaate the,
+        jis se server ka <strong>Refresh Token Reuse Detection</strong> trigger hota tha aur
+        <strong>poori session nuke ho jaati thi</strong>.
+      </span>
+    </p>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;">
+      <span class="badge br">Severity: HIGH 🔴</span>
+      <span class="badge by">Type: Race Condition</span>
+      <span class="badge bp">Area: Auth / Security</span>
+      <span class="badge bg">Status: FIXED ✅</span>
+      <span class="badge bb">File: AuthContext.tsx</span>
+    </div>
+  </div>
+
+  <!-- WHAT CHANGED FAST SUMMARY -->
+  <div class="card clg">
+    <h3><span class="en">⚡ What Changed — Quick Answer</span><span class="hi">⚡ Kya Badla — Quick Answer</span></h3>
+    <table>
+      <thead>
+        <tr>
+          <th><span class="en">Before Fix</span><span class="hi">Fix se Pehle</span></th>
+          <th><span class="en">After Fix</span><span class="hi">Fix ke Baad</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="en">Every F5 = instant <code>POST /auth/refresh</code></span><span class="hi">Har F5 = turant <code>POST /auth/refresh</code></span></td>
+          <td><span class="en">If a refresh was just made, wait for it to settle first</span><span class="hi">Agar abhi refresh hua tha, pehle settle hone do</span></td>
+        </tr>
+        <tr>
+          <td><span class="en">3 rapid F5 = 3 concurrent requests with same <code>rt</code> cookie</span><span class="hi">3 rapid F5 = 3 concurrent requests same <code>rt</code> cookie ke saath</span></td>
+          <td><span class="en">3 rapid F5 = serialised — each waits for previous to complete</span><span class="hi">3 rapid F5 = serialised — har ek pehle wale ke complete hone ka wait karta hai</span></td>
+        </tr>
+        <tr>
+          <td><span class="en">Server detects reuse → <strong>nukes session</strong> → user logged out</span><span class="hi">Server reuse detect karta hai → <strong>session nuke</strong> → user logout</span></td>
+          <td><span class="en">No concurrent calls → no reuse detected → session safe</span><span class="hi">No concurrent calls → reuse detect nahi hoti → session safe</span></td>
+        </tr>
+        <tr>
+          <td><span class="en">Guard: only <code>initRef.current</code> (same page load only)</span><span class="hi">Guard: sirf <code>initRef.current</code> (same page load mein hi kaam karta)</span></td>
+          <td><span class="en">Guard: <code>initRef</code> + <code>_refreshInFlight</code> + <code>sessionStorage</code> lock</span><span class="hi">Guard: <code>initRef</code> + <code>_refreshInFlight</code> + <code>sessionStorage</code> lock</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ═══════ EVIDENCE ═══════ -->
+<section id="evidence">
+  <h2><span class="en">Network Evidence — What We Saw in DevTools</span><span class="hi">Network Evidence — DevTools Mein Kya Dikha</span></h2>
+
+  <p>
+    <span class="en">The screenshot from the user's browser showed this exact sequence in the Network tab after rapid F5 presses:</span>
+    <span class="hi">User ke browser screenshot mein Network tab mein rapid F5 ke baad ye exact sequence dikha:</span>
+  </p>
+
+  <div style="background:var(--code-bg);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin:12px 0;">
+    <div class="net-row">
+      <div class="net-col-name">Request</div>
+      <div class="net-col-status">Status</div>
+      <div class="net-col-cookie">Cookie Sent (rt token value)</div>
+      <div class="net-col-result">Result</div>
+    </div>
+    <div class="net-row">
+      <div class="net-col-name" style="color:var(--green)">refresh</div>
+      <div class="net-col-status"><span class="badge bg">200 OK</span></div>
+      <div class="net-col-cookie" style="color:var(--yellow)">rt = 3e6bfae46b0f6fe1…  (old token)</div>
+      <div class="net-col-result" style="color:var(--green)">✅ New cookie set: rt = 85a02e…</div>
+    </div>
+    <div class="net-row">
+      <div class="net-col-name" style="color:var(--green)">profile</div>
+      <div class="net-col-status"><span class="badge bb">304</span></div>
+      <div class="net-col-cookie" style="color:var(--muted)">—</div>
+      <div class="net-col-result" style="color:var(--accent2)">User profile fetched</div>
+    </div>
+    <div class="net-row">
+      <div class="net-col-name" style="color:var(--green)">refresh</div>
+      <div class="net-col-status"><span class="badge bg">200 OK</span></div>
+      <div class="net-col-cookie" style="color:var(--yellow)">rt = 3e6bfae46b0f6fe1…  (SAME old token)</div>
+      <div class="net-col-result" style="color:var(--red)">⚠️ Reuse detected silently</div>
+    </div>
+    <div class="net-row">
+      <div class="net-col-name" style="color:var(--yellow)">(unknown)</div>
+      <div class="net-col-status"><span class="badge by">unknown</span></div>
+      <div class="net-col-cookie" style="color:var(--muted)">—</div>
+      <div class="net-col-result" style="color:var(--yellow)">Request aborted (F5 again)</div>
+    </div>
+    <div class="net-row">
+      <div class="net-col-name" style="color:var(--red)">refresh</div>
+      <div class="net-col-status"><span class="badge br">401</span></div>
+      <div class="net-col-cookie" style="color:var(--orange)">rt = 85a02e080e1abd…  (NEW token, but session DEAD)</div>
+      <div class="net-col-result" style="color:var(--red)">❌ Session nuked → User logged out</div>
+    </div>
+  </div>
+
+  <div class="warn">
+    <span class="en">⚠️ <strong>Key Observation:</strong> The 401 request used the <strong>NEW</strong> token (<code>rt=85a02e…</code>) that was set by the first successful response — not the old token. This proves the server didn't just reject the old token — it <strong>invalidated the entire session family</strong> when it detected reuse of the old token by a concurrent request.</span>
+    <span class="hi">⚠️ <strong>Key Observation:</strong> 401 request ne <strong>NEW</strong> token (<code>rt=85a02e…</code>) use kiya tha jo pehle successful response ne set kiya tha — old token nahi. Iska matlab hai server ne sirf old token reject nahi kiya — usne <strong>poora session family invalidate</strong> kar diya jab concurrent request ke through old token ka reuse detect kiya.</span>
+  </div>
+
+  <div class="card cly">
+    <h3><span class="en">🔑 The Two Key Network Requests Explained</span><span class="hi">🔑 Do Key Network Requests Ki Explanation</span></h3>
+
+    <h4><span class="en">Request 1 — 200 OK (Successful Refresh)</span><span class="hi">Request 1 — 200 OK (Successful Refresh)</span></h4>
+    <ul>
+      <li><span class="en"><strong>Cookie sent:</strong> <code>rt=3e6bfae46b0f6fe1eeb962ef8785d78601d8e519…</code> (old token)</span><span class="hi"><strong>Cookie bheja:</strong> <code>rt=3e6bfae46b0f6fe1…</code> (old token)</span></li>
+      <li><span class="en"><strong>Response set-cookie:</strong> <code>rt=85a02e080e1abd92540fcc2f2b47cf3accd4c59…</code> (new token)</span><span class="hi"><strong>Response set-cookie:</strong> <code>rt=85a02e…</code> (new token)</span></li>
+      <li><span class="en"><strong>Status:</strong> 200 — server rotated the token successfully</span><span class="hi"><strong>Status:</strong> 200 — server ne token rotate kiya successfully</span></li>
+    </ul>
+
+    <h4><span class="en">Request 2 — 401 Unauthorized (Session Dead)</span><span class="hi">Request 2 — 401 Unauthorized (Session Dead)</span></h4>
+    <ul>
+      <li><span class="en"><strong>Cookie sent:</strong> <code>rt=85a02e080e1abd92540fcc2f2b47cf3accd4c59…</code> (the NEW token)</span><span class="hi"><strong>Cookie bheja:</strong> <code>rt=85a02e…</code> (NEW token)</span></li>
+      <li><span class="en"><strong>Status:</strong> 401 — even the new token is invalid because the session was nuked</span><span class="hi"><strong>Status:</strong> 401 — new token bhi invalid hai kyunki session nuke ho gayi</span></li>
+      <li><span class="en"><strong>Initiator:</strong> <code>AuthContext.tsx:113</code> — clearly our refresh call</span><span class="hi"><strong>Initiator:</strong> <code>AuthContext.tsx:113</code> — clearly hamara refresh call</span></li>
+    </ul>
+  </div>
+</section>
+
+<!-- ═══════ ROOT CAUSE ═══════ -->
+<section id="rootcause">
+  <h2><span class="en">Root Cause Deep Dive</span><span class="hi">Root Cause Deep Dive</span></h2>
+
+  <div class="card clr">
+    <h3><span class="en">🔴 The Exact Problem in Code</span><span class="hi">🔴 Code Mein Exact Problem</span></h3>
+    <p>
+      <span class="en">The old <code>AuthContext.tsx</code> used <code>initRef.current</code> as a guard to prevent duplicate refresh calls:</span>
+      <span class="hi">Purana <code>AuthContext.tsx</code> <code>initRef.current</code> use karta tha duplicate refresh calls rokne ke liye:</span>
+    </p>
+<pre>
+<span class="c">// OLD CODE — initRef only protects within ONE page load</span>
+<span class="k">const</span> <span class="n">initRef</span> = <span class="f">useRef</span>(<span class="k">false</span>);
+
+<span class="f">useEffect</span>(() => {
+  <span class="k">if</span> (<span class="n">initRef</span>.current) <span class="k">return</span>; <span class="c">// ← guard</span>
+  <span class="n">initRef</span>.current = <span class="k">true</span>;
+
+  (<span class="k">async</span> () => {
+    <span class="k">const</span> <span class="n">refreshRes</span> = <span class="k">await</span> <span class="f">callRefreshApi</span>(); <span class="c">// fires with NO guard across F5</span>
+    <span class="c">// ...</span>
+  })();
+}, []);
+</pre>
+    <div class="error-box">
+      <span class="en">❌ <strong>Fatal Flaw:</strong> <code>useRef</code> lives in component memory. Every F5 creates a <strong>completely new JavaScript execution context</strong>. <code>initRef.current</code> resets to <code>false</code> on every page load. The guard is useless across page refreshes.</span>
+      <span class="hi">❌ <strong>Fatal Flaw:</strong> <code>useRef</code> component memory mein rehta hai. Har F5 ek <strong>bilkul naya JavaScript execution context</strong> create karta hai. <code>initRef.current</code> har page load pe <code>false</code> reset ho jaata hai. Guard page refreshes ke across kuch nahi karta.</span>
+    </div>
+  </div>
+
+  <div class="card cly">
+    <h3><span class="en">⚠️ Why <code>initRef</code> Does NOT Help With Rapid F5</span><span class="hi">⚠️ <code>initRef</code> Rapid F5 Ke Saath Kyun Kaam Nahi Karta</span></h3>
+    <table>
+      <thead>
+        <tr>
+          <th><span class="en">Scenario</span><span class="hi">Scenario</span></th>
+          <th><span class="en">Does initRef help?</span><span class="hi">initRef kaam karta hai?</span></th>
+          <th><span class="en">Why?</span><span class="hi">Kyun?</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="en">React StrictMode double mount (same page load)</span><span class="hi">React StrictMode double mount (same page load)</span></td>
+          <td><span class="badge bg">✅ YES</span></td>
+          <td><span class="en">Same JS memory, ref persists</span><span class="hi">Same JS memory, ref persist karta hai</span></td>
+        </tr>
+        <tr>
+          <td><span class="en">Component unmounts/remounts in same page</span><span class="hi">Component same page mein unmount/remount hota hai</span></td>
+          <td><span class="badge bg">✅ YES</span></td>
+          <td><span class="en">Same JS memory, ref persists</span><span class="hi">Same JS memory, ref persist karta hai</span></td>
+        </tr>
+        <tr>
+          <td><span class="en">User presses F5 (browser refresh)</span><span class="hi">User F5 dabata hai (browser refresh)</span></td>
+          <td><span class="badge br">❌ NO</span></td>
+          <td><span class="en">New page load = new JS module eval = <code>initRef.current = false</code> again</span><span class="hi">Naya page load = naya JS module eval = <code>initRef.current = false</code> fir se</span></td>
+        </tr>
+        <tr>
+          <td><span class="en">User presses F5 rapidly 3 times</span><span class="hi">User rapidly 3 baar F5 dabata hai</span></td>
+          <td><span class="badge br">❌ NO</span></td>
+          <td><span class="en">3 new JS contexts = 3 concurrent requests</span><span class="hi">3 naye JS contexts = 3 concurrent requests</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ═══════ SERVER ROTATION ═══════ -->
+<section id="server-rotation">
+  <h2><span class="en">How The Server Works — RT Rotation</span><span class="hi">Server Kaise Kaam Karta Hai — RT Rotation</span></h2>
+
+  <div class="card cl">
+    <h3><span class="en">🔄 Refresh Token Rotation (Standard Security)</span><span class="hi">🔄 Refresh Token Rotation (Standard Security)</span></h3>
+    <p>
+      <span class="en">The Succesly backend uses <strong>Refresh Token Rotation</strong> — a standard security practice also used by Auth0, Google, GitHub. Every time you call <code>POST /auth/refresh</code> with a valid <code>rt</code> cookie:</span>
+      <span class="hi">Succesly backend <strong>Refresh Token Rotation</strong> use karta hai — Auth0, Google, GitHub bhi yahi use karte hain. Har baar jab aap valid <code>rt</code> cookie ke saath <code>POST /auth/refresh</code> call karte ho:</span>
+    </p>
+    <div class="flow"><span class="fg">Browser</span>          <span class="fm">──── POST /auth/refresh ────→</span>   <span class="fb">Server</span>
+<span class="fm">  (sends rt cookie = OLD_TOKEN automatically)</span>
+
+<span class="fb">Server</span> checks:
+  <span class="fg">1.</span> Is OLD_TOKEN in the database?         <span class="fg">→ YES</span>
+  <span class="fg">2.</span> Is it expired?                         <span class="fg">→ NO</span>
+  <span class="fg">3.</span> Has it been used before?               <span class="fg">→ NO (first use)</span>
+  <span class="fg">4.</span> Mark OLD_TOKEN as USED in DB
+  <span class="fg">5.</span> Generate NEW_TOKEN
+  <span class="fg">6.</span> Store NEW_TOKEN in DB, linked to same user session
+  <span class="fg">7.</span> Return: accessToken + csrfToken + set-cookie: rt=NEW_TOKEN</div>
+    <p>
+      <span class="en">After this, <code>OLD_TOKEN</code> is <strong>permanently invalidated</strong>. If anyone tries to use it again, the server knows it was already rotated.</span>
+      <span class="hi">Iske baad <code>OLD_TOKEN</code> <strong>permanently invalid</strong> ho jaata hai. Agar koi phir se use karne ki koshish kare, server ko pata hai ki ye already rotate ho chuka hai.</span>
+    </p>
+  </div>
+</section>
+
+<!-- ═══════ REUSE DETECTION ═══════ -->
+<section id="reuse-detection">
+  <h2><span class="en">Refresh Token Reuse Detection — The Security Trigger</span><span class="hi">Refresh Token Reuse Detection — Security Trigger</span></h2>
+
+  <div class="card clr">
+    <h3><span class="en">🛡️ What Is Reuse Detection?</span><span class="hi">🛡️ Reuse Detection Kya Hai?</span></h3>
+    <p>
+      <span class="en">
+        Reuse Detection is an advanced security mechanism. If an <strong>already-rotated (used) refresh token</strong> is sent again, it means one of two things:
+      </span>
+      <span class="hi">
+        Reuse Detection ek advanced security mechanism hai. Agar ek <strong>already-rotated (use ho chuka) refresh token</strong> dobara bheja jaaye, to iska matlab do cheez ho sakti hai:
+      </span>
+    </p>
+    <ol>
+      <li><span class="en"><strong>Token Theft:</strong> An attacker stole the old token and is trying to use it after the legitimate user already refreshed.</span><span class="hi"><strong>Token Theft:</strong> Attacker ne purana token chura liya aur legitimate user ke refresh karne ke baad bhi use kar raha hai.</span></li>
+      <li><span class="en"><strong>Concurrent Request Bug:</strong> (Our case) Multiple page loads fired the same token concurrently — a frontend bug, not an attack.</span><span class="hi"><strong>Concurrent Request Bug:</strong> (Hamara case) Multiple page loads ne same token concurrently fire kiya — frontend bug tha, attack nahi.</span></li>
+    </ol>
+    <p>
+      <span class="en">The server <strong>cannot tell the difference</strong> between these two. So it takes the safest action in both cases:</span>
+      <span class="hi">Server <strong>dono ke beech difference nahi bata sakta</strong>. Isliye woh dono cases mein sabse safe action leta hai:</span>
+    </p>
+
+    <div class="flow"><span class="fb">Server</span> receives request with ALREADY-ROTATED token:
+
+  <span class="fr">❌ Reuse Detected!</span>
+     <span class="fr">1.</span> Mark this token as COMPROMISED
+     <span class="fr">2.</span> Find ALL tokens in this session family (token lineage tree)
+     <span class="fr">3.</span> Invalidate EVERY token in the family — including the new ones
+     <span class="fr">4.</span> Delete session from database
+     <span class="fr">5.</span> Return 401 Unauthorized
+     <span class="fr">6.</span> Clear the rt cookie via set-cookie with Max-Age=0
+
+<span class="fr">Result: User is fully logged out. Even valid new tokens stop working.</span></div>
+
+    <div class="info-box">
+      <span class="en">ℹ️ <strong>Why so extreme?</strong> RFC 6819 (OAuth 2.0 Threat Model) recommends this behaviour. If a token is being reused, it might mean it was stolen. Nuking the session prevents the attacker from continuing to use it even if they have a rotated copy.</span>
+      <span class="hi">ℹ️ <strong>Itna extreme kyun?</strong> RFC 6819 (OAuth 2.0 Threat Model) yahi recommend karta hai. Agar token reuse ho raha hai, matlab shayad chori ho gaya ho. Session nuke karne se attacker ko rotated copy milne ke baad bhi koi fayda nahi hota.</span>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════ BUG FLOW ═══════ -->
+<section id="bug-flow">
+  <h2><span class="en">Before Fix — Exact Bug Timeline</span><span class="hi">Fix Se Pehle — Exact Bug Timeline</span></h2>
+
+  <p>
+    <span class="en">Here is what happened millisecond by millisecond when a user rapidly pressed F5 three times:</span>
+    <span class="hi">Jab user ne rapidly 3 baar F5 dabaya tab millisecond by millisecond kya hua:</span>
+  </p>
+
+  <div class="flow"><span class="fm">T = 0 ms</span>
+  <span class="fy">User presses F5</span> → Browser reloads page
+  <span class="fg">Page Load #1</span> starts. React mounts. <span class="k">initRef.current</span> = <span class="k">false</span> (fresh JS context)
+  <span class="fg">initRef</span> set to <span class="k">true</span>.
+  <span class="fg">POST /auth/refresh</span> → cookie: <span class="n">rt = OLD_TOKEN</span>  ← IN FLIGHT ✈️
+
+<span class="fm">T = 150 ms</span>
+  <span class="fy">User presses F5 again</span> → Browser starts new page load (old page unloads)
+  <span class="fg">Page Load #2</span> starts. React mounts. <span class="k">initRef.current</span> = <span class="k">false</span> (new JS context!)
+  <span class="fg">initRef</span> set to <span class="k">true</span>.
+  <span class="fg">POST /auth/refresh</span> → cookie: <span class="n">rt = OLD_TOKEN</span>  ← IN FLIGHT ✈️ (SAME TOKEN!)
+
+<span class="fm">T = 300 ms</span>
+  <span class="fy">User presses F5 again</span> → Page Load #3 starts
+  <span class="fg">POST /auth/refresh</span> → cookie: <span class="n">rt = OLD_TOKEN</span>  ← IN FLIGHT ✈️ (STILL SAME TOKEN!)
+
+<span class="fm">T = 450 ms</span>
+  <span class="fg">Server processes Request #1</span> (from Page Load #1)
+  → OLD_TOKEN rotated → NEW_TOKEN created → <span class="fg">200 OK</span>
+  → set-cookie: rt = NEW_TOKEN
+  <span class="fm">(But Page #1 is already unloaded — browser discards the response)</span>
+
+<span class="fm">T = 460 ms</span>
+  <span class="fr">Server processes Request #2</span> (from Page Load #2)
+  → OLD_TOKEN presented again → <span class="fr">REUSE DETECTED!</span>
+  → <span class="fr">Nukes ENTIRE session (including NEW_TOKEN!)</span>
+  → Returns 401
+
+<span class="fm">T = 470 ms</span>
+  <span class="fg">Page Load #3</span>'s refresh fires → cookie: <span class="n">rt = NEW_TOKEN</span>
+  → Server: "This token's session is dead" → <span class="fr">401 Unauthorized</span>
+
+<span class="fr">Result: User sees login page. Session destroyed. ❌</span></div>
+</section>
+
+<!-- ═══════ FIX FLOW ═══════ -->
+<section id="fix-flow">
+  <h2><span class="en">After Fix — How Rapid F5 Now Works</span><span class="hi">Fix Ke Baad — Rapid F5 Ab Kaise Kaam Karta Hai</span></h2>
+
+  <div class="flow"><span class="fm">T = 0 ms</span>
+  <span class="fy">User presses F5</span> → Page Load #1 starts
+  <span class="fg">callRefreshApi()</span> called
+  → sessionStorage: <span class="n">__sc_rt_lock</span> = 0 (empty) → waitMs = 0
+  → sets <span class="n">__sc_rt_lock</span> = <span class="fy">T+2000</span> (locks for 2 seconds)
+  → <span class="fg">POST /auth/refresh</span> fires IMMEDIATELY → cookie: <span class="n">rt = OLD_TOKEN</span>  ✈️
+
+<span class="fm">T = 150 ms</span>
+  <span class="fy">User presses F5 again</span> → Page Load #2 starts
+  <span class="fg">callRefreshApi()</span> called
+  → sessionStorage: <span class="n">__sc_rt_lock</span> = <span class="fy">T+2000</span> → waitMs = <span class="fy">1850 ms</span>
+  → sets <span class="n">__sc_rt_lock</span> = <span class="fy">T+150+2000 = T+2150</span> (extends lock)
+  → <span class="fg">WAITING 1850 ms</span> before firing... 🕐
+
+<span class="fm">T = 300 ms</span>
+  <span class="fy">User presses F5 again</span> → Page Load #3 starts
+  <span class="fg">callRefreshApi()</span> called
+  → sessionStorage: <span class="n">__sc_rt_lock</span> = <span class="fy">T+2150</span> → waitMs = <span class="fy">1850 ms</span>
+  → sets <span class="n">__sc_rt_lock</span> = <span class="fy">T+300+2000 = T+2300</span> (extends lock again)
+  → <span class="fg">WAITING 1850 ms</span> before firing... 🕐
+
+<span class="fm">T = 500 ms</span>
+  <span class="fg">Server processes Page#1's request</span> → <span class="fg">200 OK</span>
+  → OLD_TOKEN rotated → NEW_TOKEN issued
+  → Browser stores <span class="n">rt = NEW_TOKEN</span> in httpOnly cookie ✅
+  → <span class="k">sessionStorage</span>.<span class="f">removeItem</span>(<span class="n">'__sc_rt_lock'</span>) ← lock cleared on success ✅
+
+<span class="fm">T = 2000 ms</span> (Page #2's wait completes)
+  <span class="fg">POST /auth/refresh</span> → cookie: <span class="n">rt = NEW_TOKEN</span>  (correct rotated token!) ✈️
+  → <span class="fg">200 OK</span> → User stays logged in ✅
+
+<span class="fm">T = 2150 ms</span> (Page #3's wait completes)
+  <span class="fg">POST /auth/refresh</span> → cookie: <span class="n">rt = NEWEST_TOKEN</span> ✈️
+  → <span class="fg">200 OK</span> → User stays logged in ✅
+
+<span class="fg">Result: User sees their dashboard. Session intact. ✅</span></div>
+
+  <div class="success-box">
+    <span class="en">✅ <strong>Key Insight:</strong> By the time Page #2 and Page #3 fire their requests, the previous refresh has already completed and the browser has stored the <strong>rotated cookie</strong>. No concurrent requests with the same token = no reuse detection = no session nuke.</span>
+    <span class="hi">✅ <strong>Key Insight:</strong> Jab Page #2 aur Page #3 apne requests fire karte hain, previous refresh already complete ho chuka hota hai aur browser <strong>rotated cookie</strong> store kar chuka hota hai. Same token ke saath concurrent requests nahi = reuse detection nahi = session nuke nahi.</span>
+  </div>
+</section>
+
+<!-- ═══════ TWO LAYERS ═══════ -->
+<section id="two-layers">
+  <h2><span class="en">The Two-Layer Solution</span><span class="hi">Do-Layer Solution</span></h2>
+
+  <div class="layers">
+    <div class="layer">
+      <div class="lnum" style="background:rgba(99,102,241,.2);color:var(--accent);">L1</div>
+      <div>
+        <strong><span class="en">Module-Level In-Flight Promise Deduplication</span><span class="hi">Module-Level In-Flight Promise Deduplication</span></strong>
+        <p style="margin:4px 0 0;font-size:12px;">
+          <span class="en">Prevents multiple calls within the <strong>same page load</strong>. Covers React StrictMode double-mount in development, or any scenario where AuthProvider mounts multiple times before the first refresh completes. Variable: <code>_refreshInFlight</code></span>
+          <span class="hi">Ek hi page load ke andar multiple calls rokta hai. React StrictMode double-mount aur wo scenarios cover karta hai jab AuthProvider pehle refresh complete hone se pehle kaafi baar mount ho. Variable: <code>_refreshInFlight</code></span>
+        </p>
+      </div>
+    </div>
+    <div class="layer">
+      <div class="lnum" style="background:rgba(6,182,212,.2);color:var(--accent2);">L2</div>
+      <div>
+        <strong><span class="en">SessionStorage Lock-Until Timestamp (Cross-Page Serialisation)</span><span class="hi">SessionStorage Lock-Until Timestamp (Cross-Page Serialisation)</span></strong>
+        <p style="margin:4px 0 0;font-size:12px;">
+          <span class="en">Prevents concurrent calls across <strong>consecutive rapid page reloads</strong>. <code>sessionStorage</code> survives F5 within the same browser tab, so each new page load can read the timestamp set by the previous one and wait accordingly. Variable: <code>__sc_rt_lock</code></span>
+          <span class="hi"><strong>Consecutive rapid page reloads</strong> ke across concurrent calls rokta hai. <code>sessionStorage</code> same browser tab mein F5 survive karta hai, isliye har naya page load previous wale ka timestamp padh ke accordingly wait kar sakta hai. Variable: <code>__sc_rt_lock</code></span>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="info-box" style="margin-top:16px;">
+    <span class="en">ℹ️ <strong>Why not Web Locks API?</strong> The Web Locks API (<code>navigator.locks</code>) is released when a page navigates (F5 causes navigation). So each page refresh gets a fresh lock and can immediately acquire it — it doesn't help across page reloads. <code>sessionStorage</code> is the correct tool here because it explicitly persists across F5 in the same tab.</span>
+    <span class="hi">ℹ️ <strong>Web Locks API kyun nahi?</strong> Web Locks API (<code>navigator.locks</code>) tab release hoti hai jab page navigate karta hai (F5 navigation cause karta hai). Isliye har page refresh fresh lock paata hai — page reloads ke across kaam nahi karta. <code>sessionStorage</code> sahi tool hai kyunki ye explicitly same tab mein F5 ke across persist karta hai.</span>
+  </div>
+</section>
+
+<!-- ═══════ LAYER 1 ═══════ -->
+<section id="layer1">
+  <h2><span class="en">Layer 1 — Module-Level In-Flight Dedup</span><span class="hi">Layer 1 — Module-Level In-Flight Dedup</span></h2>
+
+  <div class="card cl">
+    <h3><span class="en">How It Works</span><span class="hi">Kaise Kaam Karta Hai</span></h3>
+    <p>
+      <span class="en">A module-level variable <code>_refreshInFlight</code> holds the currently-running refresh promise. If <code>callRefreshApi()</code> is called a second time while the first call is still in progress, it returns the <strong>same promise</strong> instead of creating a new network request.</span>
+      <span class="hi">Module-level variable <code>_refreshInFlight</code> currently-running refresh promise hold karta hai. Agar pehla call still in progress ho aur <code>callRefreshApi()</code> doosri baar call ho, to ye <strong>same promise</strong> return karta hai naya network request create karne ke bajay.</span>
+    </p>
+<pre>
+<span class="c">// Module-level — lives in JS module scope, reset on every page load</span>
+<span class="k">let</span> <span class="n">_refreshInFlight</span>: <span class="f">ReturnType</span>&lt;<span class="k">typeof</span> <span class="n">callRefreshApiRaw</span>&gt; | <span class="k">null</span> = <span class="k">null</span>;
+
+<span class="k">function</span> <span class="f">callRefreshApi</span>() {
+  <span class="c">// Layer 1: if there's already a request in flight, return it</span>
+  <span class="k">if</span> (<span class="n">_refreshInFlight</span>) <span class="k">return</span> <span class="n">_refreshInFlight</span>;
+
+  <span class="c">// ... (Layer 2 below)</span>
+
+  <span class="n">_refreshInFlight</span> = (<span class="k">async</span> () => {
+    <span class="k">try</span> {
+      <span class="k">return await</span> <span class="f">callRefreshApiRaw</span>();
+    } <span class="k">finally</span> {
+      <span class="n">_refreshInFlight</span> = <span class="k">null</span>; <span class="c">// always clear on done</span>
+    }
+  })();
+
+  <span class="k">return</span> <span class="n">_refreshInFlight</span>;
+}
+</pre>
+    <div class="warn">
+      <span class="en">⚠️ <strong>Limitation:</strong> This only works within one page load. Each F5 creates a fresh module evaluation → <code>_refreshInFlight = null</code> again. This is why Layer 2 is needed.</span>
+      <span class="hi">⚠️ <strong>Limitation:</strong> Ye sirf ek page load ke andar kaam karta hai. Har F5 fresh module evaluation create karta hai → <code>_refreshInFlight = null</code> fir se. Isliye Layer 2 zaroori hai.</span>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════ LAYER 2 ═══════ -->
+<section id="layer2">
+  <h2><span class="en">Layer 2 — SessionStorage Lock-Until Timestamp</span><span class="hi">Layer 2 — SessionStorage Lock-Until Timestamp</span></h2>
+
+  <div class="card cl">
+    <h3><span class="en">Why sessionStorage Works Across F5</span><span class="hi">sessionStorage F5 Ke Across Kyun Kaam Karta Hai</span></h3>
+    <table>
+      <thead>
+        <tr>
+          <th><span class="en">Storage Type</span><span class="hi">Storage Type</span></th>
+          <th><span class="en">Survives F5?</span><span class="hi">F5 ke baad bachta hai?</span></th>
+          <th><span class="en">Survives Tab Close?</span><span class="hi">Tab close ke baad bachta hai?</span></th>
+          <th><span class="en">Survives Browser Close?</span><span class="hi">Browser close ke baad bachta hai?</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>localStorage</code></td>
+          <td><span class="badge bg">✅ YES</span></td>
+          <td><span class="badge bg">✅ YES</span></td>
+          <td><span class="badge bg">✅ YES</span></td>
+        </tr>
+        <tr>
+          <td><code>sessionStorage</code></td>
+          <td><span class="badge bg">✅ YES</span></td>
+          <td><span class="badge br">❌ NO</span></td>
+          <td><span class="badge br">❌ NO</span></td>
+        </tr>
+        <tr>
+          <td><code>useRef</code> / JS Memory</td>
+          <td><span class="badge br">❌ NO</span></td>
+          <td><span class="badge br">❌ NO</span></td>
+          <td><span class="badge br">❌ NO</span></td>
+        </tr>
+        <tr>
+          <td><code>Web Locks API</code></td>
+          <td><span class="badge br">❌ NO (released on navigation)</span></td>
+          <td><span class="badge br">❌ NO</span></td>
+          <td><span class="badge br">❌ NO</span></td>
+        </tr>
+      </tbody>
+    </table>
+    <p>
+      <span class="en"><code>sessionStorage</code> is the <strong>perfect tool</strong> — it persists across F5 (which is what we need) but auto-clears when the tab closes (which means old locks never affect a fresh login session).</span>
+      <span class="hi"><code>sessionStorage</code> <strong>perfect tool</strong> hai — ye F5 ke across persist karta hai (jo hamein chahiye) lekin tab close hone pe auto-clear ho jaata hai (matlab purane locks fresh login session ko affect nahi karte).</span>
+    </p>
+
+    <h3><span class="en">The Lock-Until Logic</span><span class="hi">Lock-Until Logic</span></h3>
+<pre>
+<span class="k">const</span> <span class="n">_RT_LOCK_KEY</span>    = <span class="s">"__sc_rt_lock"</span>;
+<span class="k">const</span> <span class="n">_RT_COOLDOWN_MS</span> = <span class="o">2000</span>; <span class="c">// 2 seconds > typical API response time</span>
+
+<span class="c">// Inside callRefreshApi():</span>
+<span class="k">let</span> <span class="n">waitMs</span> = <span class="o">0</span>;
+<span class="k">try</span> {
+  <span class="k">const</span> <span class="n">lockUntil</span> = <span class="f">Number</span>(<span class="n">sessionStorage</span>.<span class="f">getItem</span>(<span class="n">_RT_LOCK_KEY</span>) || <span class="o">0</span>);
+  <span class="k">const</span> <span class="n">now</span>       = <span class="f">Date</span>.<span class="f">now</span>();
+  <span class="n">waitMs</span>          = <span class="f">Math</span>.<span class="f">max</span>(<span class="o">0</span>, <span class="n">lockUntil</span> - <span class="n">now</span>);
+  <span class="c">// Extend lock window so the NEXT page reload also waits</span>
+  <span class="n">sessionStorage</span>.<span class="f">setItem</span>(<span class="n">_RT_LOCK_KEY</span>,
+    <span class="f">String</span>(<span class="f">Math</span>.<span class="f">max</span>(<span class="n">lockUntil</span>, <span class="n">now</span>) + <span class="n">_RT_COOLDOWN_MS</span>));
+} <span class="k">catch</span> { <span class="c">/* sessionStorage unavailable — skip guard */</span> }
+
+<span class="c">// Wait if needed, then fire</span>
+<span class="k">if</span> (<span class="n">waitMs</span> > <span class="o">0</span>) {
+  <span class="k">await new</span> <span class="f">Promise</span>&lt;<span class="k">void</span>&gt;(<span class="n">r</span> => <span class="f">setTimeout</span>(<span class="n">r</span>, <span class="n">waitMs</span>));
+}
+
+<span class="c">// After success: clear lock so normal refreshes don't get penalised</span>
+<span class="k">try</span> { <span class="n">sessionStorage</span>.<span class="f">removeItem</span>(<span class="n">_RT_LOCK_KEY</span>); } <span class="k">catch</span> {}
+</pre>
+  </div>
+</section>
+
+<!-- ═══════ MATH ═══════ -->
+<section id="math">
+  <h2><span class="en">Wait Time Math — How Long Does The User Wait?</span><span class="hi">Wait Time Math — User Kitna Wait Karta Hai?</span></h2>
+
+  <div class="card cl">
+    <h3><span class="en">Serialisation Table (2000ms cooldown, F5 every 150ms)</span><span class="hi">Serialisation Table (2000ms cooldown, har 150ms mein F5)</span></h3>
+    <table>
+      <thead>
+        <tr>
+          <th><span class="en">Page Load #</span><span class="hi">Page Load #</span></th>
+          <th><span class="en">F5 Pressed At</span><span class="hi">F5 Kab Dabaya</span></th>
+          <th><span class="en">lockUntil Read</span><span class="hi">lockUntil Read</span></th>
+          <th><span class="en">Wait Time</span><span class="hi">Wait Time</span></th>
+          <th><span class="en">Request Fires At</span><span class="hi">Request Kab Fire Hoga</span></th>
+          <th><span class="en">Uses Cookie</span><span class="hi">Cookie Kaun Si</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1st</td>
+          <td>T=0</td>
+          <td>0 (empty)</td>
+          <td><span class="badge bg">0ms</span></td>
+          <td>T=0</td>
+          <td style="color:var(--yellow);">rt_old</td>
+        </tr>
+        <tr>
+          <td>2nd</td>
+          <td>T=150ms</td>
+          <td>T+2000</td>
+          <td><span class="badge by">1850ms</span></td>
+          <td>T=2000ms</td>
+          <td style="color:var(--green);">rt_new (set by #1 at ~T+500ms) ✅</td>
+        </tr>
+        <tr>
+          <td>3rd</td>
+          <td>T=300ms</td>
+          <td>T+2150</td>
+          <td><span class="badge by">1850ms</span></td>
+          <td>T=2150ms</td>
+          <td style="color:var(--green);">rt_newer (set by #2) ✅</td>
+        </tr>
+        <tr>
+          <td>Normal refresh<br><em>30 seconds later</em></td>
+          <td>T+30s</td>
+          <td>0 (cleared)</td>
+          <td><span class="badge bg">0ms</span></td>
+          <td>T+30s</td>
+          <td style="color:var(--green);">latest rt ✅</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="success-box">
+      <span class="en">✅ <strong>Normal usage is NOT penalised.</strong> After a successful refresh, <code>sessionStorage.removeItem()</code> clears the lock immediately. Any refresh 0.1s later fires with no wait. Only rapid successive F5 presses (within the 2s window) get the wait — which is exactly the scenario we're protecting against.</span>
+      <span class="hi">✅ <strong>Normal usage penalise nahi hota.</strong> Successful refresh ke baad, <code>sessionStorage.removeItem()</code> lock immediately clear kar deta hai. Baad mein koi bhi refresh bina wait ke fire karta hai. Sirf rapid successive F5 presses (2s window ke andar) wait karte hain — aur exactly yahi scenario hai jo hum protect kar rahe hain.</span>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════ CODE BEFORE ═══════ -->
+<section id="code-before">
+  <h2><span class="en">Code Before Fix — What Was There</span><span class="hi">Fix Se Pehle Ka Code — Kya Tha</span></h2>
+
+  <span class="fp-pill">src/context/AuthContext.tsx</span>
+
+<pre>
+<span class="c">// ❌ BEFORE — raw callRefreshApi, no deduplication</span>
+
+<span class="k">function</span> <span class="f">callRefreshApi</span>() {
+  <span class="k">return</span> <span class="n">authAxios</span>.<span class="f">post</span>&lt;<span class="f">RefreshResponse</span>&gt;(<span class="s">"/auth/refresh"</span>, {});
+}
+
+<span class="c">// ...</span>
+
+<span class="k">const</span> <span class="n">initRef</span> = <span class="f">useRef</span>(<span class="k">false</span>);
+
+<span class="f">useEffect</span>(() => {
+  <span class="k">if</span> (<span class="n">initRef</span>.current) <span class="k">return</span>;  <span class="c">// ← ONLY protects within same page load</span>
+  <span class="n">initRef</span>.current = <span class="k">true</span>;
+
+  (<span class="k">async</span> () => {
+    <span class="k">try</span> {
+      <span class="k">const</span> <span class="n">refreshRes</span> = <span class="k">await</span> <span class="f">callRefreshApi</span>();  <span class="c">// ← no protection across F5</span>
+      <span class="k">const</span> { <span class="n">accessToken</span>: <span class="n">newToken</span>, <span class="n">csrfToken</span> } = <span class="n">refreshRes</span>.<span class="n">data</span>.<span class="n">data</span>;
+      <span class="n">dispatch</span>(<span class="f">setAuthTokens</span>({ <span class="n">accessToken</span>: <span class="n">newToken</span>, <span class="n">csrfToken</span> }));
+      <span class="k">const</span> <span class="n">profileRes</span> = <span class="k">await</span> <span class="f">fetchProfileApi</span>(<span class="n">newToken</span>);
+      <span class="f">applyProfile</span>(<span class="n">profileRes</span>.<span class="n">data</span>);
+    } <span class="k">catch</span> {
+      <span class="f">clearAllAuthState</span>();  <span class="c">// ← logs user out on ANY 401</span>
+    } <span class="k">finally</span> {
+      <span class="f">setInitDone</span>(<span class="k">true</span>);
+    }
+  })();
+}, []);
+</pre>
+</section>
+
+<!-- ═══════ CODE AFTER ═══════ -->
+<section id="code-after">
+  <h2><span class="en">Code After Fix — Full Implementation</span><span class="hi">Fix Ke Baad Ka Code — Full Implementation</span></h2>
+
+  <span class="fp-pill">src/context/AuthContext.tsx</span>
+
+<pre>
+<span class="c">// ✅ AFTER — callRefreshApiRaw (raw) + callRefreshApi (guarded wrapper)</span>
+
+<span class="c">// Raw call — only called by the guarded wrapper</span>
+<span class="k">function</span> <span class="f">callRefreshApiRaw</span>() {
+  <span class="k">return</span> <span class="n">authAxios</span>.<span class="f">post</span>&lt;<span class="f">RefreshResponse</span>&gt;(<span class="s">"/auth/refresh"</span>, {});
+}
+
+<span class="c">// ─── Two-Layer Rapid-Refresh Guard ───────────────────────────────────────</span>
+
+<span class="c">// Layer 1: module-level — deduplicates within same page load</span>
+<span class="k">let</span> <span class="n">_refreshInFlight</span>: <span class="f">ReturnType</span>&lt;<span class="k">typeof</span> <span class="n">callRefreshApiRaw</span>&gt; | <span class="k">null</span> = <span class="k">null</span>;
+
+<span class="c">// Layer 2: sessionStorage — serialises across rapid page reloads</span>
+<span class="k">const</span> <span class="n">_RT_LOCK_KEY</span>    = <span class="s">"__sc_rt_lock"</span>;
+<span class="k">const</span> <span class="n">_RT_COOLDOWN_MS</span> = <span class="o">2000</span>;
+
+<span class="k">function</span> <span class="f">callRefreshApi</span>(): <span class="f">ReturnType</span>&lt;<span class="k">typeof</span> <span class="n">callRefreshApiRaw</span>&gt; {
+  <span class="c">// Layer 1 — within-page dedup</span>
+  <span class="k">if</span> (<span class="n">_refreshInFlight</span>) <span class="k">return</span> <span class="n">_refreshInFlight</span>;
+
+  <span class="c">// Layer 2 — cross-page cooldown</span>
+  <span class="k">let</span> <span class="n">waitMs</span> = <span class="o">0</span>;
+  <span class="k">try</span> {
+    <span class="k">const</span> <span class="n">lockUntil</span> = <span class="f">Number</span>(<span class="n">sessionStorage</span>.<span class="f">getItem</span>(<span class="n">_RT_LOCK_KEY</span>) || <span class="o">0</span>);
+    <span class="k">const</span> <span class="n">now</span>       = <span class="f">Date</span>.<span class="f">now</span>();
+    <span class="n">waitMs</span>          = <span class="f">Math</span>.<span class="f">max</span>(<span class="o">0</span>, <span class="n">lockUntil</span> - <span class="n">now</span>);
+    <span class="n">sessionStorage</span>.<span class="f">setItem</span>(<span class="n">_RT_LOCK_KEY</span>,
+      <span class="f">String</span>(<span class="f">Math</span>.<span class="f">max</span>(<span class="n">lockUntil</span>, <span class="n">now</span>) + <span class="n">_RT_COOLDOWN_MS</span>));
+  } <span class="k">catch</span> { <span class="c">/* sessionStorage unavailable — proceed without guard */</span> }
+
+  <span class="n">_refreshInFlight</span> = (<span class="k">async</span> () => {
+    <span class="k">if</span> (<span class="n">waitMs</span> > <span class="o">0</span>) {
+      <span class="k">await new</span> <span class="f">Promise</span>&lt;<span class="k">void</span>&gt;(<span class="n">r</span> => <span class="f">setTimeout</span>(<span class="n">r</span>, <span class="n">waitMs</span>));
+    }
+    <span class="k">try</span> {
+      <span class="k">const</span> <span class="n">result</span> = <span class="k">await</span> <span class="f">callRefreshApiRaw</span>();
+      <span class="c">// On success, clear lock so normal refreshes aren't penalised</span>
+      <span class="k">try</span> { <span class="n">sessionStorage</span>.<span class="f">removeItem</span>(<span class="n">_RT_LOCK_KEY</span>); } <span class="k">catch</span> {}
+      <span class="k">return</span> <span class="n">result</span>;
+    } <span class="k">finally</span> {
+      <span class="n">_refreshInFlight</span> = <span class="k">null</span>;
+    }
+  })();
+
+  <span class="k">return</span> <span class="n">_refreshInFlight</span>;
+}
+
+<span class="c">// useEffect — unchanged, still calls callRefreshApi()</span>
+<span class="f">useEffect</span>(() => {
+  <span class="k">if</span> (<span class="n">initRef</span>.current) <span class="k">return</span>;
+  <span class="n">initRef</span>.current = <span class="k">true</span>;
+
+  (<span class="k">async</span> () => {
+    <span class="k">try</span> {
+      <span class="k">const</span> <span class="n">refreshRes</span> = <span class="k">await</span> <span class="f">callRefreshApi</span>(); <span class="c">// ← now guarded ✅</span>
+      <span class="k">const</span> { <span class="n">accessToken</span>: <span class="n">newToken</span>, <span class="n">csrfToken</span> } = <span class="n">refreshRes</span>.<span class="n">data</span>.<span class="n">data</span>;
+      <span class="n">dispatch</span>(<span class="f">setAuthTokens</span>({ <span class="n">accessToken</span>: <span class="n">newToken</span>, <span class="n">csrfToken</span> }));
+      <span class="k">const</span> <span class="n">profileRes</span> = <span class="k">await</span> <span class="f">fetchProfileApi</span>(<span class="n">newToken</span>);
+      <span class="f">applyProfile</span>(<span class="n">profileRes</span>.<span class="n">data</span>);
+    } <span class="k">catch</span> {
+      <span class="f">clearAllAuthState</span>();
+    } <span class="k">finally</span> {
+      <span class="f">setInitDone</span>(<span class="k">true</span>);
+    }
+  })();
+}, []);
+</pre>
+</section>
+
+<!-- ═══════ FILES CHANGED ═══════ -->
+<section id="files-changed">
+  <h2><span class="en">Files Changed</span><span class="hi">Kaunse Files Badle</span></h2>
+
+  <div class="card cl">
+    <table>
+      <thead>
+        <tr>
+          <th><span class="en">File</span><span class="hi">File</span></th>
+          <th><span class="en">What Changed</span><span class="hi">Kya Badla</span></th>
+          <th><span class="en">Lines</span><span class="hi">Lines</span></th>
+          <th><span class="en">Risk</span><span class="hi">Risk</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="fp-pill">src/context/AuthContext.tsx</span></td>
+          <td>
+            <span class="en">Added <code>_refreshInFlight</code> module var, <code>_RT_LOCK_KEY</code>/<code>_RT_COOLDOWN_MS</code> constants, renamed raw function to <code>callRefreshApiRaw</code>, added <code>callRefreshApi()</code> guarded wrapper. useEffect unchanged.</span>
+            <span class="hi">Added <code>_refreshInFlight</code> module var, constants, raw function rename, guarded wrapper add kiya. useEffect unchanged.</span>
+          </td>
+          <td>+45</td>
+          <td><span class="badge bg">LOW</span></td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="success-box">
+      <span class="en">✅ <strong>Zero breaking changes.</strong> The public <code>callRefreshApi()</code> function name is preserved. The <code>useEffect</code> body is untouched. All other files (AppRoutes, silentRefresh, etc.) are unaffected.</span>
+      <span class="hi">✅ <strong>Zero breaking changes.</strong> Public <code>callRefreshApi()</code> function name same hai. <code>useEffect</code> body untouched hai. Baaki sab files unaffected hain.</span>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════ TESTING ═══════ -->
+<section id="testing">
+  <h2><span class="en">How To Test — Reproduce and Verify</span><span class="hi">Kaise Test Karein — Reproduce Aur Verify</span></h2>
+
+  <div class="card clg">
+    <h3><span class="en">✅ Test 1 — Rapid F5 (Primary Bug Scenario)</span><span class="hi">✅ Test 1 — Rapid F5 (Primary Bug Scenario)</span></h3>
+    <ul class="steps">
+      <li><div class="snum">1</div><div><span class="en">Open DevTools → Network tab. Check "Preserve Log".</span><span class="hi">DevTools → Network tab kholein. "Preserve Log" check karein.</span></div></li>
+      <li><div class="snum">2</div><div><span class="en">Log in to the app. Navigate to <code>/dashboard/admin</code>.</span><span class="hi">App mein login karein. <code>/dashboard/admin</code> pe navigate karein.</span></div></li>
+      <li><div class="snum">3</div><div><span class="en">Press F5 rapidly 4-5 times as fast as possible.</span><span class="hi">F5 rapidly 4-5 baar jitni jaldi ho sake dab dein.</span></div></li>
+      <li><div class="snum">4</div><div>
+        <span class="en"><strong>Expected (AFTER FIX):</strong> All refresh requests return 200. User stays on dashboard. No 401.</span>
+        <span class="hi"><strong>Expected (FIX KE BAAD):</strong> Sab refresh requests 200 return karte hain. User dashboard pe rehta hai. 401 nahi aata.</span>
+      </div></li>
+      <li><div class="snum">5</div><div>
+        <span class="en">In Network tab, you will notice some refresh calls take longer (~1-2s) — this is the intentional wait. The last page still resolves successfully.</span>
+        <span class="hi">Network tab mein, kuch refresh calls zyada time lete hain (~1-2s) — ye intentional wait hai. Last page successfully resolve hoti hai.</span>
+      </div></li>
+    </ul>
+  </div>
+
+  <div class="card clg">
+    <h3><span class="en">✅ Test 2 — Normal Single F5 (No Regression)</span><span class="hi">✅ Test 2 — Normal Single F5 (Regression Check)</span></h3>
+    <ul class="steps">
+      <li><div class="snum">1</div><div><span class="en">Log in. Press F5 once.</span><span class="hi">Login karein. Ek baar F5 dabayein.</span></div></li>
+      <li><div class="snum">2</div><div><span class="en"><strong>Expected:</strong> Page loads normally with no delay. Skeleton shows, then dashboard appears within 1-2 seconds as always.</span><span class="hi"><strong>Expected:</strong> Page normally load hoti hai bina kisi delay ke. Skeleton dikhta hai, phir dashboard 1-2 seconds mein aata hai.</span></div></li>
+    </ul>
+  </div>
+
+  <div class="card clg">
+    <h3><span class="en">✅ Test 3 — New Tab (No Regression)</span><span class="hi">✅ Test 3 — New Tab (Regression Check)</span></h3>
+    <ul class="steps">
+      <li><div class="snum">1</div><div><span class="en">Log in. Open a new tab with the app URL.</span><span class="hi">Login karein. Naya tab app URL ke saath kholein.</span></div></li>
+      <li><div class="snum">2</div><div><span class="en"><strong>Expected:</strong> New tab loads fine. <code>sessionStorage</code> is NOT shared across tabs, so each tab has its own lock. No cross-tab interference.</span><span class="hi"><strong>Expected:</strong> Naya tab thik se load hota hai. <code>sessionStorage</code> tabs ke beech share nahi hota, isliye har tab ka apna lock hai. Koi cross-tab interference nahi.</span></div></li>
+    </ul>
+  </div>
+
+  <div class="card clg">
+    <h3><span class="en">✅ Test 4 — SessionStorage Verification</span><span class="hi">✅ Test 4 — SessionStorage Verify Karein</span></h3>
+    <ul class="steps">
+      <li><div class="snum">1</div><div><span class="en">Open DevTools → Application → Session Storage → <code>localhost:5173</code></span><span class="hi">DevTools → Application → Session Storage → <code>localhost:5173</code> kholein</span></div></li>
+      <li><div class="snum">2</div><div><span class="en">Press F5. Immediately look for <code>__sc_rt_lock</code>. You should briefly see a timestamp value (lock set). After ~500ms, the key disappears (lock cleared on success).</span><span class="hi">F5 dabayein. Turant <code>__sc_rt_lock</code> dhundhein. Briefly timestamp value dikhni chahiye (lock set). ~500ms baad, key gayab ho jaati hai (success pe lock clear).</span></div></li>
+    </ul>
+  </div>
+</section>
+
+<!-- ═══════ EDGE CASES ═══════ -->
+<section id="edge-cases">
+  <h2><span class="en">Edge Cases — How Each Is Handled</span><span class="hi">Edge Cases — Har Case Kaise Handle Hota Hai</span></h2>
+
+  <table>
+    <thead>
+      <tr>
+        <th><span class="en">Scenario</span><span class="hi">Scenario</span></th>
+        <th><span class="en">Behaviour</span><span class="hi">Behaviour</span></th>
+        <th><span class="en">Safe?</span><span class="hi">Safe?</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="en">sessionStorage blocked (some private mode browsers)</span><span class="hi">sessionStorage blocked (kuch private mode browsers)</span></td>
+        <td><span class="en">try/catch swallows error, <code>waitMs = 0</code>, refresh fires normally without Layer 2 protection. Layer 1 still works.</span><span class="hi">try/catch error swallow karta hai, <code>waitMs = 0</code>, refresh normally fire karta hai Layer 2 protection ke bina. Layer 1 still kaam karta hai.</span></td>
+        <td><span class="badge by">PARTIAL</span></td>
+      </tr>
+      <tr>
+        <td><span class="en">User presses F5 30 seconds after last refresh</span><span class="hi">User last refresh ke 30 second baad F5 dabata hai</span></td>
+        <td><span class="en">Lock was cleared on success. <code>lockUntil = 0</code> → <code>waitMs = 0</code> → fires immediately.</span><span class="hi">Lock success pe clear ho gaya tha. <code>lockUntil = 0</code> → <code>waitMs = 0</code> → immediately fire karta hai.</span></td>
+        <td><span class="badge bg">✅ SAFE</span></td>
+      </tr>
+      <tr>
+        <td><span class="en">User opens multiple tabs simultaneously</span><span class="hi">User ek saath multiple tabs kholata hai</span></td>
+        <td><span class="en"><code>sessionStorage</code> is NOT shared across tabs. Each tab has its own lock. No interference.</span><span class="hi"><code>sessionStorage</code> tabs ke beech share nahi hota. Har tab ka apna lock hai. Koi interference nahi.</span></td>
+        <td><span class="badge bg">✅ SAFE</span></td>
+      </tr>
+      <tr>
+        <td><span class="en">API is very slow (>2000ms response time)</span><span class="hi">API bahut slow hai (>2000ms response time)</span></td>
+        <td><span class="en">Page #2 fires at T+2000ms. If API still hasn't responded from Page #1 by then, both are in flight with same token → could still trigger reuse. This is an unlikely edge case; increase <code>_RT_COOLDOWN_MS</code> if the API is known to be slow.</span><span class="hi">Page #2 T+2000ms pe fire karta hai. Agar API abhi Page #1 se respond nahi ki, to dono in flight same token ke saath → reuse trigger ho sakti hai. Ye unlikely edge case hai; agar API slow ho to <code>_RT_COOLDOWN_MS</code> badhayein.</span></td>
+        <td><span class="badge by">UNLIKELY</span></td>
+      </tr>
+      <tr>
+        <td><span class="en">React StrictMode double-mount (dev only)</span><span class="hi">React StrictMode double-mount (sirf dev mein)</span></td>
+        <td><span class="en">Layer 1 (<code>_refreshInFlight</code>) catches the second mount and returns the same promise. <code>initRef</code> also blocks the second <code>useEffect</code> run.</span><span class="hi">Layer 1 (<code>_refreshInFlight</code>) doosra mount catch karta hai aur same promise return karta hai. <code>initRef</code> bhi doosra <code>useEffect</code> run block karta hai.</span></td>
+        <td><span class="badge bg">✅ SAFE</span></td>
+      </tr>
+      <tr>
+        <td><span class="en">Refresh token genuinely expired (user was away 7 days)</span><span class="hi">Refresh token genuinely expire (user 7 din baad aaya)</span></td>
+        <td><span class="en">API returns 401. <code>callRefreshApiRaw()</code> throws. <code>catch</code> in <code>useEffect</code> calls <code>clearAllAuthState()</code>. User goes to login. Correct behaviour.</span><span class="hi">API 401 return karta hai. <code>callRefreshApiRaw()</code> throw karta hai. <code>useEffect</code> mein <code>catch</code> <code>clearAllAuthState()</code> call karta hai. User login page pe jaata hai. Correct behaviour.</span></td>
+        <td><span class="badge bg">✅ SAFE</span></td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ═══════ TRADE-OFFS ═══════ -->
+<section id="tradeoffs">
+  <h2><span class="en">Trade-offs — What We Gained and Lost</span><span class="hi">Trade-offs — Kya Mila Aur Kya Gaya</span></h2>
+
+  <div class="card clg">
+    <h3><span class="en">✅ What We Gained</span><span class="hi">✅ Kya Mila</span></h3>
+    <ul>
+      <li><span class="en"><strong>Session survival on rapid F5</strong> — the primary goal. No more accidental logouts.</span><span class="hi"><strong>Rapid F5 pe session survive</strong> — primary goal. Ab accidental logouts nahi.</span></li>
+      <li><span class="en"><strong>No regression for normal usage</strong> — single F5, tab change, normal navigation all work identically.</span><span class="hi"><strong>Normal usage pe koi regression nahi</strong> — single F5, tab change, normal navigation bilkul same kaam karta hai.</span></li>
+      <li><span class="en"><strong>Handles private mode gracefully</strong> — sessionStorage blockage falls back to direct call without crashing.</span><span class="hi"><strong>Private mode gracefully handle karta hai</strong> — sessionStorage blockage direct call pe fallback karta hai crash ke bina.</span></li>
+    </ul>
+  </div>
+
+  <div class="card cly">
+    <h3><span class="en">⚠️ What The User Experiences Differently</span><span class="hi">⚠️ User Ko Kya Differently Experience Hoga</span></h3>
+    <ul>
+      <li><span class="en"><strong>Rapid F5 loads the page 1-2 seconds slower</strong> for the last refresh in a rapid sequence. The skeleton loader is shown during this wait — which was already built in the previous PR. The user sees the skeleton instead of a white screen.</span><span class="hi"><strong>Rapid F5 pe last refresh 1-2 second slow load hoti hai</strong>. Skeleton loader is wait ke dauran dikhta hai — jo pehle se build kiya gaya hai. User white screen ki jagah skeleton dekhta hai.</span></li>
+      <li><span class="en">This is a <strong>deliberate, acceptable trade-off</strong>: a slightly longer load vs. being unexpectedly logged out.</span><span class="hi">Ye <strong>deliberate, acceptable trade-off</strong> hai: thoda longer load vs. unexpectedly logged out hona.</span></li>
+    </ul>
+  </div>
+</section>
+
+<!-- ═══════ CHECKLIST ═══════ -->
+<section id="checklist">
+  <h2><span class="en">Fix Checklist</span><span class="hi">Fix Checklist</span></h2>
+
+  <div class="card clg">
+    <ul class="steps">
+      <li>
+        <div class="snum" style="background:rgba(34,197,94,.2);color:var(--green);">✓</div>
+        <div>
+          <strong><span class="en">Root cause identified</span><span class="hi">Root cause identify kiya</span></strong>
+          <p style="margin:4px 0 0;font-size:12px;"><span class="en">Concurrent <code>POST /auth/refresh</code> calls with same rt cookie → server reuse detection → session nuke</span><span class="hi">Concurrent calls same rt cookie ke saath → server reuse detection → session nuke</span></p>
+        </div>
+      </li>
+      <li>
+        <div class="snum" style="background:rgba(34,197,94,.2);color:var(--green);">✓</div>
+        <div>
+          <strong><span class="en">Layer 1 — Module-level in-flight dedup added</span><span class="hi">Layer 1 — Module-level in-flight dedup add kiya</span></strong>
+          <p style="margin:4px 0 0;font-size:12px;"><code>_refreshInFlight</code> <span class="en">variable prevents same-page-load duplicates</span><span class="hi">variable same-page-load duplicates rokta hai</span></p>
+        </div>
+      </li>
+      <li>
+        <div class="snum" style="background:rgba(34,197,94,.2);color:var(--green);">✓</div>
+        <div>
+          <strong><span class="en">Layer 2 — SessionStorage lock-until timestamp added</span><span class="hi">Layer 2 — SessionStorage lock-until timestamp add kiya</span></strong>
+          <p style="margin:4px 0 0;font-size:12px;"><code>__sc_rt_lock</code> <span class="en">serialises rapid F5 page loads</span><span class="hi">rapid F5 page loads serialise karta hai</span></p>
+        </div>
+      </li>
+      <li>
+        <div class="snum" style="background:rgba(34,197,94,.2);color:var(--green);">✓</div>
+        <div>
+          <strong><span class="en">Lock cleared on success (no penalty for normal usage)</span><span class="hi">Lock success pe clear hoti hai (normal usage ke liye koi penalty nahi)</span></strong>
+          <p style="margin:4px 0 0;font-size:12px;"><span class="en"><code>sessionStorage.removeItem()</code> called after successful refresh</span><span class="hi">Successful refresh ke baad <code>sessionStorage.removeItem()</code> call hota hai</span></p>
+        </div>
+      </li>
+      <li>
+        <div class="snum" style="background:rgba(34,197,94,.2);color:var(--green);">✓</div>
+        <div>
+          <strong><span class="en">sessionStorage blockage handled gracefully (try/catch)</span><span class="hi">sessionStorage blockage gracefully handle hoti hai (try/catch)</span></strong>
+        </div>
+      </li>
+      <li>
+        <div class="snum" style="background:rgba(34,197,94,.2);color:var(--green);">✓</div>
+        <div>
+          <strong><span class="en">Zero changes to useEffect, login, logout, or profile fetch</span><span class="hi">useEffect, login, logout, profile fetch mein zero changes</span></strong>
+          <p style="margin:4px 0 0;font-size:12px;"><span class="en">Only the <code>callRefreshApi()</code> function was refactored (name + guard added)</span><span class="hi">Sirf <code>callRefreshApi()</code> function refactor kiya (name + guard add kiya)</span></p>
+        </div>
+      </li>
+      <li>
+        <div class="snum" style="background:rgba(34,197,94,.2);color:var(--green);">✓</div>
+        <div>
+          <strong><span class="en">Skeleton loaders show during wait (built in companion PR)</span><span class="hi">Wait ke dauran skeleton loaders show hote hain (companion PR mein build kiya)</span></strong>
+          <p style="margin:4px 0 0;font-size:12px;"><span class="en">User sees themed skeleton instead of white screen while the cooldown plays out</span><span class="hi">Cooldown ke dauran user white screen ki jagah themed skeleton dekhta hai</span></p>
+        </div>
+      </li>
+      <li>
+        <div class="snum" style="background:rgba(34,197,94,.2);color:var(--green);">✓</div>
+        <div>
+          <strong><span class="en">PRD documented</span><span class="hi">PRD document kiya</span></strong>
+          <p style="margin:4px 0 0;font-size:12px;"><code>doc/Rapid_Refresh_Fix_PRD.html</code></p>
+        </div>
+      </li>
+    </ul>
+  </div>
+
+  <div class="info-box" style="margin-top:20px;">
+    <span class="en">ℹ️ <strong>Related PRD:</strong> See <code>doc/Frontend_Auth_Security_v2.html</code> for the complete Auth Security architecture — refresh token strategy, CSRF protection, and the 5-layer security model this fix builds on top of.</span>
+    <span class="hi">ℹ️ <strong>Related PRD:</strong> Complete Auth Security architecture ke liye <code>doc/Frontend_Auth_Security_v2.html</code> dekhein — refresh token strategy, CSRF protection, aur 5-layer security model jis pe ye fix build kiya gaya hai.</span>
+  </div>
+</section>
+
+</main>
+
+<!-- ═══════ LANG SCRIPT ═══════ -->
+<script>
+function setLang(lang) {
+  document.body.classList.toggle('hi-mode', lang === 'hi');
+  document.getElementById('btn-en').classList.toggle('active', lang === 'en');
+  document.getElementById('btn-hi').classList.toggle('active', lang === 'hi');
+}
+
+// Sidebar active link highlight
+const links = document.querySelectorAll('nav a');
+const sections = document.querySelectorAll('section[id]');
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      links.forEach(l => l.classList.remove('active'));
+      const match = document.querySelector('nav a[href="#' + e.target.id + '"]');
+      if (match) match.classList.add('active');
+    }
+  });
+}, { rootMargin: '-20% 0px -70% 0px' });
+sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>

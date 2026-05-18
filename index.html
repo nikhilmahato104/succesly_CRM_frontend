@@ -88,6 +88,15 @@
   </noscript>
 
   <title>Succesly Admin</title>
+
+  <!-- Dark-mode pre-init: applies .dark before React mounts so skeleton uses correct colors -->
+  <script>
+    try {
+      var dm = localStorage.getItem('darkMode');
+      var dark = dm === 'true' || (dm === null && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      if (dark) document.documentElement.classList.add('dark');
+    } catch (e) {}
+  </script>
 </head>
 
 <body>

@@ -11,6 +11,9 @@ html {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
 
+  /* Block swipe-back/forward navigation on the document root */
+  overscroll-behavior: none;
+
   /* Smooth font rendering */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -172,9 +175,9 @@ button, nav, header, aside, label, [role="button"], [role="tab"] {
   --fi-border:       #3d3d3d;              /* subtle border                         */
   --fi-border-focus: #3d3d3d;              /* SAME — no highlight on focus          */
   --fi-border-error: #f87171;
-  --fi-text:         #ececec;              /* near-white for readability            */
+  --fi-text:         #ffffff;              /* pure white for readability in dark    */
   --fi-muted:        #6b6b6b;
-  --fi-label:        #b0b0b0;              /* lighter labels for dark bg            */
+  --fi-label:        #e0e0e0;              /* near-white labels for dark bg         */
   --fi-height:       32px;
   --fi-radius:       7px;
   --fi-font-size:    13px;
@@ -201,9 +204,9 @@ button, nav, header, aside, label, [role="button"], [role="tab"] {
   --dt-header-hover:    #222222;
   --dt-border:          #2a2a2a;
   --dt-border-strong:   #3a3a3a;
-  --dt-text:            #e5e5e5;
-  --dt-dim:             #a3a3a3;
-  --dt-muted:           #737373;
+  --dt-text:            #ffffff;
+  --dt-dim:             #f7f3f3;
+  --dt-muted:           #ffffff;
   --dt-accent:          #f0f0f0;
   --dt-scrollbar:       rgba(255, 255, 255, 0.12);
   --dt-scrollbar-hover: rgba(255, 255, 255, 0.22);
@@ -228,6 +231,9 @@ button, nav, header, aside, label, [role="button"], [role="tab"] {
      Falls back through svh → dvh for slightly older Safari. */
   height: 100svh;
   height: 100dvh;
+
+  /* Block swipe-back/forward on the app shell itself */
+  overscroll-behavior: none;
 
   /* Safe-area-aware padding: at least 6px + the notch/home-indicator inset */
   padding: max(6px, calc(env(safe-area-inset-top)    + 2px))
@@ -350,10 +356,14 @@ textarea::-webkit-scrollbar-thumb:hover  { background: var(--dt-scrollbar-hover)
   }
 }
 
-/* ── Prevent horizontal overflow that causes iOS Safari to scroll right ──── */
+/* ── Block page-level horizontal scroll and swipe navigation ────────────── */
+/* overflow-x: hidden stops the page body from scrolling horizontally (inner */
+/* components like the table handle their own horizontal scroll).            */
+/* overscroll-behavior: none stops Chrome's 2-finger swipe-back gesture.    */
 html, body {
   max-width: 100%;
   overflow-x: hidden;
+  overscroll-behavior: none;
 }
 
 /* ── iOS modal / sheet body-scroll lock ─────────────────────────────────── */
@@ -362,6 +372,28 @@ html, body {
   position: fixed;
   width: 100%;
   /* preserve scroll position via top (set by JS) */
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SKELETON SHIMMER  —  used by all page skeleton loaders
+   Colors are CSS-variable-driven so light/dark both work automatically:
+     Light: --dt-skeleton-from #eeeeee  --dt-skeleton-to #e0e0e0
+     Dark:  --dt-skeleton-from #1e1e1e  --dt-skeleton-to #2a2a2a
+   ═══════════════════════════════════════════════════════════════════════════ */
+@keyframes sk-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+.sk-pulse {
+  background: linear-gradient(
+    90deg,
+    var(--dt-skeleton-from) 25%,
+    var(--dt-skeleton-to)   50%,
+    var(--dt-skeleton-from) 75%
+  );
+  background-size: 200% 100%;
+  animation: sk-shimmer 1.5s ease-in-out infinite;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════

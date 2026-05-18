@@ -4,7 +4,7 @@ import { useSelector } from "react-redux";
 import { selectAccessToken } from "../../store/slices/authSlice";
 import { Plus, Trash2, ChevronDown, ChevronUp, AlertTriangle, CheckCircle, XCircle } from "lucide-react";
 import { showToastnew } from "../../services/toastifynewService/toastifynewService";
-import { postData } from "../../services/crmServices";
+import { postData, patchData } from "../../services/crmServices";
 import { parseBookingRawText, ParsedBookingFields } from "./bookingParser";
 import {
   CleanButton, CleanInput, CleanTextarea, CleanSelect, CleanModal, type SelectOption,
@@ -32,7 +32,33 @@ interface SubmitResult {
 
 type AbandonReason = "close" | "navigate";
 
-type Props = { isOpen: boolean; onClose: () => void; onCreated: () => void };
+type BookingStatus =
+  | "ongoing" | "completed" | "cancelled_via_user" | "cancelled_by_admin_crm";
+
+type ModalMode = "create" | "view" | "edit";
+
+export interface InitialBookingData {
+  _id:               string;
+  reference_id?:     string;
+  user_name?:        string;
+  user_phone?:       string;
+  address?:          string;
+  live_location_url?: string;
+  branch?:           string;
+  booking_via?:      BookingVia;
+  booking_status?:   BookingStatus;
+  is_active?:        boolean;
+  createdAt?:        string;
+}
+
+type Props = {
+  isOpen:        boolean;
+  onClose:       () => void;
+  onCreated?:    () => void;
+  onSaved?:      () => void;
+  mode?:         ModalMode;
+  initialData?:  InitialBookingData;
+};
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
@@ -50,6 +76,13 @@ const BOOKING_VIA_OPTIONS: SelectOption[] = [
   { value: "laptop",          label: "Laptop"         },
   { value: "whatsapp_to_crm", label: "WhatsApp → CRM" },
   { value: "call",            label: "Call"           },
+];
+
+const BOOKING_STATUS_OPTIONS: SelectOption[] = [
+  { value: "ongoing",               label: "Ongoing"           },
+  { value: "completed",             label: "Completed"         },
+  { value: "cancelled_via_user",    label: "Cancelled (User)"  },
+  { value: "cancelled_by_admin_crm",label: "Cancelled (Admin)" },
 ];
 
 const ABANDON_COPY: Record<AbandonReason, { title: string; body: string; confirm: string }> = {
@@ -283,7 +316,7 @@ const AbandonConfirm: React.FC<{
 }> = ({ isOpen, reason, onStay, onLeave }) => {
   const c = ABANDON_COPY[reason];
   return (
-    <CleanModal isOpen={isOpen} onClose={onStay} maxWidth={400} zIndex={999999} closeOnBackdrop
+    <CleanModal isOpen={isOpen} onClose={onStay} maxWidth={400} zIndex={999999} expandable={false} closeOnBackdrop
       footer={<><span /><div style={{ display:"flex", gap:8 }}>
         <CleanButton variant="outline" size="sm" onClick={onStay}>Stay</CleanButton>
         <CleanButton variant="primary" size="sm" onClick={onLeave}>{c.confirm}</CleanButton>
@@ -303,7 +336,7 @@ const AbandonConfirm: React.FC<{
 
 const ClearDraftConfirm: React.FC<{ isOpen: boolean; onCancel: () => void; onConfirm: () => void }> =
   ({ isOpen, onCancel, onConfirm }) => (
-    <CleanModal isOpen={isOpen} onClose={onCancel} maxWidth={380} zIndex={999999} closeOnBackdrop
+    <CleanModal isOpen={isOpen} onClose={onCancel} maxWidth={380} zIndex={999999} expandable={false} closeOnBackdrop
       footer={<><span /><div style={{ display:"flex", gap:8 }}>
         <CleanButton variant="outline" size="sm" onClick={onCancel}>Cancel</CleanButton>
         <CleanButton variant="primary" size="sm" onClick={onConfirm}
@@ -321,9 +354,169 @@ const ClearDraftConfirm: React.FC<{ isOpen: boolean; onCancel: () => void; onCon
     </CleanModal>
   );
 
-// ── Main Modal ─────────────────────────────────────────────────────────────
+// ── View / Edit mode ────────────────────────────────────────────────────────
 
-const CreateBookingModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => {
+type ViewEditFields = {
+  user_name:        string;
+  user_phone:       string;
+  address:          string;
+  live_location_url:string;
+  branch:           string;
+  booking_via:      BookingVia;
+  booking_status:   BookingStatus;
+};
+
+function dataToFields(d: InitialBookingData): ViewEditFields {
+  return {
+    user_name:         d.user_name         ?? "",
+    user_phone:        d.user_phone        ?? "",
+    address:           d.address           ?? "",
+    live_location_url: d.live_location_url ?? "",
+    branch:            d.branch            ?? "jalandhar",
+    booking_via:       (d.booking_via      as BookingVia)     ?? "whatsapp_to_crm",
+    booking_status:    (d.booking_status   as BookingStatus)  ?? "ongoing",
+  };
+}
+
+const ViewEditContent: React.FC<{
+  isOpen:   boolean;
+  onClose:  () => void;
+  onSaved?: () => void;
+  mode:     "view" | "edit";
+  data:     InitialBookingData;
+}> = ({ isOpen, onClose, onSaved, mode, data }) => {
+  const token  = useSelector(selectAccessToken);
+  const isView = mode === "view";
+
+  const [fields, setFields] = useState<ViewEditFields>(() => dataToFields(data));
+  const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState<Partial<Record<keyof ViewEditFields, string>>>({});
+
+  // Reset form whenever a different booking is opened
+  useEffect(() => {
+    setFields(dataToFields(data));
+    setErrors({});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data._id]);
+
+  const setField = <K extends keyof ViewEditFields>(key: K, val: ViewEditFields[K]) => {
+    setFields(prev => ({ ...prev, [key]: val }));
+    setErrors(prev => ({ ...prev, [key]: undefined }));
+  };
+
+  const validate = () => {
+    const e: Partial<Record<keyof ViewEditFields, string>> = {};
+    if (!fields.user_phone.trim()) e.user_phone = "Phone is required";
+    if (!fields.address.trim())    e.address    = "Address is required";
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const handleSave = async () => {
+    if (!validate()) return;
+    setSaving(true);
+    try {
+      await patchData({
+        endpoint: `bookings/${data._id}`,
+        token,
+        instance: "identity",
+        data: {
+          user_name:         fields.user_name         || undefined,
+          user_phone:        fields.user_phone,
+          address:           fields.address,
+          live_location_url: fields.live_location_url || undefined,
+          branch:            fields.branch            || undefined,
+          booking_via:       fields.booking_via,
+          booking_status:    fields.booking_status,
+        },
+      });
+      showToastnew.success("Booking updated");
+      onSaved?.();
+    } catch (err: unknown) {
+      const d = (err as any)?.response?.data;
+      const msg = Array.isArray(d?.errors)
+        ? (d.errors as string[]).join(" · ")
+        : d?.message ?? "Failed to update booking";
+      showToastnew.error(msg);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <CleanModal
+      isOpen={isOpen}
+      onClose={onClose}
+      maxWidth={600}
+      zIndex={9999}
+      title={isView ? "Booking Details" : "Edit Booking"}
+      subtitle={data.reference_id ? `Reference: ${data.reference_id}` : undefined}
+      closeOnBackdrop={isView}
+      footer={
+        <>
+          <span />
+          <div style={{ display: "flex", gap: 8 }}>
+            {isView ? (
+              <CleanButton variant="outline" size="sm" onClick={onClose}>Close</CleanButton>
+            ) : (
+              <>
+                <CleanButton variant="outline" size="sm" onClick={onClose} disabled={saving}>Cancel</CleanButton>
+                <CleanButton variant="primary" size="sm" onClick={handleSave} loading={saving}>Save Changes</CleanButton>
+              </>
+            )}
+          </div>
+        </>
+      }
+    >
+      <div className="form-grid">
+        <CleanInput label="Customer Name" type="text"
+          value={fields.user_name} placeholder="Full name"
+          readOnly={isView} disabled={isView}
+          onChange={e => setField("user_name", e.target.value)} />
+
+        <CleanInput label="Phone" required type="text"
+          value={fields.user_phone} placeholder="+91XXXXXXXXXX"
+          error={errors.user_phone}
+          readOnly={isView} disabled={isView}
+          onChange={e => setField("user_phone", e.target.value)} />
+
+        <div className="form-grid-full">
+          <CleanInput label="Address" required type="text"
+            value={fields.address} placeholder="Building / PG Name, Room No."
+            error={errors.address}
+            readOnly={isView} disabled={isView}
+            onChange={e => setField("address", e.target.value)} />
+        </div>
+
+        <CleanSelect label="Branch"
+          value={fields.branch} options={BRANCH_OPTIONS}
+          disabled={isView}
+          onChange={e => setField("branch", e.target.value)} />
+
+        <CleanSelect label="Booking Via"
+          value={fields.booking_via} options={BOOKING_VIA_OPTIONS}
+          disabled={isView}
+          onChange={e => setField("booking_via", e.target.value as BookingVia)} />
+
+        <CleanSelect label="Status"
+          value={fields.booking_status} options={BOOKING_STATUS_OPTIONS}
+          disabled={isView}
+          onChange={e => setField("booking_status", e.target.value as BookingStatus)} />
+
+        <div className="form-grid-full">
+          <CleanInput label="Live Location URL" type="url"
+            value={fields.live_location_url} placeholder="https://maps.google.com/..."
+            readOnly={isView} disabled={isView}
+            onChange={e => setField("live_location_url", e.target.value)} />
+        </div>
+      </div>
+    </CleanModal>
+  );
+};
+
+// ── Create mode (multi-entry) ────────────────────────────────────────────────
+
+const CreateModeContent: React.FC<{ isOpen: boolean; onClose: () => void; onCreated: () => void }> = ({ isOpen, onClose, onCreated }) => {
   const cookies = { t: useSelector(selectAccessToken) }; // compat shim — read from Redux
   const user                                = useSelector((s: any) => s.user?.userData || s.user);
 
@@ -628,6 +821,26 @@ const CreateBookingModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
         </div>
       </CleanModal>
     </>
+  );
+};
+
+// ── Public export — routes to create / view / edit ──────────────────────────
+
+const CreateBookingModal: React.FC<Props> = ({
+  isOpen, onClose, onCreated, onSaved, mode = "create", initialData,
+}) => {
+  if (mode === "view" || mode === "edit") {
+    return (
+      <ViewEditContent
+        isOpen={isOpen} onClose={onClose} onSaved={onSaved}
+        mode={mode} data={initialData!}
+      />
+    );
+  }
+  return (
+    <CreateModeContent
+      isOpen={isOpen} onClose={onClose} onCreated={onCreated ?? (() => {})}
+    />
   );
 };
 

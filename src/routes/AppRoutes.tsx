@@ -1,11 +1,14 @@
 import React, { lazy, Suspense, useEffect } from "react";
-import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import { Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { useAuth } from "../hooks/useAuth";
 import { DashboardLayout } from "../templates/DashboardLayout";
 import { selectAccessData } from "../store/slices/accessSlice";
 import { LoaderOverlay } from "../atoms/LoaderOverlay";
 import { NavigationProgress } from "../atoms/NavigationProgress";
+import { DashboardSkeleton } from "../atoms/skeleton/DashboardSkeleton";
+import { BookingManagementSkeleton } from "../atoms/skeleton/BookingManagementSkeleton";
+import { SettingConfigSkeleton, ApiKeyPageSkeleton } from "../atoms/skeleton/SettingConfigSkeleton";
 
 // ── Lazy-loaded pages ──────────────────────────────────────────────────────
 // Each page is code-split: the JS bundle for that page is only downloaded
@@ -101,11 +104,32 @@ const ProtectedRoute: React.FC<{
   roleAllowed?: string[]; // partial role-name matches  e.g. ["super", "manager"]
 }> = ({ children, moduleId, roleAllowed }) => {
   const { isAuthenticated, isLoading, initDone } = useAuth();
-  const access = useSelector((s: any) => selectAccessData(s)); // Redux accessSlice
-  const user   = useSelector((s: any) => s.user);              // Redux userSlice (flat)
+  const access   = useSelector((s: any) => selectAccessData(s)); // Redux accessSlice
+  const user     = useSelector((s: any) => s.user);              // Redux userSlice (flat)
+  const { pathname } = useLocation();
 
-  // Layer 1 — wait for profile init (covers page-refresh scenario)
-  if (isLoading || !initDone) return <LoaderOverlay show />;
+  // Layer 1 — wait for profile init (covers page-refresh scenario).
+  // Show a page-specific skeleton instead of a white screen + spinner so the
+  // user sees the layout chrome immediately while auth resolves.
+  if (isLoading || !initDone) {
+    if (pathname.startsWith("/dashboard/admin") || pathname.startsWith("/dashboard/manager")) {
+      return <DashboardSkeleton />;
+    }
+    if (pathname === "/booking-management") {
+      return <BookingManagementSkeleton />;
+    }
+    if (
+      pathname.startsWith("/setting-config/user-management") ||
+      pathname.startsWith("/setting-config/role-management") ||
+      pathname.startsWith("/setting-config/module-management")
+    ) {
+      return <SettingConfigSkeleton />;
+    }
+    if (pathname.startsWith("/setting-config/api-key-management")) {
+      return <ApiKeyPageSkeleton />;
+    }
+    return <LoaderOverlay show />;
+  }
 
   // Layer 2 — must be logged in
   if (!isAuthenticated) return <Navigate to="/login" replace />;

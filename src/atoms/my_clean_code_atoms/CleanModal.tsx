@@ -1,9 +1,9 @@
-import React, { Fragment, useCallback, useEffect, useRef, useState } from "react";
+import React, { Fragment, useCallback, useEffect, useRef, useState } from "react"; // useRef kept for BottomSheet drag system
 import {
   Dialog, DialogPanel, DialogTitle,
   Transition, TransitionChild,
 } from "@headlessui/react";
-import { X } from "lucide-react";
+import { X, Maximize2, Minimize2 } from "lucide-react";
 import { useDevice } from "../../hooks/useDevice";
 
 // ── Public props ───────────────────────────────────────────────────────────
@@ -20,6 +20,8 @@ export interface CleanModalProps {
   closeOnBackdrop?: boolean;
   headerExtra?:     React.ReactNode;
   zIndex?:          number;
+  /** Show expand/collapse icon before the close button (default: true) */
+  expandable?:      boolean;
   /** "auto" (default) = mobile→sheet, desktop→modal  |  "modal" = always centered  |  "sheet" = always bottom sheet */
   mode?:            "auto" | "modal" | "sheet";
 }
@@ -272,11 +274,18 @@ const SimpleBackdrop: React.FC = () => (
 
 // ── Shared UI ──────────────────────────────────────────────────────────────
 
+const iconBtnStyle: React.CSSProperties = {
+  display: "flex", alignItems: "center", justifyContent: "center",
+  width: 28, height: 28, borderRadius: 6, border: "none",
+  background: "transparent", cursor: "pointer", color: "var(--fi-muted)",
+  transition: "background 140ms ease, color 140ms ease",
+};
+
 const CloseBtn: React.FC<{ onClose: () => void }> = ({ onClose }) => (
   <button
     type="button" onClick={onClose} aria-label="Close"
     onPointerDown={e => e.stopPropagation()}
-    style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 28, height: 28, borderRadius: 6, border: "none", background: "transparent", cursor: "pointer", color: "var(--fi-muted)", transition: "background 140ms ease, color 140ms ease" }}
+    style={iconBtnStyle}
     onMouseEnter={e => { const b = e.currentTarget; b.style.background = "var(--sb-hover)"; b.style.color = "var(--fi-text)"; }}
     onMouseLeave={e => { const b = e.currentTarget; b.style.background = "transparent"; b.style.color = "var(--fi-muted)"; }}
   >
@@ -284,9 +293,24 @@ const CloseBtn: React.FC<{ onClose: () => void }> = ({ onClose }) => (
   </button>
 );
 
+const ExpandBtn: React.FC<{ expanded: boolean; onToggle: () => void }> = ({ expanded, onToggle }) => (
+  <button
+    type="button" onClick={onToggle} aria-label={expanded ? "Collapse" : "Expand"}
+    onPointerDown={e => e.stopPropagation()}
+    style={iconBtnStyle}
+    onMouseEnter={e => { const b = e.currentTarget; b.style.background = "var(--sb-hover)"; b.style.color = "var(--fi-text)"; }}
+    onMouseLeave={e => { const b = e.currentTarget; b.style.background = "transparent"; b.style.color = "var(--fi-muted)"; }}
+  >
+    {expanded
+      ? <Minimize2 style={{ width: 14, height: 14 }} />
+      : <Maximize2 style={{ width: 14, height: 14 }} />}
+  </button>
+);
+
 const ModalHeader: React.FC<{
-  title?: string; subtitle?: string; headerExtra?: React.ReactNode; onClose: () => void;
-}> = ({ title, subtitle, headerExtra, onClose }) => {
+  title?: string; subtitle?: string; headerExtra?: React.ReactNode;
+  expandControl?: React.ReactNode; onClose: () => void;
+}> = ({ title, subtitle, headerExtra, expandControl, onClose }) => {
   if (!title && !headerExtra) return null;
   return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 18px", borderBottom: "1px solid var(--fi-border)", background: "var(--modal-bg)" }}>
@@ -296,6 +320,7 @@ const ModalHeader: React.FC<{
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
         {headerExtra}
+        {expandControl}
         <CloseBtn onClose={onClose} />
       </div>
     </div>
@@ -318,27 +343,77 @@ const ModalFooter: React.FC<{ footer: React.ReactNode }> = ({ footer }) => (
 
 const DesktopModal: React.FC<CleanModalProps> = ({
   isOpen, onClose, title, subtitle, children, footer,
-  maxWidth = 720, maxHeight = "90vh", closeOnBackdrop = false, headerExtra, zIndex = 9999,
-}) => (
-  <Transition appear show={isOpen} as={Fragment}>
-    <Dialog as="div" style={{ position: "relative", zIndex }} onClose={closeOnBackdrop ? onClose : () => {}}>
-      <SimpleBackdrop />
-      <div style={{ position: "fixed", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-        <TransitionChild
-          as={Fragment}
-          enter="ease-out duration-200" enterFrom="opacity-0 scale-95 translate-y-4" enterTo="opacity-100 scale-100 translate-y-0"
-          leave="ease-in duration-150" leaveFrom="opacity-100 scale-100 translate-y-0" leaveTo="opacity-0 scale-95 translate-y-4"
-        >
-          <DialogPanel style={{ width: "100%", maxWidth, maxHeight, display: "flex", flexDirection: "column", borderRadius: 12, background: "var(--modal-bg)", boxShadow: "0 20px 60px rgba(0,0,0,0.2)", overflow: "hidden", border: "1px solid var(--fi-border)" }}>
-            <ModalHeader title={title} subtitle={subtitle} headerExtra={headerExtra} onClose={onClose} />
-            <ModalBody>{children}</ModalBody>
-            {footer && <ModalFooter footer={footer} />}
-          </DialogPanel>
-        </TransitionChild>
-      </div>
-    </Dialog>
-  </Transition>
-);
+  maxWidth = 720, maxHeight = "90vh", closeOnBackdrop = false,
+  headerExtra, zIndex = 9999, expandable = true,
+}) => {
+  const [expanded, setExpanded] = useState(false);
+
+  useEffect(() => { if (!isOpen) setExpanded(false); }, [isOpen]);
+
+  // Pure state flip — CSS transitions handle the animation because both
+  // normal (maxHeight) and expanded (100vh) are explicit length values.
+  const toggleExpand = useCallback(() => setExpanded(v => !v), []);
+
+  const expandControl = expandable
+    ? <ExpandBtn expanded={expanded} onToggle={toggleExpand} />
+    : null;
+
+  // Expandable modals use maxHeight as a fixed height so CSS can transition
+  // between two concrete values (maxHeight ↔ 100vh). Non-expandable modals
+  // (confirm dialogs) keep height:auto for natural content sizing.
+  const panelH    = expanded ? "100vh" : (expandable ? maxHeight : "auto");
+  const panelMaxH = expanded ? "100vh" : maxHeight;
+
+  return (
+    <Transition appear show={isOpen} as={Fragment}>
+      <Dialog as="div" style={{ position: "relative", zIndex }} onClose={closeOnBackdrop ? onClose : () => {}}>
+        <SimpleBackdrop />
+        <div style={{
+          position: "fixed", inset: 0,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          padding: expanded ? 0 : 16,
+          transition: "padding 0.28s cubic-bezier(0.4,0,0.2,1)",
+        }}>
+          <TransitionChild
+            as={Fragment}
+            enter="ease-out duration-200" enterFrom="opacity-0 scale-95 translate-y-4" enterTo="opacity-100 scale-100 translate-y-0"
+            leave="ease-in duration-150" leaveFrom="opacity-100 scale-100 translate-y-0" leaveTo="opacity-0 scale-95 translate-y-4"
+          >
+            <DialogPanel
+              style={{
+                width:         "100%",
+                maxWidth:      expanded ? "100vw" : maxWidth,
+                height:        panelH,
+                maxHeight:     panelMaxH,
+                display:       "flex",
+                flexDirection: "column",
+                borderRadius:  expanded ? 0 : 12,
+                background:    "var(--modal-bg)",
+                boxShadow:     "0 20px 60px rgba(0,0,0,0.2)",
+                overflow:      "hidden",
+                border:        "1px solid var(--fi-border)",
+                transition:    [
+                  "opacity 0.2s ease-out",
+                  "transform 0.2s ease-out",
+                  "max-width 0.28s cubic-bezier(0.4,0,0.2,1)",
+                  "height 0.28s cubic-bezier(0.4,0,0.2,1)",
+                  "max-height 0.28s cubic-bezier(0.4,0,0.2,1)",
+                  "border-radius 0.28s cubic-bezier(0.4,0,0.2,1)",
+                  "box-shadow 0.28s ease",
+                  "border 0.28s ease",
+                ].join(", "),
+              }}
+            >
+              <ModalHeader title={title} subtitle={subtitle} headerExtra={headerExtra} expandControl={expandControl} onClose={onClose} />
+              <ModalBody>{children}</ModalBody>
+              {footer && <ModalFooter footer={footer} />}
+            </DialogPanel>
+          </TransitionChild>
+        </div>
+      </Dialog>
+    </Transition>
+  );
+};
 
 // ── Mobile bottom sheet ────────────────────────────────────────────────────
 
