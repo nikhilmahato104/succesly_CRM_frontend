@@ -133,7 +133,7 @@
 <nav>
   <div class="logo">
     <div class="logo-title">🔐 Auth Security v2.0</div>
-    <div class="logo-sub">Succesly Admin · Frontend PRD · CSRF + RT + JWT</div>
+    <div class="logo-sub">My Learning Admin · Frontend PRD · CSRF + RT + JWT</div>
   </div>
 
   <div class="section-label">Overview</div>
@@ -183,21 +183,21 @@
 <section id="overview">
   <h1>Frontend Auth Security v2.0</h1>
   <p class="subtitle">
-    <span class="en">Complete Developer Guide — JWT · CSRF Token · httpOnly Refresh Token · Silent Refresh · Succesly Admin</span>
-    <span class="hi">Complete Developer Guide — JWT · CSRF Token · httpOnly Refresh Token · Silent Refresh · Succesly Admin</span>
+    <span class="en">Complete Developer Guide — JWT · CSRF Token · httpOnly Refresh Token · Silent Refresh · My Learning Admin</span>
+    <span class="hi">Complete Developer Guide — JWT · CSRF Token · httpOnly Refresh Token · Silent Refresh · My Learning Admin</span>
   </p>
 
   <div class="card cl">
     <h3><span class="en">📌 What Did We Build?</span><span class="hi">📌 Humne Kya Banaya?</span></h3>
     <p>
       <span class="en">
-        We implemented a <strong>3-token, 5-layer security architecture</strong> for Succesly Admin.
+        We implemented a <strong>3-token, 5-layer security architecture</strong> for My Learning Admin.
         This is the same pattern used by <strong>Google, GitHub, Stripe, and Notion</strong>.
         No JWT token is stored in any cookie or localStorage — making it invisible to Cookie Editor,
         XSS attacks, and browser extensions.
       </span>
       <span class="hi">
-        Humne Succesly Admin ke liye <strong>3-token, 5-layer security architecture</strong> implement ki hai.
+        Humne My Learning Admin ke liye <strong>3-token, 5-layer security architecture</strong> implement ki hai.
         Ye same pattern hai jo <strong>Google, GitHub, Stripe, aur Notion</strong> use karte hain.
         Koi bhi JWT token kisi cookie ya localStorage mein store nahi hai — is wajah se ye Cookie Editor,
         XSS attacks, aur browser extensions ke liye invisible hai.
@@ -344,7 +344,7 @@
 
 <div class="card clg">
   <h3><span class="en">Request</span><span class="hi">Request</span></h3>
-<pre><span class="c">POST https://api.succesly.in/api/v1/auth/login
+<pre><span class="c">POST https://api.My Learning.in/api/v1/auth/login
 Content-Type: application/json</span>
 
 {
@@ -398,7 +398,7 @@ dispatch(<span class="f">setAuthTokens</span>({
   </p>
 
   <h3><span class="en">Request</span><span class="hi">Request</span></h3>
-<pre><span class="c">POST https://api.succesly.in/api/v1/auth/refresh
+<pre><span class="c">POST https://api.My Learning.in/api/v1/auth/refresh
 Content-Type: application/json
 withCredentials: true   ← browser auto-sends the rt httpOnly cookie
 
@@ -424,8 +424,8 @@ Body: {}   (empty — the rt cookie is sent automatically by browser)</span></pr
 
   <div class="warn">
     ⚠️ <strong><span class="en">Known Cross-Origin Issue (Dev Only):</span><span class="hi">Known Cross-Origin Issue (Sirf Dev Mein):</span></strong>
-    <span class="en"> When frontend is at <code>http://localhost:5173</code> and backend is at <code>https://api.succesly.in</code>, the browser blocks the <code>rt</code> cookie from being sent due to <strong>SameSite=Strict</strong> policy. Backend team needs to set <code>SameSite=None; Secure</code> on the rt cookie to fix this. This is NOT a frontend bug.</span>
-    <span class="hi"> Jab frontend <code>http://localhost:5173</code> par hai aur backend <code>https://api.succesly.in</code> par, browser <strong>SameSite=Strict</strong> policy ki wajah se <code>rt</code> cookie bhejne se rok deta hai. Backend team ko rt cookie par <code>SameSite=None; Secure</code> set karna hoga. Ye frontend bug nahi hai.</span>
+    <span class="en"> When frontend is at <code>http://localhost:5173</code> and backend is at <code>https://api.My Learning.in</code>, the browser blocks the <code>rt</code> cookie from being sent due to <strong>SameSite=Strict</strong> policy. Backend team needs to set <code>SameSite=None; Secure</code> on the rt cookie to fix this. This is NOT a frontend bug.</span>
+    <span class="hi"> Jab frontend <code>http://localhost:5173</code> par hai aur backend <code>https://api.My Learning.in</code> par, browser <strong>SameSite=Strict</strong> policy ki wajah se <code>rt</code> cookie bhejne se rok deta hai. Backend team ko rt cookie par <code>SameSite=None; Secure</code> set karna hoga. Ye frontend bug nahi hai.</span>
   </div>
 </div>
 
@@ -439,7 +439,7 @@ Body: {}   (empty — the rt cookie is sent automatically by browser)</span></pr
   <span class="hi"><strong>Kab call hota hai?</strong> Har login ke baad aur har refresh ke baad (full role + permissions Redux mein load karne ke liye).</span></p>
 
   <h3><span class="en">Request</span><span class="hi">Request</span></h3>
-<pre><span class="c">GET https://api.succesly.in/api/v1/auth/profile
+<pre><span class="c">GET https://api.My Learning.in/api/v1/auth/profile
 Authorization: Bearer &lt;accessToken&gt;   ← injected by identityInstance interceptor</span></pre>
 
   <h3><span class="en">Success Response (200)</span><span class="hi">Success Response (200)</span></h3>
@@ -470,7 +470,7 @@ Authorization: Bearer &lt;accessToken&gt;   ← injected by identityInstance int
 
 <div class="card clg">
   <h3><span class="en">Request</span><span class="hi">Request</span></h3>
-<pre><span class="c">POST https://api.succesly.in/api/v1/auth/logout
+<pre><span class="c">POST https://api.My Learning.in/api/v1/auth/logout
 Authorization: Bearer &lt;accessToken&gt;
 x-csrf-token: &lt;csrfToken&gt;            ← CSRF protection on logout too
 withCredentials: true                  ← browser sends rt cookie so server can invalidate it</span></pre>
@@ -652,8 +652,8 @@ withCredentials: true                  ← browser sends rt cookie so server can
   <div class="card cl">
     <h3><span class="en">What is a CSRF Attack?</span><span class="hi">CSRF Attack Kya Hota Hai?</span></h3>
     <p>
-      <span class="en">Imagine you are logged into Succesly Admin. A hacker sends you a link — <code>hacker.com/trick.html</code>. When you open it, that page silently sends a POST request to <code>api.succesly.in/users/delete</code> using YOUR session cookies. The server sees a valid session and deletes the user. This is CSRF.</span>
-      <span class="hi">Socho tum Succesly Admin mein logged in ho. Hacker tumhe ek link bhejta hai — <code>hacker.com/trick.html</code>. Jab tum use kholte ho, wo page secretly tumhare session cookies use karke <code>api.succesly.in/users/delete</code> par POST request bhej deta hai. Server valid session dekhta hai aur user delete kar deta hai. Ye hai CSRF.</span>
+      <span class="en">Imagine you are logged into My Learning Admin. A hacker sends you a link — <code>hacker.com/trick.html</code>. When you open it, that page silently sends a POST request to <code>api.My Learning.in/users/delete</code> using YOUR session cookies. The server sees a valid session and deletes the user. This is CSRF.</span>
+      <span class="hi">Socho tum My Learning Admin mein logged in ho. Hacker tumhe ek link bhejta hai — <code>hacker.com/trick.html</code>. Jab tum use kholte ho, wo page secretly tumhare session cookies use karke <code>api.My Learning.in/users/delete</code> par POST request bhej deta hai. Server valid session dekhta hai aur user delete kar deta hai. Ye hai CSRF.</span>
     </p>
 
     <h3 style="margin-top:16px"><span class="en">How We Block CSRF</span><span class="hi">Hum CSRF Kaise Rokate Hain</span></h3>
@@ -682,12 +682,12 @@ identityInstance.interceptors.request.<span class="f">use</span>((config) => {
 
     <h3><span class="en">CSRF Attack Scenario — Blocked</span><span class="hi">CSRF Attack Scenario — Blocked</span></h3>
     <div class="flow"><span class="fr">HACKER creates malicious page: hacker.com/trap.html</span>
-<span class="fa">         │  Contains: &lt;form action="https://api.succesly.in/users/delete" method="POST"&gt;</span>
+<span class="fa">         │  Contains: &lt;form action="https://api.My Learning.in/users/delete" method="POST"&gt;</span>
 <span class="fa">         ▼</span>
-<span class="fr">User visits hacker.com/trap.html (while logged into Succesly Admin)</span>
+<span class="fr">User visits hacker.com/trap.html (while logged into My Learning Admin)</span>
 <span class="fa">         │</span>
 <span class="fa">         ▼</span>
-<span class="fr">Browser submits form → POST request to api.succesly.in</span>
+<span class="fr">Browser submits form → POST request to api.My Learning.in</span>
 <span class="fa">         │  Cookies? rt cookie has SameSite=Strict → NOT sent to cross-site request ✅</span>
 <span class="fa">         │  x-csrf-token header? hacker.com cannot read our Redux state → MISSING ✅</span>
 <span class="fa">         ▼</span>
@@ -956,8 +956,8 @@ identityInstance.interceptors.request.<span class="f">use</span>((config) => {
   <div class="card cly">
     <h3>⚠️ <span class="en">The Problem</span><span class="hi">Problem Kya Hai</span></h3>
     <p>
-      <span class="en">Frontend: <code>http://localhost:5173</code> ↔ Backend: <code>https://api.succesly.in</code> — these are <strong>cross-origin</strong> (different domains). The browser's SameSite policy blocks the <code>rt</code> httpOnly cookie from being sent in cross-origin requests. This causes refresh to fail = user gets kicked to login on page reload during local development.</span>
-      <span class="hi">Frontend: <code>http://localhost:5173</code> ↔ Backend: <code>https://api.succesly.in</code> — ye <strong>cross-origin</strong> hain (alag domains). Browser ki SameSite policy <code>rt</code> httpOnly cookie ko cross-origin requests mein bhejne se rokti hai. Isse refresh fail hota hai = local development mein page reload par user login page par aa jaata hai.</span>
+      <span class="en">Frontend: <code>http://localhost:5173</code> ↔ Backend: <code>https://api.My Learning.in</code> — these are <strong>cross-origin</strong> (different domains). The browser's SameSite policy blocks the <code>rt</code> httpOnly cookie from being sent in cross-origin requests. This causes refresh to fail = user gets kicked to login on page reload during local development.</span>
+      <span class="hi">Frontend: <code>http://localhost:5173</code> ↔ Backend: <code>https://api.My Learning.in</code> — ye <strong>cross-origin</strong> hain (alag domains). Browser ki SameSite policy <code>rt</code> httpOnly cookie ko cross-origin requests mein bhejne se rokti hai. Isse refresh fail hota hai = local development mein page reload par user login page par aa jaata hai.</span>
     </p>
     <h3><span class="en">The Fix (Backend team — Nikhil)</span><span class="hi">Fix Kya Hai (Backend team — Nikhil)</span></h3>
 <pre><span class="c">// Current (blocks cross-origin dev):</span>
@@ -967,7 +967,7 @@ res.<span class="f">cookie</span>(<span class="s">"rt"</span>, refreshToken, { h
 res.<span class="f">cookie</span>(<span class="s">"rt"</span>, refreshToken, { httpOnly: <span class="k">true</span>, secure: <span class="k">true</span>, sameSite: <span class="s">"none"</span> });
 <span class="c">//                                                                            ^^^^
 // One word change. Secure=true is REQUIRED when SameSite=None.
-// Since api.succesly.in is HTTPS, this works perfectly.</span></pre>
+// Since api.My Learning.in is HTTPS, this works perfectly.</span></pre>
     <p><span class="en">This is the <strong>industry standard</strong> setting used by Auth0, Firebase, AWS Cognito, and every API that serves a cross-origin frontend. Without this, the httpOnly cookie architecture simply cannot work for cross-origin dev setups.</span>
     <span class="hi">Ye <strong>industry standard</strong> setting hai jo Auth0, Firebase, AWS Cognito, aur har wo API use karta hai jo cross-origin frontend serve karta hai. Iske bina httpOnly cookie architecture cross-origin dev setups ke liye kaam nahi kar sakta.</span></p>
   </div>

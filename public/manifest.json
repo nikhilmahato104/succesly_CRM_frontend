@@ -1,7 +1,7 @@
 {
-  "name": "Succesly Admin",
+  "name": "My Learning Admin",
   "short_name": "NP Admin",
-  "description": "Succesly Admin — manage bookings, users, and platform settings.",
+  "description": "My Learning Admin — manage bookings, users, and platform settings.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

@@ -83,7 +83,7 @@ const SidebarLogo: React.FC<SidebarLogoProps> = ({ isCollapsed, isHovered, onCol
             letterSpacing: "-0.02em",
           }}
         >
-          Succesly
+          My Learning
         </span>
       </div>
 

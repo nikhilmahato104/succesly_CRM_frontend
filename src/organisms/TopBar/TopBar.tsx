@@ -227,7 +227,7 @@ export const TopBar: React.FC = () => {
           N
         </div>
         <span style={{ fontSize: 13, fontWeight: 600, color: "var(--sb-text-active)", whiteSpace: "nowrap", letterSpacing: "-0.01em" }}>
-          Succesly
+          My Learning
         </span>
         <ChevronDown style={{ width: 13, height: 13, color: "var(--sb-text-dim)" }} />
       </div>

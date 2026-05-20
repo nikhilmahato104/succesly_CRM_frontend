@@ -297,7 +297,7 @@ const WelcomeScreen: React.FC<{ userName: string }> = ({ userName }) => (
         letterSpacing: "-0.4px",
       }}
     >
-      Succesly
+      My Learning
     </h2>
     <p style={{ margin: 0, color: "var(--text-muted)", fontSize: 14 }}>
       How can I help you today?

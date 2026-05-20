@@ -16,7 +16,7 @@ const MobilePanelHeader: React.FC<{ onClose: () => void }> = ({ onClose }) => (
   <div style={{ padding: "12px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid var(--sb-border)" }}>
     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
       <div style={{ width: 30, height: 30, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--sb-text-active)", color: "var(--sb-bg)", fontWeight: 800, fontSize: 15, flexShrink: 0 }}>N</div>
-      <span style={{ fontSize: 15, fontWeight: 700, color: "var(--sb-text-active)", letterSpacing: "-0.02em" }}>Succesly</span>
+      <span style={{ fontSize: 15, fontWeight: 700, color: "var(--sb-text-active)", letterSpacing: "-0.02em" }}>My Learning</span>
     </div>
     <button
       onClick={onClose}

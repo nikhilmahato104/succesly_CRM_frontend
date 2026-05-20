@@ -5,4 +5,4 @@ Disallow: /login
 Disallow: /forgot-password
 Allow: /
 
-Sitemap: https://admin.Succesly.in/sitemap.xml
+Sitemap: https://admin.My Learning.in/sitemap.xml
