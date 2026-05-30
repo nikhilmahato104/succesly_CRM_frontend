@@ -1,17 +1,2 @@
 [build]
-  command = "npm run build"
-  publish = "dist"
   functions = "netlify/functions"
-
-# Proxy /ik-signature → Netlify Function (same path as Vite dev proxy)
-[[redirects]]
-  from   = "/ik-signature"
-  to     = "/.netlify/functions/ik-signature"
-  status = 200
-  force  = true
-
-# SPA fallback — all other routes serve index.html
-[[redirects]]
-  from   = "/*"
-  to     = "/index.html"
-  status = 200

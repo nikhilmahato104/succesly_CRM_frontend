@@ -1,1 +1,5 @@
+# ImageKit signature proxy → Netlify function
+/ik-signature  /.netlify/functions/ik-signature  200
+
+# SPA fallback
 /*    /index.html   200
