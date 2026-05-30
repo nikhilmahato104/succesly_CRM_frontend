@@ -6,17 +6,32 @@ import { getData, postData, patchData } from "../../services/crmServices";
 import {
   CleanInput, CleanSelect, CleanButton, type SelectOption,
 } from "../../atoms/my_clean_code_atoms";
+import ImageUploadAvatar from "../../atoms/ImageUploadAvatar";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
 interface RolesApiItem { _id: string; role_name: string }
 interface RolesApiResponse { success: boolean; data: { data: RolesApiItem[]; total: number } }
 
-type UserFormValues = { name: string; email: string; mobile_no: string; password: string; role_id: string };
+type UserFormValues = {
+  name: string;
+  email: string;
+  mobile_no: string;
+  password: string;
+  role_id: string;
+  profile_image_url: string;
+};
 
 type UserFormProps = {
   token?: string;
-  initialValues?: { _id?: string; name: string; email: string; mobile_no?: string; role_id?: string };
+  initialValues?: {
+    _id?: string;
+    name: string;
+    email: string;
+    mobile_no?: string;
+    role_id?: string;
+    profile_image_url?: string | null;
+  };
   onSuccess: () => void;
 };
 
@@ -58,17 +73,19 @@ const UserForm: React.FC<UserFormProps> = ({ token, initialValues, onSuccess }) 
       password:  isEdit
         ? Yup.string()
         : Yup.string().required("Password is required").min(6, "Minimum 6 characters"),
-      role_id: Yup.string().required("Role is required"),
+      role_id:           Yup.string().required("Role is required"),
+      profile_image_url: Yup.string(),
     }),
     [isEdit],
   );
 
   const initialFormValues: UserFormValues = {
-    name:      initialValues?.name      ?? "",
-    email:     initialValues?.email     ?? "",
-    mobile_no: initialValues?.mobile_no ?? "",
-    password:  "",
-    role_id:   initialValues?.role_id   ?? "",
+    name:              initialValues?.name              ?? "",
+    email:             initialValues?.email             ?? "",
+    mobile_no:         initialValues?.mobile_no         ?? "",
+    password:          "",
+    role_id:           initialValues?.role_id           ?? "",
+    profile_image_url: initialValues?.profile_image_url ?? "",
   };
 
   const handleSubmit = async (
@@ -76,14 +93,17 @@ const UserForm: React.FC<UserFormProps> = ({ token, initialValues, onSuccess }) 
     { setSubmitting, resetForm }: { setSubmitting: (b: boolean) => void; resetForm: () => void },
   ) => {
     try {
+      const imageUrl = values.profile_image_url.trim() || undefined;
+
       if (isEdit) {
         await patchData({
           endpoint: `users/${initialValues!._id}`, token, instance: "identity",
           data: {
-            username: values.name.trim(),
-            email:    values.email.toLowerCase().trim(),
-            mobile_no: values.mobile_no.trim(),
-            role_id:  values.role_id,
+            username:          values.name.trim(),
+            email:             values.email.toLowerCase().trim(),
+            mobile_no:         values.mobile_no.trim(),
+            role_id:           values.role_id,
+            profile_image_url: imageUrl,
           },
         });
         showToastnew.success("User updated successfully");
@@ -91,11 +111,12 @@ const UserForm: React.FC<UserFormProps> = ({ token, initialValues, onSuccess }) 
         await postData({
           endpoint: "users", token, instance: "identity",
           data: {
-            username:  values.name.trim(),
-            email:     values.email.toLowerCase().trim(),
-            mobile_no: values.mobile_no.trim(),
-            password:  values.password,
-            role_id:   values.role_id,
+            username:          values.name.trim(),
+            email:             values.email.toLowerCase().trim(),
+            mobile_no:         values.mobile_no.trim(),
+            password:          values.password,
+            role_id:           values.role_id,
+            profile_image_url: imageUrl,
           },
         });
         showToastnew.success("User created successfully");
@@ -118,6 +139,16 @@ const UserForm: React.FC<UserFormProps> = ({ token, initialValues, onSuccess }) 
     >
       {({ values, errors, touched, handleChange, handleBlur, isSubmitting, setFieldValue, resetForm }) => (
         <Form>
+          {/* Avatar upload — centred above the form */}
+          <div style={{ display: "flex", justifyContent: "center", paddingBottom: 16 }}>
+            <ImageUploadAvatar
+              url={values.profile_image_url || null}
+              name={values.name}
+              size={80}
+              onUpload={(url) => setFieldValue("profile_image_url", url)}
+            />
+          </div>
+
           <div className="form-grid">
             <CleanInput
               label="Name" required placeholder="Full name"

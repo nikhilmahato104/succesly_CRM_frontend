@@ -19,6 +19,7 @@ import {
 interface UserApiItem {
   _id: string; username: string; email: string;
   mobile_no: string; role_id: string; is_active: boolean;
+  profile_image_url?: string | null;
   role?: { _id: string; role_name: string };
 }
 
@@ -30,6 +31,7 @@ interface UsersApiResponse {
 type UserItem = {
   _id: string; name: string; email: string;
   mobile_no?: string; role_name?: string; role_id?: string; is_active: boolean;
+  profile_image_url?: string | null;
 };
 
 type StatusState = { isOpen: boolean; id: string; name: string; is_active: boolean };
@@ -40,12 +42,47 @@ const mapUser = (u: UserApiItem): UserItem => ({
   _id: u._id, name: u.username, email: u.email,
   mobile_no: u.mobile_no, role_name: u.role?.role_name,
   role_id: u.role_id, is_active: u.is_active,
+  profile_image_url: u.profile_image_url ?? null,
 });
 
 function extractErrorMessage(err: unknown): string {
   if (err instanceof Error) return err.message;
   const e = err as { error?: { response?: { data?: { message?: string } } }; message?: string };
   return e?.error?.response?.data?.message ?? e?.message ?? "Operation failed";
+}
+
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0][0].toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+// ── Avatar cell ────────────────────────────────────────────────────────────
+
+function UserAvatar({ url, name }: { url?: string | null; name: string }) {
+  const [imgError, setImgError] = React.useState(false);
+  const showImg = !!url && !imgError;
+  return (
+    <div style={{
+      width: 30, height: 30, borderRadius: "50%", flexShrink: 0,
+      overflow: "hidden", border: "1.5px solid var(--fi-border)",
+      background: "var(--sc-surface)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+    }}>
+      {showImg ? (
+        <img
+          src={url!}
+          alt={name}
+          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          onError={() => setImgError(true)}
+        />
+      ) : (
+        <span style={{ fontSize: 10, fontWeight: 700, color: "var(--fi-muted)", lineHeight: 1 }}>
+          {getInitials(name)}
+        </span>
+      )}
+    </div>
+  );
 }
 
 // ── Status badge ───────────────────────────────────────────────────────────
@@ -182,7 +219,21 @@ const UserManagementList: React.FC = () => {
   const activeFilterCount = statusFilter ? 1 : 0;
 
   const columns = useMemo<GridColumn<UserItem>[]>(() => [
-    { field: "name",      headerName: "User Name", minWidth: 180, sortable: true },
+    {
+      field: "profile_image_url",
+      headerName: "",
+      minWidth: 48,
+      width: 48,
+      renderCell: ({ row }) => (
+        <UserAvatar url={row.profile_image_url} name={row.name} />
+      ),
+    },
+    {
+      field: "name",
+      headerName: "User Name",
+      minWidth: 160,
+      sortable: true,
+    },
     { field: "email",     headerName: "Email",     minWidth: 220, sortable: true },
     {
       field: "role_name", headerName: "Role", minWidth: 150,

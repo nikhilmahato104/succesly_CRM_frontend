@@ -1,189 +1,364 @@
 import React, { useState } from "react";
+import { CheckCircle2, Clipboard, Code2, Trash2 } from "lucide-react";
+import builtInCookies from "../../config/imagekit-cookies.json";
+import {
+  saveImageKitCookies,
+  getImageKitCookies,
+  clearImageKitCookies,
+  hasImageKitCookies,
+  uploadToImageKit,
+} from "../../utils/imagekitUpload";
 
-// ── ImageKit (TEST ONLY) ─────────────────────────────────────────────────────
-const IK_PUBLIC_KEY = "public_7rJWGD1cCcPUnbwQQ6wGFQREKbU=";
-const IK_CSRF_TOKEN = "K3DnTkCR-gsd9meJreeHWSHwQOqhXs5tApQc";
+// ── ImageKit cookie setup card ────────────────────────────────────────────────
 
-const card: React.CSSProperties = {
-  border: "1px solid #e0e0e0",
-  borderRadius: "12px",
-  padding: "24px",
-  maxWidth: "480px",
-  display: "flex",
-  flexDirection: "column",
-  gap: "14px",
-  boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
-};
+const CookieSetupCard: React.FC = () => {
+  const [saved,       setSaved]       = useState(() => hasImageKitCookies());
+  const [pasteText,   setPasteText]   = useState("");
+  const [showPaste,   setShowPaste]   = useState(false);
+  const [msg,         setMsg]         = useState<{ type: "ok" | "err"; text: string } | null>(null);
 
-const btn = (disabled: boolean): React.CSSProperties => ({
-  padding: "10px 20px",
-  backgroundColor: disabled ? "#b0bec5" : "#e44d26",
-  color: "#fff",
-  border: "none",
-  borderRadius: "6px",
-  cursor: disabled ? "not-allowed" : "pointer",
-  fontSize: "14px",
-  fontWeight: 600,
-  alignSelf: "flex-start",
-});
-
-const HelpChatPage: React.FC = () => {
-  const [ikFile,    setIkFile]    = useState<File | null>(null);
-  const [ikPreview, setIkPreview] = useState<string | null>(null);
-  const [ikLoading, setIkLoading] = useState(false);
-  const [ikUrl,     setIkUrl]     = useState<string | null>(null);
-  const [ikError,   setIkError]   = useState<string | null>(null);
-  const [ikCookie,  setIkCookie]  = useState("");
-
-  // Accepts JSON array (DevTools export) OR plain "name=val; name2=val2" string
-  const toCookieString = (raw: string): string => {
-    const trimmed = raw.trim();
-    if (!trimmed.startsWith("[")) return trimmed;
-    try {
-      const arr: { name: string; value: string }[] = JSON.parse(trimmed);
-      return arr.map(c => `${c.name}=${c.value}`).join("; ");
-    } catch {
-      return trimmed;
-    }
+  const flash = (type: "ok" | "err", text: string) => {
+    setMsg({ type, text });
+    setTimeout(() => setMsg(null), 3000);
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] ?? null;
-    setIkFile(file);
-    setIkPreview(file ? URL.createObjectURL(file) : null);
-    setIkUrl(null);
-    setIkError(null);
+  const loadFromCode = () => {
+    saveImageKitCookies(JSON.stringify(builtInCookies));
+    setSaved(true);
+    setShowPaste(false);
+    flash("ok", "Loaded cookies from built-in config and saved to localStorage.");
   };
 
-  const handleUpload = async () => {
-    if (!ikFile) { setIkError("Please select a file first."); return; }
+  const loadFromPaste = () => {
+    const text = pasteText.trim();
+    if (!text) { flash("err", "Paste field is empty."); return; }
+    saveImageKitCookies(text);
+    setSaved(true);
+    setShowPaste(false);
+    setPasteText("");
+    flash("ok", "Pasted cookies saved to localStorage.");
+  };
 
-    setIkLoading(true);
-    setIkError(null);
-    setIkUrl(null);
-
-    const cookieHeader = toCookieString(ikCookie);
-
-    try {
-      // Step 1 — get signed upload token via Vite proxy
-      const sigRes = await fetch("/ik-signature", {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          "csrf-token":   IK_CSRF_TOKEN,
-          "x-ik-cookie":  cookieHeader,
-        },
-        body: JSON.stringify({
-          publicKey: IK_PUBLIC_KEY,
-          expire: 3600,
-          uploadPayload: {
-            folder: "/",
-            fileName: ikFile.name,
-            responseFields: "tags,customCoordinates,isPrivateFile,embeddedMetadata,isPublished,customMetadata,selectedFieldsSchema,metadata,mime",
-            overwriteCustomMetadata: "true",
-            isPrivateFile: "false",
-            isPublished: "true",
-            useUniqueFileName: "false",
-            overwriteFile: "true",
-            overwriteTags: "true",
-            overwriteDescription: "true",
-            overwriteAITags: "true",
-          },
-        }),
-      });
-
-      if (!sigRes.ok) throw new Error(`Signature failed (${sigRes.status}): ${await sigRes.text()}`);
-      const { token } = await sigRes.json();
-
-      // Step 2 — upload file with the signed token
-      const form = new FormData();
-      form.append("folder",                 "/");
-      form.append("fileName",               ikFile.name);
-      form.append("responseFields",         "tags,customCoordinates,isPrivateFile,embeddedMetadata,isPublished,customMetadata,selectedFieldsSchema,metadata,mime");
-      form.append("overwriteCustomMetadata","true");
-      form.append("isPrivateFile",          "false");
-      form.append("isPublished",            "true");
-      form.append("useUniqueFileName",      "false");
-      form.append("overwriteFile",          "true");
-      form.append("overwriteTags",          "true");
-      form.append("overwriteDescription",   "true");
-      form.append("overwriteAITags",        "true");
-      form.append("file",                   ikFile, ikFile.name);
-      form.append("token",                  token);
-
-      const uploadRes = await fetch("https://upload.imagekit.io/api/v2-alpha/files/upload", {
-        method: "POST",
-        body: form,
-      });
-
-      if (!uploadRes.ok) throw new Error(`Upload failed (${uploadRes.status}): ${await uploadRes.text()}`);
-      const data = await uploadRes.json();
-      setIkUrl(data.url);
-    } catch (err: any) {
-      setIkError(err.message || "Upload failed.");
-    } finally {
-      setIkLoading(false);
-    }
+  const clearAll = () => {
+    clearImageKitCookies();
+    setSaved(false);
+    setPasteText("");
+    setShowPaste(false);
+    flash("ok", "Cookies cleared.");
   };
 
   return (
-    <div style={{ padding: "24px", minHeight: "100vh", display: "flex", flexDirection: "column", gap: "24px" }}>
-      <h1 style={{ margin: 0 }}>Help Chat (In Progress)</h1>
+    <div style={{
+      border:       "1px solid var(--sc-border, #e5e5e5)",
+      borderRadius: 12,
+      padding:      24,
+      maxWidth:     560,
+      display:      "flex",
+      flexDirection:"column",
+      gap:          16,
+      background:   "var(--sc-card, #fff)",
+      boxShadow:    "0 1px 4px rgba(0,0,0,0.07)",
+    }}>
+      <div>
+        <h2 style={{ margin: "0 0 4px", fontSize: 16, fontWeight: 700, color: "var(--fi-text, #0d0d0d)" }}>
+          ImageKit — Session Setup
+        </h2>
+        <p style={{ margin: 0, fontSize: 12, color: "var(--fi-muted, #9e9e9e)", lineHeight: 1.6 }}>
+          Cookies are saved once in <code>localStorage</code> and reused across the entire platform
+          for profile image uploads, chat attachments, and any other media.
+        </p>
+      </div>
 
-      <div style={card}>
-        <h2 style={{ margin: 0, fontSize: "18px" }}>Upload File → ImageKit</h2>
-
-        <div>
-          <label style={{ fontSize: "12px", fontWeight: 600, color: "#555", display: "block", marginBottom: "4px" }}>
-            ImageKit Session Cookie
-            <span style={{ fontWeight: 400, color: "#999", marginLeft: "6px" }}>
-              (DevTools → Application → Cookies → imagekit.io → copy all)
-            </span>
-          </label>
-          <textarea
-            value={ikCookie}
-            onChange={e => setIkCookie(e.target.value)}
-            placeholder="Paste cookie string or JSON array here…"
-            rows={3}
+      {/* Current status */}
+      <div style={{
+        display:      "flex",
+        alignItems:   "center",
+        gap:          8,
+        padding:      "8px 12px",
+        borderRadius: 8,
+        background:   saved ? "var(--badge-green-bg, #dcfce7)" : "var(--badge-amber-bg, #fef3c7)",
+        color:        saved ? "var(--badge-green-text, #166534)" : "var(--badge-amber-text, #92400e)",
+        fontSize:     12,
+        fontWeight:   600,
+      }}>
+        {saved ? <CheckCircle2 size={14} /> : <span>⚠</span>}
+        {saved ? "Cookies are saved — image upload ready" : "No cookies saved — image upload will not work"}
+        {saved && (
+          <button
+            onClick={clearAll}
+            title="Clear saved cookies"
             style={{
-              width: "100%",
-              fontSize: "11px",
-              fontFamily: "monospace",
-              padding: "8px",
-              borderRadius: "6px",
-              border: "1px solid #ccc",
-              resize: "vertical",
-              boxSizing: "border-box",
+              marginLeft: "auto", background: "none", border: "none",
+              cursor: "pointer", padding: 2, color: "inherit", display: "flex",
             }}
-          />
-        </div>
-
-        <input type="file" onChange={handleFileChange} style={{ fontSize: "14px" }} />
-
-        {ikPreview && (
-          <img src={ikPreview} alt="Preview" style={{ maxWidth: "100%", borderRadius: "8px", border: "1px solid #ddd" }} />
-        )}
-
-        <button onClick={handleUpload} disabled={ikLoading || !ikFile} style={btn(ikLoading || !ikFile)}>
-          {ikLoading ? "Uploading…" : "Upload to ImageKit"}
-        </button>
-
-        {ikError && <p style={{ margin: 0, color: "#d32f2f", fontSize: "13px" }}>{ikError}</p>}
-        {ikUrl && (
-          <div>
-            <p style={{ margin: "0 0 4px", color: "#388e3c", fontWeight: 600, fontSize: "13px" }}>✓ Uploaded!</p>
-            <a href={ikUrl} target="_blank" rel="noopener noreferrer" style={{ color: "#e44d26", fontSize: "13px", wordBreak: "break-all" }}>
-              {ikUrl}
-            </a>
-          </div>
+          >
+            <Trash2 size={13} />
+          </button>
         )}
       </div>
 
-      <div style={{ flex: 1, border: "1px solid #e0e0e0", borderRadius: "12px", padding: "20px", color: "#9e9e9e" }}>
-        Chat messages will appear here…
+      {/* Flash message */}
+      {msg && (
+        <div style={{
+          padding: "7px 12px", borderRadius: 7, fontSize: 12, fontWeight: 600,
+          background: msg.type === "ok" ? "var(--badge-green-bg, #dcfce7)" : "var(--badge-red-bg, #fee2e2)",
+          color:      msg.type === "ok" ? "var(--badge-green-text, #166534)" : "var(--badge-red-text, #991b1b)",
+        }}>
+          {msg.text}
+        </div>
+      )}
+
+      {/* Option 1 — load from built-in JSON */}
+      <div style={{
+        border:       "1px solid var(--sc-border, #e5e5e5)",
+        borderRadius: 8,
+        padding:      14,
+        display:      "flex",
+        flexDirection:"column",
+        gap:          8,
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <Code2 size={15} style={{ color: "var(--btn-primary-bg, #111)", flexShrink: 0 }} />
+          <span style={{ fontSize: 13, fontWeight: 600, color: "var(--fi-text, #0d0d0d)" }}>
+            Option 1 — Use cookies from code
+          </span>
+        </div>
+        <p style={{ margin: 0, fontSize: 12, color: "var(--fi-muted, #9e9e9e)", lineHeight: 1.5 }}>
+          Loads the cookies already saved in <code>src/config/imagekit-cookies.json</code> and writes
+          them to localStorage in one click. Update the JSON file when the session expires.
+        </p>
+        <button
+          onClick={loadFromCode}
+          style={{
+            alignSelf:    "flex-start",
+            padding:      "7px 16px",
+            background:   "var(--btn-primary-bg, #111)",
+            color:        "var(--btn-primary-text, #fff)",
+            border:       "none",
+            borderRadius: 7,
+            cursor:       "pointer",
+            fontSize:     12,
+            fontWeight:   600,
+          }}
+        >
+          Load from imagekit-cookies.json
+        </button>
+      </div>
+
+      {/* Option 2 — paste directly */}
+      <div style={{
+        border:       "1px solid var(--sc-border, #e5e5e5)",
+        borderRadius: 8,
+        padding:      14,
+        display:      "flex",
+        flexDirection:"column",
+        gap:          8,
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <Clipboard size={15} style={{ color: "var(--btn-primary-bg, #111)", flexShrink: 0 }} />
+          <span style={{ fontSize: 13, fontWeight: 600, color: "var(--fi-text, #0d0d0d)" }}>
+            Option 2 — Paste fresh cookies
+          </span>
+        </div>
+        <p style={{ margin: 0, fontSize: 12, color: "var(--fi-muted, #9e9e9e)", lineHeight: 1.5 }}>
+          DevTools → Application → Cookies → imagekit.io → select all rows → copy → paste below.
+          Accepts the raw copy-paste text or a JSON array.
+        </p>
+
+        {!showPaste ? (
+          <button
+            onClick={() => setShowPaste(true)}
+            style={{
+              alignSelf:    "flex-start",
+              padding:      "7px 16px",
+              background:   "none",
+              color:        "var(--fi-text, #0d0d0d)",
+              border:       "1px solid var(--sc-border, #e5e5e5)",
+              borderRadius: 7,
+              cursor:       "pointer",
+              fontSize:     12,
+              fontWeight:   600,
+            }}
+          >
+            Paste cookies manually
+          </button>
+        ) : (
+          <>
+            <textarea
+              value={pasteText}
+              onChange={(e) => setPasteText(e.target.value)}
+              placeholder="Paste cookie string or JSON array here…"
+              rows={5}
+              autoFocus
+              style={{
+                width:        "100%",
+                fontSize:     11,
+                fontFamily:   "monospace",
+                padding:      8,
+                borderRadius: 6,
+                border:       "1px solid var(--sc-border, #e5e5e5)",
+                background:   "var(--fi-bg, #fff)",
+                color:        "var(--fi-text, #0d0d0d)",
+                resize:       "vertical",
+                boxSizing:    "border-box",
+              }}
+            />
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                onClick={loadFromPaste}
+                disabled={!pasteText.trim()}
+                style={{
+                  padding:      "7px 16px",
+                  background:   pasteText.trim() ? "var(--btn-primary-bg, #111)" : "var(--sc-border, #e5e5e5)",
+                  color:        pasteText.trim() ? "var(--btn-primary-text, #fff)" : "var(--fi-muted, #9e9e9e)",
+                  border:       "none",
+                  borderRadius: 7,
+                  cursor:       pasteText.trim() ? "pointer" : "not-allowed",
+                  fontSize:     12,
+                  fontWeight:   600,
+                }}
+              >
+                Save cookies
+              </button>
+              <button
+                onClick={() => { setShowPaste(false); setPasteText(""); }}
+                style={{
+                  padding:      "7px 14px",
+                  background:   "none",
+                  color:        "var(--fi-muted, #9e9e9e)",
+                  border:       "1px solid var(--sc-border, #e5e5e5)",
+                  borderRadius: 7,
+                  cursor:       "pointer",
+                  fontSize:     12,
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
 };
+
+// ── Quick upload test ─────────────────────────────────────────────────────────
+
+const UploadTestCard: React.FC = () => {
+  const [file,     setFile]     = useState<File | null>(null);
+  const [preview,  setPreview]  = useState<string | null>(null);
+  const [loading,  setLoading]  = useState(false);
+  const [url,      setUrl]      = useState<string | null>(null);
+  const [error,    setError]    = useState<string | null>(null);
+
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0] ?? null;
+    setFile(f);
+    setPreview(f ? URL.createObjectURL(f) : null);
+    setUrl(null);
+    setError(null);
+  };
+
+  const handleUpload = async () => {
+    if (!file) return;
+    setLoading(true);
+    setError(null);
+    setUrl(null);
+    try {
+      const cdnUrl = await uploadToImageKit(file);
+      setUrl(cdnUrl);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Upload failed";
+      setError(msg === "NO_COOKIES" ? "No cookies configured. Use the setup card above first." : msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div style={{
+      border:       "1px solid var(--sc-border, #e5e5e5)",
+      borderRadius: 12,
+      padding:      24,
+      maxWidth:     560,
+      display:      "flex",
+      flexDirection:"column",
+      gap:          14,
+      background:   "var(--sc-card, #fff)",
+      boxShadow:    "0 1px 4px rgba(0,0,0,0.07)",
+    }}>
+      <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "var(--fi-text, #0d0d0d)" }}>
+        Test Upload
+      </h2>
+
+      <input type="file" accept="image/*" onChange={handleFile} style={{ fontSize: 13 }} />
+
+      {preview && (
+        <img src={preview} alt="Preview" style={{ maxWidth: "100%", maxHeight: 200, borderRadius: 8, objectFit: "contain", border: "1px solid var(--sc-border, #e5e5e5)" }} />
+      )}
+
+      <button
+        onClick={handleUpload}
+        disabled={loading || !file}
+        style={{
+          alignSelf:    "flex-start",
+          padding:      "8px 18px",
+          background:   loading || !file ? "var(--sc-border, #e5e5e5)" : "var(--btn-primary-bg, #111)",
+          color:        loading || !file ? "var(--fi-muted, #9e9e9e)" : "var(--btn-primary-text, #fff)",
+          border:       "none",
+          borderRadius: 7,
+          cursor:       loading || !file ? "not-allowed" : "pointer",
+          fontSize:     13,
+          fontWeight:   600,
+        }}
+      >
+        {loading ? "Uploading…" : "Upload to ImageKit"}
+      </button>
+
+      {error && <p style={{ margin: 0, color: "var(--badge-red-text, #991b1b)", fontSize: 12 }}>{error}</p>}
+      {url && (
+        <div>
+          <p style={{ margin: "0 0 4px", color: "var(--badge-green-text, #166534)", fontWeight: 600, fontSize: 12 }}>
+            ✓ Uploaded successfully
+          </p>
+          <a href={url} target="_blank" rel="noopener noreferrer"
+            style={{ color: "var(--btn-primary-bg, #111)", fontSize: 12, wordBreak: "break-all" }}>
+            {url}
+          </a>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ── Page ──────────────────────────────────────────────────────────────────────
+
+const HelpChatPage: React.FC = () => (
+  <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 20 }}>
+    <div>
+      <h1 style={{ margin: "0 0 4px", fontSize: 20, fontWeight: 700, color: "var(--fi-text, #0d0d0d)" }}>
+        Help Chat
+      </h1>
+      <p style={{ margin: 0, fontSize: 13, color: "var(--fi-muted, #9e9e9e)" }}>
+        Configure image upload (ImageKit) and test it here. Cookies saved here are used platform-wide.
+      </p>
+    </div>
+
+    <CookieSetupCard />
+    <UploadTestCard />
+
+    <div style={{
+      flex: 1, minHeight: 120,
+      border: "1px solid var(--sc-border, #e5e5e5)",
+      borderRadius: 12,
+      padding: 20,
+      color: "var(--fi-muted, #9e9e9e)",
+      fontSize: 13,
+      background: "var(--sc-card, #fff)",
+    }}>
+      Chat messages will appear here…
+    </div>
+  </div>
+);
 
 export default HelpChatPage;
