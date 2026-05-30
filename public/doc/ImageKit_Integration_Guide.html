@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>ImageKit Integration Guide — My Learning Admin</title>
+<style>
+  :root{--bg:#0f1117;--card:#1a1d27;--card2:#161922;--border:#2a2d3a;--accent:#6366f1;--accent2:#06b6d4;--green:#22c55e;--yellow:#f59e0b;--red:#ef4444;--orange:#f97316;--purple:#a855f7;--text:#e2e4ed;--muted:#8b8fa8;--dim:#b0b3c8;--code-bg:#0d1117;--ik:#e44d26;}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html{scroll-behavior:smooth;}
+  body{font-family:system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.65;display:flex;}
+  nav{position:fixed;top:0;left:0;width:252px;height:100vh;background:var(--card);border-right:1px solid var(--border);overflow-y:auto;padding:20px 0;z-index:100;scrollbar-width:thin;}
+  nav .logo{padding:0 16px 16px;border-bottom:1px solid var(--border);margin-bottom:8px;}
+  nav .logo-title{font-size:13px;font-weight:800;color:var(--ik);}
+  nav .logo-sub{font-size:10px;color:var(--muted);margin-top:3px;}
+  nav .section-label{padding:14px 16px 4px;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);}
+  nav a{display:block;padding:6px 16px;color:var(--muted);text-decoration:none;font-size:12px;border-left:3px solid transparent;transition:all 120ms;}
+  nav a:hover,nav a.active{background:rgba(228,77,38,.09);color:var(--text);border-left-color:var(--ik);}
+  main{margin-left:252px;padding:36px 52px 80px;max-width:980px;width:100%;}
+  .lang-bar{position:sticky;top:0;z-index:50;background:var(--bg);padding:10px 0 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border);margin-bottom:32px;}
+  .lang-bar span{font-size:11px;color:var(--muted);}
+  .lang-btn{padding:5px 18px;border-radius:6px;border:1px solid var(--border);font-size:12px;font-weight:600;cursor:pointer;background:transparent;color:var(--muted);transition:all 140ms;}
+  .lang-btn.active{background:var(--ik);border-color:var(--ik);color:#fff;}
+  h1{font-size:28px;font-weight:800;margin-bottom:6px;}
+  h2{font-size:17px;font-weight:700;margin:38px 0 14px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+  h3{font-size:14px;font-weight:700;color:var(--accent2);margin:20px 0 8px;}
+  p{color:var(--dim);margin-bottom:10px;}
+  ul,ol{padding-left:22px;color:var(--dim);margin-bottom:10px;}
+  li{margin-bottom:5px;}
+  strong{color:var(--text);}
+  code{background:rgba(228,77,38,.12);color:#fda47f;padding:1px 6px;border-radius:4px;font-family:monospace;font-size:12px;}
+  .subtitle{font-size:13px;color:var(--muted);margin-bottom:24px;}
+  .badge{display:inline-flex;align-items:center;gap:4px;padding:2px 10px;border-radius:100px;font-size:11px;font-weight:700;vertical-align:middle;}
+  .bg{background:rgba(34,197,94,.12);color:var(--green);border:1px solid rgba(34,197,94,.25);}
+  .br{background:rgba(239,68,68,.12);color:var(--red);border:1px solid rgba(239,68,68,.25);}
+  .by{background:rgba(245,158,11,.12);color:var(--yellow);border:1px solid rgba(245,158,11,.25);}
+  .bb{background:rgba(6,182,212,.12);color:var(--accent2);border:1px solid rgba(6,182,212,.25);}
+  .bik{background:rgba(228,77,38,.12);color:var(--ik);border:1px solid rgba(228,77,38,.25);}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px 24px;margin-bottom:14px;}
+  .cl{border-left:3px solid var(--accent);}
+  .clg{border-left:3px solid var(--green);}
+  .clr{border-left:3px solid var(--red);}
+  .cly{border-left:3px solid var(--yellow);}
+  .clik{border-left:3px solid var(--ik);}
+  .flow{background:var(--code-bg);border:1px solid var(--border);border-radius:8px;padding:18px 22px;margin:12px 0;font-family:'JetBrains Mono','Fira Code',monospace;font-size:12px;line-height:2;overflow-x:auto;white-space:pre;}
+  .fg{color:var(--green);} .fr{color:var(--red);} .fy{color:var(--yellow);} .fb{color:var(--accent2);} .fa{color:#64748b;} .fik{color:var(--ik);}
+  pre{background:var(--code-bg);border:1px solid var(--border);border-radius:8px;padding:16px 20px;font-family:'JetBrains Mono','Fira Code',monospace;font-size:12px;line-height:1.85;overflow-x:auto;margin:10px 0;color:var(--dim);}
+  pre .k{color:#c084fc;} pre .s{color:#86efac;} pre .c{color:#475569;font-style:italic;} pre .f{color:#67e8f9;} pre .n{color:#fde68a;}
+  table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13px;}
+  th{background:rgba(228,77,38,.1);color:var(--text);padding:10px 14px;text-align:left;border:1px solid var(--border);font-size:11px;text-transform:uppercase;letter-spacing:.04em;}
+  td{padding:10px 14px;border:1px solid var(--border);color:var(--dim);vertical-align:top;}
+  tr:hover td{background:rgba(255,255,255,.015);}
+  .fp-pill{display:inline-flex;align-items:center;gap:5px;background:rgba(228,77,38,.1);border:1px solid rgba(228,77,38,.2);border-radius:5px;padding:3px 10px;font-size:11px;font-weight:600;color:#fda47f;font-family:monospace;margin:2px 2px 6px;}
+  .fp-pill::before{content:'📄';}
+  .steps{list-style:none;padding:0;}
+  .steps li{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid rgba(42,45,58,.5);}
+  .steps li:last-child{border-bottom:none;}
+  .snum{width:24px;height:24px;border-radius:50%;background:rgba(228,77,38,.2);color:var(--ik);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;}
+  .warn{background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.25);border-radius:8px;padding:12px 16px;font-size:13px;color:var(--yellow);margin:12px 0;}
+  .info-box{background:rgba(6,182,212,.06);border:1px solid rgba(6,182,212,.2);border-radius:8px;padding:12px 16px;font-size:13px;color:var(--accent2);margin:12px 0;}
+  .success-box{background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.2);border-radius:8px;padding:12px 16px;font-size:13px;color:var(--green);margin:12px 0;}
+  .env-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:14px 0;}
+  .hi{display:none;}.en{display:block;}
+  body.hi-mode .hi{display:block;}body.hi-mode .en{display:none;}
+  span.hi{display:none;}span.en{display:inline;}
+  body.hi-mode span.hi{display:inline;}body.hi-mode span.en{display:none;}
+  ::-webkit-scrollbar{width:5px;} ::-webkit-scrollbar-track{background:var(--bg);} ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+</style>
+</head>
+<body>
+<nav>
+  <div class="logo">
+    <div class="logo-title">🖼️ ImageKit Integration</div>
+    <div class="logo-sub">My Learning Admin · Complete Dev Guide</div>
+  </div>
+  <div class="section-label">Overview</div>
+  <a href="#overview">What We Built</a>
+  <a href="#files">Files Changed</a>
+  <a href="#env">Local vs Netlify</a>
+
+  <div class="section-label">Local Dev Setup</div>
+  <a href="#local-how">How Vite Proxy Works</a>
+  <a href="#local-run">How to Run Locally</a>
+
+  <div class="section-label">Netlify Setup</div>
+  <a href="#netlify-how">How Netlify Function Works</a>
+  <a href="#netlify-deploy">How to Deploy</a>
+
+  <div class="section-label">Credentials</div>
+  <a href="#csrf">CSRF Token — What & When</a>
+  <a href="#cookie">Session Cookie — How to Get</a>
+  <a href="#constants">Hardcoded Constants</a>
+
+  <div class="section-label">API Reference</div>
+  <a href="#api1">API 1 — Signature</a>
+  <a href="#api2">API 2 — Upload</a>
+  <a href="#payload">All Payload Params</a>
+
+  <div class="section-label">Flow Diagrams</div>
+  <a href="#flow-local">Local Upload Flow</a>
+  <a href="#flow-prod">Production Upload Flow</a>
+
+  <div class="section-label">Maintenance</div>
+  <a href="#update-csrf">Update CSRF Token</a>
+  <a href="#update-cookie">Get Fresh Cookies</a>
+  <a href="#trouble">Troubleshooting</a>
+</nav>
+
+<main>
+<div class="lang-bar">
+  <span>Language / Bhasha:</span>
+  <button class="lang-btn active" id="btn-en" onclick="setLang('en')">🇬🇧 English</button>
+  <button class="lang-btn" id="btn-hi" onclick="setLang('hi')">🇮🇳 Hinglish</button>
+</div>
+
+<!-- OVERVIEW -->
+<section id="overview">
+  <h1>ImageKit Upload — Complete Integration Guide</h1>
+  <p class="subtitle">
+    <span class="en">Vite Proxy · Netlify Function · CSRF Token · Session Cookies · 2-Step Upload · My Learning Admin</span>
+    <span class="hi">Vite Proxy · Netlify Function · CSRF Token · Session Cookies · 2-Step Upload · My Learning Admin</span>
+  </p>
+
+  <div class="card clik">
+    <h3><span class="en">📌 What Did We Build?</span><span class="hi">📌 Humne Kya Banaya?</span></h3>
+    <p><span class="en">A file upload feature on <code>/help-chat</code> page that uploads images to <strong>ImageKit CDN</strong>. The upload is a 2-step process — first get a signed JWT token from ImageKit, then upload the file using that token. Because ImageKit's signature endpoint rejects requests from any origin other than <code>https://imagekit.io</code>, we use a <strong>proxy</strong> that runs on the server side (Vite in dev, Netlify Function in production).</span>
+    <span class="hi"><code>/help-chat</code> page par ek file upload feature jo images ko <strong>ImageKit CDN</strong> par upload karta hai. Upload 2-step process hai — pehle ImageKit se signed JWT token lo, phir us token se file upload karo. Kyunki ImageKit ka signature endpoint <code>https://imagekit.io</code> ke alawa kisi origin se request reject karta hai, hum ek <strong>proxy</strong> use karte hain jo server side par run karta hai (dev mein Vite, production mein Netlify Function).</span></p>
+
+    <div class="env-grid" style="margin-top:14px;">
+      <div style="background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:14px;">
+        <div style="font-size:12px;font-weight:800;color:var(--accent2);margin-bottom:8px;">🖥️ <span class="en">Local Development</span><span class="hi">Local Development</span></div>
+        <p style="font-size:12px;margin-bottom:4px;"><strong>URL:</strong> <code>http://localhost:5173</code></p>
+        <p style="font-size:12px;margin-bottom:4px;"><strong>Proxy:</strong> <span class="en">Vite dev-server middleware</span><span class="hi">Vite dev-server middleware</span></p>
+        <p style="font-size:12px;"><strong>/ik-signature</strong> → <span class="en">Handled by <code>vite.config.ts</code></span><span class="hi"><code>vite.config.ts</code> handle karta hai</span></p>
+      </div>
+      <div style="background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:14px;">
+        <div style="font-size:12px;font-weight:800;color:var(--green);margin-bottom:8px;">☁️ <span class="en">Netlify Production</span><span class="hi">Netlify Production</span></div>
+        <p style="font-size:12px;margin-bottom:4px;"><strong>URL:</strong> <code>https://administration.succesly.in</code></p>
+        <p style="font-size:12px;margin-bottom:4px;"><strong>Proxy:</strong> <span class="en">Netlify Serverless Function</span><span class="hi">Netlify Serverless Function</span></p>
+        <p style="font-size:12px;"><strong>/ik-signature</strong> → <span class="en">Redirected via <code>_redirects</code> to <code>netlify/functions/ik-signature.js</code></span><span class="hi"><code>_redirects</code> se <code>netlify/functions/ik-signature.js</code> par redirect</span></p>
+      </div>
+    </div>
+
+    <div class="success-box" style="margin-top:14px;">
+      ✅ <span class="en"><strong>Same frontend code works in both environments.</strong> The React component always calls <code>POST /ik-signature</code> — the environment (Vite or Netlify) decides what handles it.</span>
+      <span class="hi"><strong>Same frontend code dono environments mein kaam karta hai.</strong> React component hamesha <code>POST /ik-signature</code> call karta hai — environment (Vite ya Netlify) decide karta hai ki isse kaun handle kare.</span>
+    </div>
+  </div>
+</section>
+
+<!-- FILES CHANGED -->
+<section id="files">
+  <h2><span class="en">Files Changed — Complete List</span><span class="hi">Files Changed — Complete List</span></h2>
+  <div class="card cl">
+    <table>
+      <thead><tr><th>File</th><th><span class="en">What It Does</span><span class="hi">Kya Karta Hai</span></th><th><span class="en">When to Edit</span><span class="hi">Kab Edit Karo</span></th></tr></thead>
+      <tbody>
+        <tr>
+          <td><span class="fp-pill">src/pages/help-chat/HelpChatPage.tsx</span></td>
+          <td><span class="en">Main UI — file picker, cookie textarea, upload button, result link. All upload logic lives here.</span><span class="hi">Main UI — file picker, cookie textarea, upload button, result link. Saari upload logic yahan hai.</span></td>
+          <td><span class="badge by">Update CSRF constant when session changes</span></td>
+        </tr>
+        <tr>
+          <td><span class="fp-pill">vite.config.ts</span></td>
+          <td><span class="en">Contains <code>ikSignatureProxyPlugin()</code> — intercepts <code>POST /ik-signature</code> in local dev, spoofs origin/referer headers, forwards to imagekit.io.</span><span class="hi"><code>ikSignatureProxyPlugin()</code> — local dev mein <code>POST /ik-signature</code> intercept karta hai, origin/referer headers spoof karta hai, imagekit.io ko forward karta hai.</span></td>
+          <td><span class="badge bg">Only if imagekit.io client ID changes</span></td>
+        </tr>
+        <tr>
+          <td><span class="fp-pill">netlify/functions/ik-signature.js</span></td>
+          <td><span class="en">Netlify serverless function — same proxy logic as Vite plugin but runs in production on Netlify's Node.js runtime.</span><span class="hi">Netlify serverless function — Vite plugin jaisa hi proxy logic lekin production mein Netlify ke Node.js runtime par run karta hai.</span></td>
+          <td><span class="badge bg">Only if imagekit.io client ID changes</span></td>
+        </tr>
+        <tr>
+          <td><span class="fp-pill">public/_redirects</span></td>
+          <td><span class="en">Netlify redirect rules copied into <code>dist/</code> at build time. Routes <code>/ik-signature</code> → Netlify function, and <code>/*</code> → SPA fallback.</span><span class="hi">Netlify redirect rules jo build time par <code>dist/</code> mein copy hote hain. <code>/ik-signature</code> → Netlify function, aur <code>/*</code> → SPA fallback.</span></td>
+          <td><span class="badge bg">Only if adding new backend routes</span></td>
+        </tr>
+        <tr>
+          <td><span class="fp-pill">netlify.toml</span></td>
+          <td><span class="en">Tells Netlify where to find serverless functions (<code>netlify/functions</code> directory).</span><span class="hi">Netlify ko batata hai serverless functions kahan hain (<code>netlify/functions</code> directory).</span></td>
+          <td><span class="badge bg">Rarely — only infra changes</span></td>
+        </tr>
+        <tr>
+          <td><span class="fp-pill">src/routes/AppRoutes.tsx</span></td>
+          <td><span class="en">Lazy import + route registration for <code>/help-chat</code>.</span><span class="hi">Lazy import + route registration <code>/help-chat</code> ke liye.</span></td>
+          <td><span class="badge bg">Already set — don't touch</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- LOCAL VS NETLIFY -->
+<section id="env">
+  <h2><span class="en">Local vs Netlify — How They Differ</span><span class="hi">Local vs Netlify — Farq Kya Hai</span></h2>
+  <div class="card cl">
+    <table>
+      <thead><tr><th></th><th>🖥️ Local (<code>localhost:5173</code>)</th><th>☁️ Netlify (<code>administration.succesly.in</code>)</th></tr></thead>
+      <tbody>
+        <tr><td><strong><span class="en">Proxy mechanism</span><span class="hi">Proxy mechanism</span></strong></td><td><span class="en">Vite dev-server middleware in <code>vite.config.ts</code></span><span class="hi">Vite dev-server middleware <code>vite.config.ts</code> mein</span></td><td><span class="en">Netlify Function in <code>netlify/functions/ik-signature.js</code></span><span class="hi">Netlify Function <code>netlify/functions/ik-signature.js</code> mein</span></td></tr>
+        <tr><td><strong><span class="en">Route config</span><span class="hi">Route config</span></strong></td><td><span class="en">Vite interceptor (no config file needed)</span><span class="hi">Vite interceptor (koi config file nahi chahiye)</span></td><td><span class="en"><code>public/_redirects</code> → routes <code>/ik-signature</code> to function</span><span class="hi"><code>public/_redirects</code> → <code>/ik-signature</code> ko function par route karta hai</span></td></tr>
+        <tr><td><strong><span class="en">Start command</span><span class="hi">Start command</span></strong></td><td><code>npm run dev</code></td><td><span class="en">Push to git → Netlify auto-deploys</span><span class="hi">Git push → Netlify auto-deploy</span></td></tr>
+        <tr><td><strong><span class="en">Restart needed?</span><span class="hi">Restart chahiye?</span></strong></td><td><span class="en">Yes — after any <code>vite.config.ts</code> change, restart dev server</span><span class="hi">Haan — <code>vite.config.ts</code> change ke baad dev server restart karo</span></td><td><span class="en">No — just push, Netlify redeploys automatically</span><span class="hi">Nahi — bas push karo, Netlify automatic redeploy karta hai</span></td></tr>
+        <tr><td><strong><span class="en">CSRF token</span><span class="hi">CSRF token</span></strong></td><td><span class="en">Same — hardcoded in <code>HelpChatPage.tsx</code></span><span class="hi">Same — <code>HelpChatPage.tsx</code> mein hardcoded</span></td><td><span class="en">Same — same constant, push to redeploy</span><span class="hi">Same — same constant, redeploy ke liye push karo</span></td></tr>
+        <tr><td><strong><span class="en">Session cookies</span><span class="hi">Session cookies</span></strong></td><td><span class="en">Pasted by user in textarea</span><span class="hi">User textarea mein paste karta hai</span></td><td><span class="en">Same — pasted by user in textarea</span><span class="hi">Same — user textarea mein paste karta hai</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- LOCAL HOW -->
+<section id="local-how">
+  <h2><span class="en">Local Dev — How the Vite Proxy Works</span><span class="hi">Local Dev — Vite Proxy Kaise Kaam Karta Hai</span></h2>
+  <div class="card clik">
+    <p><span class="en">The browser's <code>Origin</code> header always reflects the real page origin. JavaScript cannot override it. So a fetch from <code>localhost:5173</code> always sends <code>Origin: http://localhost:5173</code>, which ImageKit rejects. The Vite proxy runs inside Node.js on the dev server — Node.js is not a browser, so it can set any header it wants.</span>
+    <span class="hi">Browser ka <code>Origin</code> header hamesha real page origin reflect karta hai. JavaScript isse override nahi kar sakta. To <code>localhost:5173</code> se fetch hamesha <code>Origin: http://localhost:5173</code> bhejta hai, jo ImageKit reject karta hai. Vite proxy dev server par Node.js ke andar run karta hai — Node.js browser nahi hai, isliye wo koi bhi header set kar sakta hai.</span></p>
+
+    <div class="flow"><span class="fy">vite.config.ts — ikSignatureProxyPlugin()</span>
+
+<span class="fa">When browser calls POST /ik-signature</span>
+<span class="fa">  ↓</span>
+<span class="fb">Vite middleware intercepts (same origin — no CORS)</span>
+<span class="fa">  ↓  Reads from request:</span>
+<span class="fa">     csrf-token header   → forwards as-is</span>
+<span class="fa">     x-ik-cookie header  → used as Cookie header</span>
+<span class="fa">     request body (JSON) → forwards as-is</span>
+<span class="fa">  ↓</span>
+<span class="fg">Node.js https.request → imagekit.io</span>
+<span class="fa">     origin:  https://imagekit.io              ← SPOOFED ✅</span>
+<span class="fa">     referer: https://imagekit.io/dashboard/media-library  ← SPOOFED ✅</span>
+<span class="fa">     cookie:  connect.sid=...; _csrf=...        ← from x-ik-cookie ✅</span>
+<span class="fa">     csrf-token: K3DnTkCR-...                   ← forwarded ✅</span>
+<span class="fa">  ↓</span>
+<span class="fg">imagekit.io → 200 OK → { "token": "eyJhbGci..." }</span>
+<span class="fa">  ↓</span>
+<span class="fg">Vite returns JSON to browser</span></div>
+  </div>
+</section>
+
+<!-- LOCAL RUN -->
+<section id="local-run">
+  <h2><span class="en">How to Run Locally — Step by Step</span><span class="hi">Locally Kaise Run Karo — Step by Step</span></h2>
+  <div class="card clg">
+    <ol class="steps">
+      <li><div class="snum">1</div><div>
+        <strong><span class="en">Start the dev server</span><span class="hi">Dev server start karo</span></strong>
+        <pre>npm run dev</pre>
+        <span class="en">Vite starts at <code>http://localhost:5173</code>. The <code>ikSignatureProxyPlugin</code> loads automatically.</span>
+        <span class="hi">Vite <code>http://localhost:5173</code> par start hota hai. <code>ikSignatureProxyPlugin</code> automatically load hota hai.</span>
+      </div></li>
+      <li><div class="snum">2</div><div>
+        <strong><span class="en">Open imagekit.io in the SAME browser</span><span class="hi">SAME browser mein imagekit.io kholein</span></strong><br>
+        <span class="en">Log in at <code>https://imagekit.io/dashboard</code>. This creates the session cookies needed for the signature API.</span>
+        <span class="hi"><code>https://imagekit.io/dashboard</code> par login karo. Ye signature API ke liye zaruri session cookies create karta hai.</span>
+      </div></li>
+      <li><div class="snum">3</div><div>
+        <strong><span class="en">Get your session cookies from DevTools</span><span class="hi">DevTools se session cookies lo</span></strong><br>
+        <span class="en">Press <code>F12</code> → Application → Storage → Cookies → <code>https://imagekit.io</code> → right-click any row → <strong>Copy all</strong> (gives JSON array).</span>
+        <span class="hi"><code>F12</code> → Application → Storage → Cookies → <code>https://imagekit.io</code> → kisi bhi row par right-click → <strong>Copy all</strong> (JSON array milta hai).</span>
+      </div></li>
+      <li><div class="snum">4</div><div>
+        <strong><span class="en">Navigate to help-chat</span><span class="hi">help-chat par jao</span></strong><br>
+        <span class="en">Open <code>http://localhost:5173/help-chat</code>. You must be logged into the admin panel too.</span>
+        <span class="hi"><code>http://localhost:5173/help-chat</code> kholein. Admin panel mein bhi logged in hona chahiye.</span>
+      </div></li>
+      <li><div class="snum">5</div><div>
+        <strong><span class="en">Paste cookies + select file + upload</span><span class="hi">Cookies paste karo + file select karo + upload karo</span></strong><br>
+        <span class="en">Paste the copied JSON into the <strong>ImageKit Session Cookie</strong> textarea. Select any file. Click <strong>Upload to ImageKit</strong>.</span>
+        <span class="hi">Copied JSON ko <strong>ImageKit Session Cookie</strong> textarea mein paste karo. Koi bhi file select karo. <strong>Upload to ImageKit</strong> click karo.</span>
+      </div></li>
+      <li><div class="snum">6</div><div>
+        <strong><span class="en">You get a CDN URL</span><span class="hi">CDN URL milta hai</span></strong><br>
+        <span class="en">On success: <code>https://ik.imagekit.io/cfpzzm9vy/your-file.jpg</code></span>
+        <span class="hi">Success par: <code>https://ik.imagekit.io/cfpzzm9vy/your-file.jpg</code></span>
+      </div></li>
+    </ol>
+    <div class="warn">⚠️ <span class="en">After editing <code>vite.config.ts</code>, always <strong>restart the dev server</strong> (<code>Ctrl+C</code> → <code>npm run dev</code>). Vite does NOT hot-reload config file changes.</span><span class="hi"><code>vite.config.ts</code> edit karne ke baad hamesha <strong>dev server restart karo</strong> (<code>Ctrl+C</code> → <code>npm run dev</code>). Vite config file changes ko hot-reload NAHI karta.</span></div>
+  </div>
+</section>
+
+<!-- NETLIFY HOW -->
+<section id="netlify-how">
+  <h2><span class="en">Netlify Production — How the Function Works</span><span class="hi">Netlify Production — Function Kaise Kaam Karta Hai</span></h2>
+  <div class="card clik">
+    <p><span class="en">In production, the Vite dev server doesn't exist. The built app is static HTML/CSS/JS on Netlify's CDN. So we use a <strong>Netlify Serverless Function</strong> — Node.js code that runs on Netlify's servers — to do the same proxy job.</span>
+    <span class="hi">Production mein, Vite dev server exist nahi karta. Build ki gayi app Netlify ke CDN par static HTML/CSS/JS hai. Isliye hum <strong>Netlify Serverless Function</strong> use karte hain — Node.js code jo Netlify ke servers par run karta hai — same proxy kaam karne ke liye.</span></p>
+
+    <h3><span class="en">How the Redirect Works</span><span class="hi">Redirect Kaise Kaam Karta Hai</span></h3>
+    <p><span class="en">The file <span class="fp-pill">public/_redirects</span> gets copied to <code>dist/</code> during build. Netlify reads it and applies the rules:</span>
+    <span class="hi"><span class="fp-pill">public/_redirects</span> file build ke dauran <code>dist/</code> mein copy hoti hai. Netlify ise read karke rules apply karta hai:</span></p>
+<pre><span class="c"># public/_redirects</span>
+/ik-signature  /.netlify/functions/ik-signature  200   <span class="c">← matched FIRST</span>
+/*             /index.html                        200   <span class="c">← SPA fallback</span></pre>
+
+    <div class="flow"><span class="fy">Production Request Flow</span>
+
+<span class="fa">Browser calls POST /ik-signature (from administration.succesly.in)</span>
+<span class="fa">  ↓</span>
+<span class="fb">Netlify edge reads _redirects</span>
+<span class="fa">  → /ik-signature matches rule 1 → routes to /.netlify/functions/ik-signature</span>
+<span class="fa">  ↓</span>
+<span class="fg">netlify/functions/ik-signature.js runs (Node.js)</span>
+<span class="fa">  Reads:  event.headers["csrf-token"]</span>
+<span class="fa">          event.headers["x-ik-cookie"]</span>
+<span class="fa">          event.body (JSON)</span>
+<span class="fa">  ↓</span>
+<span class="fg">Node.js https.request → imagekit.io</span>
+<span class="fa">     origin:     https://imagekit.io        ← SPOOFED ✅</span>
+<span class="fa">     referer:    https://imagekit.io/dashboard/media-library ✅</span>
+<span class="fa">     cookie:     connect.sid=...; _csrf=...  ← from x-ik-cookie ✅</span>
+<span class="fa">     csrf-token: K3DnTkCR-...               ← forwarded ✅</span>
+<span class="fa">  ↓</span>
+<span class="fg">imagekit.io → 200 OK → { "token": "eyJhbGci..." }</span>
+<span class="fa">  ↓</span>
+<span class="fg">Function returns JSON → browser receives it</span></div>
+  </div>
+</section>
+
+<!-- NETLIFY DEPLOY -->
+<section id="netlify-deploy">
+  <h2><span class="en">How to Deploy to Netlify</span><span class="hi">Netlify Par Deploy Kaise Karo</span></h2>
+  <div class="card clg">
+    <ol class="steps">
+      <li><div class="snum">1</div><div>
+        <strong><span class="en">Commit and push all changed files</span><span class="hi">Sabhi changed files commit aur push karo</span></strong>
+        <pre>git add src/pages/help-chat/HelpChatPage.tsx
+git add vite.config.ts
+git add netlify/functions/ik-signature.js
+git add netlify.toml
+git add public/_redirects
+git commit -m "feat: imagekit upload with proxy"
+git push</pre>
+      </div></li>
+      <li><div class="snum">2</div><div>
+        <strong><span class="en">Netlify auto-deploys</span><span class="hi">Netlify auto-deploy karta hai</span></strong><br>
+        <span class="en">Watch the deploy log in Netlify Dashboard → Deploys. It should say <em>"Deploying functions..."</em> during build.</span>
+        <span class="hi">Netlify Dashboard → Deploys mein deploy log dekho. Build ke dauran <em>"Deploying functions..."</em> dikhna chahiye.</span>
+      </div></li>
+      <li><div class="snum">3</div><div>
+        <strong><span class="en">Verify the function deployed</span><span class="hi">Function deploy confirm karo</span></strong><br>
+        <span class="en">Netlify Dashboard → <strong>Functions tab</strong> → you should see <code>ik-signature</code> listed. If it's not there, check the build log for errors.</span>
+        <span class="hi">Netlify Dashboard → <strong>Functions tab</strong> → <code>ik-signature</code> listed hona chahiye. Nahi hai to build log mein errors check karo.</span>
+      </div></li>
+      <li><div class="snum">4</div><div>
+        <strong><span class="en">Test the function directly (optional)</span><span class="hi">Function directly test karo (optional)</span></strong><br>
+        <span class="en">Open: <code>https://administration.succesly.in/.netlify/functions/ik-signature</code> in browser — should return a JSON error (not 404), confirming the function exists.</span>
+        <span class="hi"><code>https://administration.succesly.in/.netlify/functions/ik-signature</code> browser mein kholein — JSON error aana chahiye (404 nahi), confirm karta hai function exist karta hai.</span>
+      </div></li>
+      <li><div class="snum">5</div><div>
+        <strong><span class="en">Use the site normally</span><span class="hi">Site normally use karo</span></strong><br>
+        <span class="en">Go to <code>https://administration.succesly.in/help-chat</code>, paste cookies, upload.</span>
+        <span class="hi"><code>https://administration.succesly.in/help-chat</code> par jao, cookies paste karo, upload karo.</span>
+      </div></li>
+    </ol>
+  </div>
+</section>
+
+<!-- CSRF TOKEN -->
+<section id="csrf">
+  <h2><span class="en">CSRF Token — What It Is & When to Change It</span><span class="hi">CSRF Token — Kya Hai & Kab Badlein</span></h2>
+  <div class="card cl">
+    <h3><span class="en">What Is It?</span><span class="hi">Kya Hai?</span></h3>
+    <p><span class="en">CSRF = Cross-Site Request Forgery. ImageKit's internal signature endpoint uses a CSRF token to verify that API calls come from <em>their own dashboard</em>, not from an external site. The token is a string generated by imagekit.io's server and tied to your login session.</span>
+    <span class="hi">CSRF = Cross-Site Request Forgery. ImageKit ka internal signature endpoint CSRF token use karta hai ye verify karne ke liye ki API calls <em>unke apne dashboard</em> se aa rahi hain, kisi external site se nahi. Token ek string hai jo imagekit.io ke server se generate hoti hai aur tumhare login session se tied hai.</span></p>
+
+    <table>
+      <thead><tr><th><span class="en">Thing</span><span class="hi">Cheez</span></th><th><span class="en">Where It Lives</span><span class="hi">Kahan Hai</span></th><th><span class="en">How Long Valid</span><span class="hi">Kitna Valid</span></th></tr></thead>
+      <tbody>
+        <tr><td><code>csrf-token</code> header value</td><td><span class="en">Hardcoded in <span class="fp-pill">HelpChatPage.tsx</span> as <code>IK_CSRF_TOKEN</code></span><span class="hi"><span class="fp-pill">HelpChatPage.tsx</span> mein <code>IK_CSRF_TOKEN</code> ke roop mein hardcoded</span></td><td><span class="badge by">Until session changes (days/weeks)</span></td></tr>
+        <tr><td><code>_csrf</code> cookie</td><td><span class="en">Set by imagekit.io — visible in DevTools Cookies. You paste this as part of <code>x-ik-cookie</code>.</span><span class="hi">imagekit.io se set — DevTools Cookies mein dikhta hai. Ise <code>x-ik-cookie</code> ke part ke roop mein paste karo.</span></td><td><span class="badge bg">Long-lived (months)</span></td></tr>
+      </tbody>
+    </table>
+
+    <div class="info-box">ℹ️ <span class="en">The <code>csrf-token</code> header value and the <code>_csrf</code> cookie are <strong>related but NOT the same string</strong>. imagekit.io's server derives the header value from the cookie using a secret. You only need to grab the header value from the Network tab.</span>
+    <span class="hi"><code>csrf-token</code> header value aur <code>_csrf</code> cookie <strong>related hain lekin SAME string nahi</strong>. imagekit.io ka server cookie se ek secret use karke header value derive karta hai. Tumhe sirf Network tab se header value grab karni hai.</span></div>
+
+    <h3 style="margin-top:16px"><span class="en">When Does It Need Updating?</span><span class="hi">Kab Update Karna Padega?</span></h3>
+    <ul>
+      <li><span class="en">You get <code>403 {"error": "Invalid CSRF Token"}</code> from the signature API</span><span class="hi">Signature API se <code>403 {"error": "Invalid CSRF Token"}</code> mile</span></li>
+      <li><span class="en">You logged out of imagekit.io and logged back in</span><span class="hi">imagekit.io se logout karke phir login kiya</span></li>
+      <li><span class="en">Your imagekit.io session expired (usually after days of inactivity)</span><span class="hi">imagekit.io session expire ho gayi (usually inactivity ke kaafi dino baad)</span></li>
+    </ul>
+  </div>
+</section>
+
+<!-- COOKIE -->
+<section id="cookie">
+  <h2><span class="en">Session Cookie — How to Get It</span><span class="hi">Session Cookie — Kaise Lo</span></h2>
+  <div class="card cl">
+    <h3><span class="en">Why Do We Need Cookies?</span><span class="hi">Cookies Kyun Chahiye?</span></h3>
+    <p><span class="en">ImageKit's signature endpoint requires you to be logged in. Your browser proves you're logged in via session cookies (<code>connect.sid</code> = session ID, <code>_csrf</code> = CSRF seed). These cookies are domain-locked to <code>imagekit.io</code> — the browser won't send them to <code>localhost</code> or Netlify. So the user must manually paste them.</span>
+    <span class="hi">ImageKit ka signature endpoint require karta hai ki aap logged in ho. Browser session cookies se prove karta hai ki aap logged in ho (<code>connect.sid</code> = session ID, <code>_csrf</code> = CSRF seed). Ye cookies <code>imagekit.io</code> domain par lock hain — browser inhe <code>localhost</code> ya Netlify par nahi bhejega. Isliye user ko manually paste karna padta hai.</span></p>
+
+    <h3><span class="en">Two Accepted Formats</span><span class="hi">Do Accepted Formats</span></h3>
+    <div class="env-grid">
+      <div style="background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:14px;">
+        <div style="font-size:12px;font-weight:700;color:var(--accent2);margin-bottom:8px;">FORMAT 1 — JSON Array <span class="badge bg">Recommended</span></div>
+        <p style="font-size:12px;"><span class="en">DevTools → Application → Cookies → imagekit.io → right-click any row → <strong>Copy all</strong></span><span class="hi">DevTools → Application → Cookies → imagekit.io → kisi bhi row par right-click → <strong>Copy all</strong></span></p>
+<pre style="font-size:11px;">[
+  {"name":"connect.sid","value":"s%3A36c8..."},
+  {"name":"_csrf","value":"bKQ3nhly..."},
+  ...
+]</pre>
+        <p style="font-size:12px;color:var(--green);">✓ <span class="en">Auto-converted by <code>toCookieString()</code></span><span class="hi"><code>toCookieString()</code> automatically convert karta hai</span></p>
+      </div>
+      <div style="background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:14px;">
+        <div style="font-size:12px;font-weight:700;color:var(--accent2);margin-bottom:8px;">FORMAT 2 — Plain String</div>
+        <p style="font-size:12px;"><span class="en">DevTools → Network → any imagekit.io request → Headers → Request Headers → find <code>Cookie</code> → copy value</span><span class="hi">DevTools → Network → koi bhi imagekit.io request → Headers → Request Headers → <code>Cookie</code> dhundho → value copy karo</span></p>
+<pre style="font-size:11px;">connect.sid=s%3A36c8...; _csrf=bKQ3...; loggedIn=true</pre>
+        <p style="font-size:12px;color:var(--green);">✓ <span class="en">Passed through as-is</span><span class="hi">As-is pass hoti hai</span></p>
+      </div>
+    </div>
+
+    <h3><span class="en">Critical Cookies That Must Be Present</span><span class="hi">Zaruri Cookies Jo Honi Chahiye</span></h3>
+    <table>
+      <thead><tr><th>Cookie Name</th><th><span class="en">Purpose</span><span class="hi">Kaam</span></th><th><span class="en">Expiry</span><span class="hi">Expiry</span></th></tr></thead>
+      <tbody>
+        <tr><td><code>connect.sid</code></td><td><span class="en">Your imagekit.io session ID — proves you're logged in</span><span class="hi">Tumhara imagekit.io session ID — prove karta hai logged in ho</span></td><td><span class="badge by">~24h idle timeout</span></td></tr>
+        <tr><td><code>_csrf</code></td><td><span class="en">CSRF seed — paired with the <code>csrf-token</code> header for CSRF validation</span><span class="hi">CSRF seed — CSRF validation ke liye <code>csrf-token</code> header ke saath pair</span></td><td><span class="badge bg">Long-lived (months)</span></td></tr>
+        <tr><td><code>loggedIn</code></td><td><span class="en">Simple boolean flag confirming login state</span><span class="hi">Login state confirm karne wala simple boolean flag</span></td><td><span class="badge bg">Long-lived</span></td></tr>
+      </tbody>
+    </table>
+
+    <div class="warn">⚠️ <span class="en"><strong>If connect.sid is missing or expired:</strong> You'll get a 401 or 403 from imagekit.io. Log back into imagekit.io and copy fresh cookies.</span>
+    <span class="hi"><strong>Agar connect.sid missing ya expired hai:</strong> imagekit.io se 401 ya 403 milega. imagekit.io mein dobara login karo aur fresh cookies copy karo.</span></div>
+  </div>
+</section>
+
+<!-- CONSTANTS -->
+<section id="constants">
+  <h2><span class="en">Hardcoded Constants in HelpChatPage.tsx</span><span class="hi">HelpChatPage.tsx Mein Hardcoded Constants</span></h2>
+  <div class="card cl">
+<pre><span class="c">// src/pages/help-chat/HelpChatPage.tsx — top of file</span>
+
+<span class="k">const</span> IK_PUBLIC_KEY = <span class="s">"public_7rJWGD1cCcPUnbwQQ6wGFQREKbU="</span>;
+<span class="c">// ↑ Your ImageKit public key. Safe to expose. Changes only if you create a new ImageKit project.</span>
+
+<span class="k">const</span> IK_CSRF_TOKEN = <span class="s">"K3DnTkCR-gsd9meJreeHWSHwQOqhXs5tApQc"</span>;
+<span class="c">// ↑ Tied to your imagekit.io browser session. Update when you get 403 "Invalid CSRF Token".</span>
+<span class="c">//   How to get: open imagekit.io → upload any file → DevTools Network → POST signature → Headers → csrf-token</span></pre>
+
+    <table>
+      <thead><tr><th>Constant</th><th><span class="en">Change Frequency</span><span class="hi">Kab Badlein</span></th><th><span class="en">How to Get New Value</span><span class="hi">Naya Value Kaise Lo</span></th></tr></thead>
+      <tbody>
+        <tr><td><code>IK_PUBLIC_KEY</code></td><td><span class="badge bg">Never (permanent)</span></td><td><span class="en">ImageKit Dashboard → Developer Options → API Keys</span><span class="hi">ImageKit Dashboard → Developer Options → API Keys</span></td></tr>
+        <tr><td><code>IK_CSRF_TOKEN</code></td><td><span class="badge by">When session changes / 403 error</span></td><td><span class="en">DevTools Network tab on imagekit.io dashboard (see section below)</span><span class="hi">imagekit.io dashboard par DevTools Network tab (neeche section dekho)</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- API 1 -->
+<section id="api1">
+  <h2><span class="en">API 1 — Get Signature Token</span><span class="hi">API 1 — Signature Token Lo</span></h2>
+  <div class="card clg">
+    <p><span class="en"><strong>Called via proxy</strong> — frontend calls <code>POST /ik-signature</code>, proxy forwards to imagekit.io with spoofed headers.</span>
+    <span class="hi"><strong>Proxy ke zariye call hota hai</strong> — frontend <code>POST /ik-signature</code> call karta hai, proxy spoofed headers ke saath imagekit.io ko forward karta hai.</span></p>
+
+    <h3><span class="en">Actual endpoint (called by proxy)</span><span class="hi">Actual endpoint (proxy call karta hai)</span></h3>
+<pre>POST https://imagekit.io/api/clients/<span class="n">54DZYShIdN</span>/upload/signature/v2</pre>
+
+    <h3><span class="en">Headers (set by proxy — browser never sends these)</span><span class="hi">Headers (proxy set karta hai — browser kabhi nahi bhejta)</span></h3>
+<pre>origin:        https://imagekit.io              <span class="c">← SPOOFED by proxy</span>
+referer:       https://imagekit.io/dashboard/media-library  <span class="c">← SPOOFED by proxy</span>
+csrf-token:    K3DnTkCR-gsd9meJreeHWSHwQOqhXs5tApQc       <span class="c">← from IK_CSRF_TOKEN constant</span>
+cookie:        connect.sid=s%3A...; _csrf=bKQ3...           <span class="c">← from user's pasted cookies (x-ik-cookie)</span>
+content-type:  application/json</pre>
+
+    <h3><span class="en">Request Body (JSON)</span><span class="hi">Request Body (JSON)</span></h3>
+<pre>{
+  <span class="s">"publicKey"</span>: <span class="s">"public_7rJWGD1cCcPUnbwQQ6wGFQREKbU="</span>,
+  <span class="s">"expire"</span>:    <span class="n">3600</span>,
+  <span class="s">"uploadPayload"</span>: {
+    <span class="s">"folder"</span>:                <span class="s">"/"</span>,
+    <span class="s">"fileName"</span>:              <span class="s">"yourfile.jpg"</span>,
+    <span class="s">"responseFields"</span>:        <span class="s">"tags,customCoordinates,isPrivateFile,embeddedMetadata,isPublished,customMetadata,selectedFieldsSchema,metadata,mime"</span>,
+    <span class="s">"overwriteCustomMetadata"</span>:<span class="s">"true"</span>,
+    <span class="s">"isPrivateFile"</span>:         <span class="s">"false"</span>,
+    <span class="s">"isPublished"</span>:           <span class="s">"true"</span>,
+    <span class="s">"useUniqueFileName"</span>:     <span class="s">"false"</span>,
+    <span class="s">"overwriteFile"</span>:         <span class="s">"true"</span>,
+    <span class="s">"overwriteTags"</span>:         <span class="s">"true"</span>,
+    <span class="s">"overwriteDescription"</span>:  <span class="s">"true"</span>,
+    <span class="s">"overwriteAITags"</span>:       <span class="s">"true"</span>
+  }
+}</pre>
+
+    <h3><span class="en">Success Response (200)</span><span class="hi">Success Response (200)</span></h3>
+<pre>{ <span class="s">"token"</span>: <span class="s">"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InB1YmxpY18..."</span> }</pre>
+
+    <h3><span class="en">Error Responses</span><span class="hi">Error Responses</span></h3>
+    <table>
+      <thead><tr><th>Status</th><th>Body</th><th><span class="en">Fix</span><span class="hi">Fix</span></th></tr></thead>
+      <tbody>
+        <tr><td><span class="badge br">403</span></td><td><code>{"error":"Invalid CSRF Token"}</code></td><td><span class="en">Update <code>IK_CSRF_TOKEN</code> constant + paste fresh cookies</span><span class="hi"><code>IK_CSRF_TOKEN</code> constant update karo + fresh cookies paste karo</span></td></tr>
+        <tr><td><span class="badge br">401</span></td><td><code>{"error":"Unauthorized"}</code></td><td><span class="en">Session expired — log into imagekit.io again</span><span class="hi">Session expire — imagekit.io mein dobara login karo</span></td></tr>
+        <tr><td><span class="badge br">404</span></td><td>Netlify HTML page</td><td><span class="en">Function not deployed — check Netlify Functions tab</span><span class="hi">Function deploy nahi hua — Netlify Functions tab check karo</span></td></tr>
+        <tr><td><span class="badge br">502</span></td><td><code>{"error":"Proxy error:..."}</code></td><td><span class="en">Proxy couldn't reach imagekit.io — network issue</span><span class="hi">Proxy imagekit.io tak nahi pahuncha — network issue</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- API 2 -->
+<section id="api2">
+  <h2><span class="en">API 2 — Upload File to ImageKit</span><span class="hi">API 2 — File ImageKit Par Upload Karo</span></h2>
+  <div class="card clg">
+    <p><span class="en"><strong>Called directly by browser</strong> — no proxy needed. <code>upload.imagekit.io</code> is a public endpoint with CORS enabled for all origins.</span>
+    <span class="hi"><strong>Browser direct call karta hai</strong> — proxy ki zarurat nahi. <code>upload.imagekit.io</code> ek public endpoint hai CORS all origins ke liye enable ke saath.</span></p>
+<pre>POST https://upload.imagekit.io/api/v2-alpha/files/upload
+Content-Type: multipart/form-data</pre>
+
+    <h3><span class="en">Form Data Fields</span><span class="hi">Form Data Fields</span></h3>
+    <table>
+      <thead><tr><th>Field</th><th>Value</th><th><span class="en">Purpose</span><span class="hi">Kaam</span></th></tr></thead>
+      <tbody>
+        <tr><td><code>file</code></td><td><span class="en">Binary file data</span><span class="hi">Binary file data</span></td><td><span class="en">The actual image/file to upload</span><span class="hi">Upload karne wali actual image/file</span></td></tr>
+        <tr><td><code>token</code></td><td><span class="en">JWT from Step 1</span><span class="hi">Step 1 se JWT</span></td><td><span class="en">Authorization — tells ImageKit this upload is allowed</span><span class="hi">Authorization — ImageKit ko batata hai ye upload allowed hai</span></td></tr>
+        <tr><td><code>fileName</code></td><td><span class="en">e.g. <code>photo.jpg</code></span><span class="hi">jaise <code>photo.jpg</code></span></td><td><span class="en">How the file is named in ImageKit</span><span class="hi">ImageKit mein file ka naam</span></td></tr>
+        <tr><td><code>folder</code></td><td><code>/</code></td><td><span class="en">ImageKit folder to upload into (root)</span><span class="hi">ImageKit folder jahan upload karo (root)</span></td></tr>
+        <tr><td><code>isPublished</code></td><td><code>true</code></td><td><span class="en">File is immediately accessible via CDN URL</span><span class="hi">File CDN URL se immediately accessible hai</span></td></tr>
+        <tr><td><code>isPrivateFile</code></td><td><code>false</code></td><td><span class="en">File is publicly viewable (no auth needed to view)</span><span class="hi">File publicly viewable hai (dekhne ke liye auth nahi chahiye)</span></td></tr>
+        <tr><td><code>useUniqueFileName</code></td><td><code>false</code></td><td><span class="en">Keep exact filename (don't add random suffix)</span><span class="hi">Exact filename rakho (random suffix mat lagao)</span></td></tr>
+        <tr><td><code>overwriteFile</code></td><td><code>true</code></td><td><span class="en">Replace existing file with same name</span><span class="hi">Same naam ki existing file replace karo</span></td></tr>
+      </tbody>
+    </table>
+
+    <h3><span class="en">Success Response (200)</span><span class="hi">Success Response (200)</span></h3>
+<pre>{
+  <span class="s">"fileId"</span>:      <span class="s">"6a1a979e5c7cd75eb85f526d"</span>,
+  <span class="s">"name"</span>:        <span class="s">"photo.jpg"</span>,
+  <span class="s">"url"</span>:         <span class="s">"https://ik.imagekit.io/cfpzzm9vy/photo.jpg"</span>,   <span class="c">← USE THIS</span>
+  <span class="s">"thumbnailUrl"</span>:<span class="s">"https://ik.imagekit.io/cfpzzm9vy/tr:n-ik_ml_thumbnail/photo.jpg"</span>,
+  <span class="s">"size"</span>:        <span class="n">269312</span>,
+  <span class="s">"fileType"</span>:    <span class="s">"image"</span>,
+  <span class="s">"height"</span>:      <span class="n">1080</span>,
+  <span class="s">"width"</span>:       <span class="n">1920</span>,
+  <span class="s">"mime"</span>:        <span class="s">"image/jpeg"</span>,
+  <span class="s">"isPublished"</span>: <span class="k">true</span>
+}</pre>
+  </div>
+</section>
+
+<!-- PAYLOAD PARAMS -->
+<section id="payload">
+  <h2><span class="en">All Payload Parameters — Reference Table</span><span class="hi">Sabhi Payload Parameters — Reference Table</span></h2>
+  <div class="card cl">
+    <table>
+      <thead><tr><th>Parameter</th><th>Type</th><th><span class="en">Current Value</span><span class="hi">Current Value</span></th><th><span class="en">What It Controls</span><span class="hi">Kya Control Karta Hai</span></th></tr></thead>
+      <tbody>
+        <tr><td><code>publicKey</code></td><td>string</td><td><code>public_7rJWGD1...</code></td><td><span class="en">Identifies your ImageKit account</span><span class="hi">Tumhara ImageKit account identify karta hai</span></td></tr>
+        <tr><td><code>expire</code></td><td>number (seconds)</td><td><code>3600</code></td><td><span class="en">How long the signed token is valid (1 hour)</span><span class="hi">Signed token kitni der valid hai (1 ghanta)</span></td></tr>
+        <tr><td><code>folder</code></td><td>string</td><td><code>"/"</code></td><td><span class="en">ImageKit folder to store the file in (root)</span><span class="hi">ImageKit folder jahan file store ho (root)</span></td></tr>
+        <tr><td><code>fileName</code></td><td>string</td><td><span class="en">Selected file's name</span><span class="hi">Select ki gayi file ka naam</span></td><td><span class="en">Filename stored in ImageKit</span><span class="hi">ImageKit mein stored filename</span></td></tr>
+        <tr><td><code>isPrivateFile</code></td><td>"true"/"false"</td><td><code>"false"</code></td><td><span class="en">false = public CDN URL, true = requires signed URL to view</span><span class="hi">false = public CDN URL, true = dekhne ke liye signed URL chahiye</span></td></tr>
+        <tr><td><code>isPublished</code></td><td>"true"/"false"</td><td><code>"true"</code></td><td><span class="en">true = file live immediately, false = draft</span><span class="hi">true = file immediate live, false = draft</span></td></tr>
+        <tr><td><code>useUniqueFileName</code></td><td>"true"/"false"</td><td><code>"false"</code></td><td><span class="en">false = exact filename used, true = random suffix added</span><span class="hi">false = exact filename, true = random suffix lagta hai</span></td></tr>
+        <tr><td><code>overwriteFile</code></td><td>"true"/"false"</td><td><code>"true"</code></td><td><span class="en">true = replace existing file with same name</span><span class="hi">true = same naam ki file replace karo</span></td></tr>
+        <tr><td><code>overwriteTags</code></td><td>"true"/"false"</td><td><code>"true"</code></td><td><span class="en">true = overwrite existing tags on file</span><span class="hi">true = existing tags overwrite karo</span></td></tr>
+        <tr><td><code>overwriteDescription</code></td><td>"true"/"false"</td><td><code>"true"</code></td><td><span class="en">true = overwrite existing description</span><span class="hi">true = existing description overwrite karo</span></td></tr>
+        <tr><td><code>overwriteAITags</code></td><td>"true"/"false"</td><td><code>"true"</code></td><td><span class="en">true = re-run AI tagging on upload</span><span class="hi">true = upload par AI tagging phir se run karo</span></td></tr>
+        <tr><td><code>overwriteCustomMetadata</code></td><td>"true"/"false"</td><td><code>"true"</code></td><td><span class="en">true = overwrite custom metadata fields</span><span class="hi">true = custom metadata fields overwrite karo</span></td></tr>
+        <tr><td><code>responseFields</code></td><td>string (CSV)</td><td><code>"tags,customCoordinates,..."</code></td><td><span class="en">Which fields to include in the upload response</span><span class="hi">Upload response mein kaunse fields include karo</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- FLOW LOCAL -->
+<section id="flow-local">
+  <h2><span class="en">Flow Diagram — Local Development</span><span class="hi">Flow Diagram — Local Development</span></h2>
+  <div class="card">
+    <div class="flow"><span class="fb">USER: localhost:5173/help-chat</span>
+     <span class="fa">│  1. Paste imagekit.io cookies into textarea</span>
+     <span class="fa">│  2. Select file</span>
+     <span class="fa">│  3. Click "Upload to ImageKit"</span>
+     <span class="fa">│</span>
+     <span class="fy">─── STEP 1: SIGNATURE ───────────────────────────────────────────</span>
+     <span class="fa">│</span>
+     <span class="fb">toCookieString(ikCookie) → "connect.sid=...; _csrf=..."</span>
+     <span class="fa">│</span>
+     <span class="fb">fetch("POST /ik-signature")   ← same-origin, no CORS block</span>
+     <span class="fa">  headers: { csrf-token: "K3DnTkCR-...", x-ik-cookie: "connect.sid=..." }</span>
+     <span class="fa">  body:    { publicKey, expire:3600, uploadPayload: { folder, fileName, ... } }</span>
+     <span class="fa">│</span>
+     <span class="fg">Vite ikSignatureProxyPlugin receives request</span>
+     <span class="fa">  → sets origin: https://imagekit.io</span>
+     <span class="fa">  → sets referer: https://imagekit.io/dashboard/media-library</span>
+     <span class="fa">  → sets cookie: value from x-ik-cookie header</span>
+     <span class="fa">│</span>
+     <span class="fg">Node.js → POST https://imagekit.io/api/clients/54DZYShIdN/upload/signature/v2</span>
+     <span class="fa">│</span>
+     <span class="fg">← 200 OK: { "token": "eyJhbGci..." }</span>
+     <span class="fa">│</span>
+     <span class="fy">─── STEP 2: UPLOAD ──────────────────────────────────────────────</span>
+     <span class="fa">│</span>
+     <span class="fb">fetch("POST https://upload.imagekit.io/api/v2-alpha/files/upload")</span>
+     <span class="fa">  body: FormData { folder, fileName, file: &lt;binary&gt;, token: "eyJhbGci..." }</span>
+     <span class="fa">│</span>
+     <span class="fg">← 200 OK: { url: "https://ik.imagekit.io/cfpzzm9vy/photo.jpg", ... }</span>
+     <span class="fa">│</span>
+     <span class="fg">UI shows link: https://ik.imagekit.io/cfpzzm9vy/photo.jpg  ✅</span></div>
+  </div>
+</section>
+
+<!-- FLOW PROD -->
+<section id="flow-prod">
+  <h2><span class="en">Flow Diagram — Netlify Production</span><span class="hi">Flow Diagram — Netlify Production</span></h2>
+  <div class="card">
+    <div class="flow"><span class="fb">USER: administration.succesly.in/help-chat</span>
+     <span class="fa">│  (same UI — paste cookies, select file, click upload)</span>
+     <span class="fa">│</span>
+     <span class="fy">─── STEP 1: SIGNATURE ───────────────────────────────────────────</span>
+     <span class="fa">│</span>
+     <span class="fb">fetch("POST /ik-signature")   ← same-origin, no CORS block</span>
+     <span class="fa">│</span>
+     <span class="fg">Netlify edge reads public/_redirects:</span>
+     <span class="fa">  /ik-signature → /.netlify/functions/ik-signature  (status 200)</span>
+     <span class="fa">│</span>
+     <span class="fg">netlify/functions/ik-signature.js executes (Node.js)</span>
+     <span class="fa">  event.headers["csrf-token"]  → csrf token</span>
+     <span class="fa">  event.headers["x-ik-cookie"] → cookie string</span>
+     <span class="fa">  event.body                   → JSON payload</span>
+     <span class="fa">  → sets origin: https://imagekit.io</span>
+     <span class="fa">  → sets cookie from x-ik-cookie</span>
+     <span class="fa">│</span>
+     <span class="fg">Node.js → POST https://imagekit.io/api/clients/54DZYShIdN/upload/signature/v2</span>
+     <span class="fa">│</span>
+     <span class="fg">← 200 OK: { "token": "eyJhbGci..." }</span>
+     <span class="fa">│</span>
+     <span class="fy">─── STEP 2: UPLOAD (same as local) ──────────────────────────────</span>
+     <span class="fa">│</span>
+     <span class="fb">fetch("POST https://upload.imagekit.io/api/v2-alpha/files/upload")</span>
+     <span class="fa">│</span>
+     <span class="fg">← 200 OK → URL shown  ✅</span></div>
+  </div>
+</section>
+
+<!-- UPDATE CSRF -->
+<section id="update-csrf">
+  <h2><span class="en">How to Update the CSRF Token</span><span class="hi">CSRF Token Kaise Update Karo</span></h2>
+  <div class="card cly">
+    <ol class="steps">
+      <li><div class="snum">1</div><div><span class="en">Open <strong>imagekit.io/dashboard</strong> in your browser (log in if needed).</span><span class="hi"><strong>imagekit.io/dashboard</strong> browser mein kholein (zarurat ho to login karo).</span></div></li>
+      <li><div class="snum">2</div><div><span class="en">Open <strong>DevTools → Network tab</strong>. Click the filter and type <code>signature</code>.</span><span class="hi"><strong>DevTools → Network tab</strong> kholein. Filter mein <code>signature</code> type karo.</span></div></li>
+      <li><div class="snum">3</div><div><span class="en">Upload any image on imagekit.io dashboard. A <code>POST upload/signature/v2</code> request appears.</span><span class="hi">imagekit.io dashboard par koi bhi image upload karo. <code>POST upload/signature/v2</code> request appear hogi.</span></div></li>
+      <li><div class="snum">4</div><div><span class="en">Click that request → <strong>Headers</strong> → under <em>Request Headers</em> find <code>csrf-token</code> → copy its value.</span><span class="hi">Us request click karo → <strong>Headers</strong> → <em>Request Headers</em> mein <code>csrf-token</code> dhundho → value copy karo.</span></div></li>
+      <li><div class="snum">5</div><div>
+        <span class="en">Open <span class="fp-pill">src/pages/help-chat/HelpChatPage.tsx</span> and update:</span>
+        <span class="hi"><span class="fp-pill">src/pages/help-chat/HelpChatPage.tsx</span> kholein aur update karo:</span>
+        <pre><span class="k">const</span> IK_CSRF_TOKEN = <span class="s">"YOUR_NEW_CSRF_TOKEN_HERE"</span>;</pre>
+      </div></li>
+      <li><div class="snum">6</div><div>
+        <span class="en"><strong>For local:</strong> save file, Vite hot-reloads. <strong>For Netlify:</strong> git commit + push to redeploy.</span>
+        <span class="hi"><strong>Local ke liye:</strong> file save karo, Vite hot-reload karta hai. <strong>Netlify ke liye:</strong> git commit + push karo redeploy ke liye.</span>
+      </div></li>
+    </ol>
+  </div>
+</section>
+
+<!-- UPDATE COOKIE -->
+<section id="update-cookie">
+  <h2><span class="en">How to Get Fresh Session Cookies</span><span class="hi">Fresh Session Cookies Kaise Lo</span></h2>
+  <div class="card clo" style="border-left-color:var(--orange)">
+    <ol class="steps">
+      <li><div class="snum">1</div><div><span class="en">Open imagekit.io in your browser (same browser you use for the admin panel). Log in if needed.</span><span class="hi">imagekit.io browser mein kholein (same browser jo admin panel ke liye use karte ho). Zarurat ho to login karo.</span></div></li>
+      <li><div class="snum">2</div><div><span class="en">Press <code>F12</code> to open DevTools → go to <strong>Application</strong> tab.</span><span class="hi"><code>F12</code> press karo DevTools kholne ke liye → <strong>Application</strong> tab par jao.</span></div></li>
+      <li><div class="snum">3</div><div><span class="en">In the left panel: <strong>Storage → Cookies → https://imagekit.io</strong>.</span><span class="hi">Left panel mein: <strong>Storage → Cookies → https://imagekit.io</strong>.</span></div></li>
+      <li><div class="snum">4</div><div><span class="en">Right-click any row in the cookie list → select <strong>"Copy all"</strong>. This gives a JSON array.</span><span class="hi">Cookie list mein kisi bhi row par right-click → <strong>"Copy all"</strong> select karo. Ye JSON array deta hai.</span></div></li>
+      <li><div class="snum">5</div><div><span class="en">Go to <code>/help-chat</code> page → paste the JSON into the <strong>ImageKit Session Cookie</strong> textarea. The component auto-converts it.</span><span class="hi"><code>/help-chat</code> page par jao → JSON ko <strong>ImageKit Session Cookie</strong> textarea mein paste karo. Component automatically convert karta hai.</span></div></li>
+    </ol>
+    <div class="info-box">ℹ️ <span class="en">Make sure these cookies are in the list: <code>connect.sid</code>, <code>_csrf</code>, <code>loggedIn=true</code>. If <code>connect.sid</code> is missing, you are not logged in to imagekit.io.</span>
+    <span class="hi">Ensure karo ye cookies list mein hain: <code>connect.sid</code>, <code>_csrf</code>, <code>loggedIn=true</code>. Agar <code>connect.sid</code> missing hai, imagekit.io mein logged in nahi ho.</span></div>
+  </div>
+</section>
+
+<!-- TROUBLESHOOT -->
+<section id="trouble">
+  <h2><span class="en">Troubleshooting</span><span class="hi">Troubleshooting</span></h2>
+  <div class="card cl">
+    <table>
+      <thead><tr><th><span class="en">Error</span><span class="hi">Error</span></th><th><span class="en">Cause</span><span class="hi">Karan</span></th><th><span class="en">Fix</span><span class="hi">Fix</span></th></tr></thead>
+      <tbody>
+        <tr><td><code>403 Invalid CSRF Token</code></td><td><span class="en"><code>IK_CSRF_TOKEN</code> constant outdated, OR cookies don't match the token</span><span class="hi"><code>IK_CSRF_TOKEN</code> constant outdated, YA cookies token se match nahi karti</span></td><td><span class="en">Update <code>IK_CSRF_TOKEN</code> from Network tab + paste fresh cookies</span><span class="hi">Network tab se <code>IK_CSRF_TOKEN</code> update karo + fresh cookies paste karo</span></td></tr>
+        <tr><td><code>401 Unauthorized</code></td><td><span class="en">imagekit.io session expired — <code>connect.sid</code> is invalid</span><span class="hi">imagekit.io session expire — <code>connect.sid</code> invalid hai</span></td><td><span class="en">Log into imagekit.io → copy fresh cookies</span><span class="hi">imagekit.io mein login karo → fresh cookies copy karo</span></td></tr>
+        <tr><td><code>404 on /ik-signature</code> <em>(Netlify)</em></td><td><span class="en">Netlify function not deployed OR <code>_redirects</code> not picking up the rule</span><span class="hi">Netlify function deploy nahi hua YA <code>_redirects</code> rule pick nahi kar raha</span></td><td><span class="en">Check Netlify Dashboard → Functions tab — is <code>ik-signature</code> listed? Check build logs.</span><span class="hi">Netlify Dashboard → Functions tab check karo — <code>ik-signature</code> listed hai? Build logs check karo.</span></td></tr>
+        <tr><td><code>Failed to execute fetch: Invalid value</code></td><td><span class="en">Pasted JSON with newlines directly as header — headers can't have newlines</span><span class="hi">Newlines wala JSON directly header mein paste kiya — headers mein newlines nahi ho sakti</span></td><td><span class="en">Make sure you're on the latest code — <code>toCookieString()</code> handles this automatically</span><span class="hi">Latest code par hona ensure karo — <code>toCookieString()</code> automatically handle karta hai</span></td></tr>
+        <tr><td><span class="en">Proxy works locally but 404 on Netlify</span><span class="hi">Locally kaam karta hai lekin Netlify par 404</span></td><td><span class="en"><code>public/_redirects</code> missing the <code>/ik-signature</code> rule, or file not pushed</span><span class="hi"><code>public/_redirects</code> mein <code>/ik-signature</code> rule missing, ya file push nahi hui</span></td><td><span class="en">Verify <code>public/_redirects</code> has the ik-signature line BEFORE <code>/*</code>. Push and redeploy.</span><span class="hi">Verify karo <code>public/_redirects</code> mein ik-signature line <code>/*</code> se PEHLE hai. Push aur redeploy karo.</span></td></tr>
+        <tr><td><span class="en">Vite proxy not intercepting</span><span class="hi">Vite proxy intercept nahi kar raha</span></td><td><span class="en"><code>vite.config.ts</code> was edited but dev server not restarted</span><span class="hi"><code>vite.config.ts</code> edit hua lekin dev server restart nahi kiya</span></td><td><span class="en"><code>Ctrl+C</code> → <code>npm run dev</code></span><span class="hi"><code>Ctrl+C</code> → <code>npm run dev</code></span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+</main>
+<script>
+function setLang(lang){
+  document.body.classList.toggle('hi-mode',lang==='hi');
+  document.getElementById('btn-en').classList.toggle('active',lang==='en');
+  document.getElementById('btn-hi').classList.toggle('active',lang==='hi');
+}
+const sections=document.querySelectorAll('section[id],h2[id]');
+const navLinks=document.querySelectorAll('nav a');
+new IntersectionObserver(entries=>{
+  entries.forEach(e=>{
+    if(e.isIntersecting){
+      navLinks.forEach(a=>a.classList.remove('active'));
+      const l=document.querySelector(`nav a[href="#${e.target.id}"]`);
+      if(l)l.classList.add('active');
+    }
+  });
+},{rootMargin:'-30% 0px -60% 0px'}).observe&&sections.forEach(s=>new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting){navLinks.forEach(a=>a.classList.remove('active'));const l=document.querySelector(`nav a[href="#${e.target.id}"]`);if(l)l.classList.add('active');}});},{rootMargin:'-30% 0px -60% 0px'}).observe(s));
+</script>
+</body>
+</html>

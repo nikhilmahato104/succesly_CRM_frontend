@@ -25,6 +25,7 @@ const ManagerDashboard   = lazy(() => import("../pages/dashboard/manager-dashboa
 const Course             = lazy(() => import("../pages/Course"));
 const NotFoundPage       = lazy(() => import("../pages/NotFoundPage"));
 const HelpChatPage       = lazy(() => import("../pages/help-chat/HelpChatPage"));
+const DocListPage        = lazy(() => import("../pages/DocListPage"));
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -217,7 +218,8 @@ export const AppRoutes: React.FC = () => {
         <Route path="auth/reset-password"  element={<PublicRoute><CreatePasswordPage type="reset" /></PublicRoute>} />
 
         {/* Fully public — no auth required */}
-        <Route path="/c" element={<Course />} />
+        <Route path="/c"   element={<Course />} />
+        <Route path="/doc" element={<DocListPage />} />
 
         {/* ── ROOT REDIRECT ──────────────────────────────────────────────────
             "/" → ProtectedRoute (must be logged in) → RedirectToHome
