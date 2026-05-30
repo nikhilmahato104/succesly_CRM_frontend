@@ -22,6 +22,7 @@ export interface UserProfileProps {
   isCollapsed?: boolean;
   userName: string;
   userEmail: string;
+  profileImageUrl?: string | null;
   isDarkMode: boolean;
   profileDropdownOpen: boolean;
   onToggleDropdown: () => void;

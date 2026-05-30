@@ -14,27 +14,35 @@ const getInitials = (name: string): string =>
 
 // ── Avatar ────────────────────────────────────────────────────────────────────
 
-const Avatar: React.FC<{ name: string; size?: number }> = ({ name, size = 30 }) => (
-  <div
-    style={{
-      width:          size,
-      height:         size,
-      borderRadius:   "50%",
-      display:        "flex",
-      alignItems:     "center",
-      justifyContent: "center",
-      background:     "var(--sb-text-active)",
-      color:          "var(--sb-bg)",
-      fontSize:       size * 0.38,
-      fontWeight:     600,
-      userSelect:     "none",
-      flexShrink:     0,
-      letterSpacing:  "0.01em",
-    }}
-  >
-    {getInitials(name)}
-  </div>
-);
+const Avatar: React.FC<{ name: string; url?: string | null; size?: number }> = ({ name, url, size = 30 }) => {
+  const [imgFailed, setImgFailed] = React.useState(false);
+  const showImg = !!url && !imgFailed;
+  return (
+    <div
+      style={{
+        width:          size,
+        height:         size,
+        borderRadius:   "50%",
+        display:        "flex",
+        alignItems:     "center",
+        justifyContent: "center",
+        background:     showImg ? "transparent" : "var(--sb-text-active)",
+        color:          "var(--sb-bg)",
+        fontSize:       size * 0.38,
+        fontWeight:     600,
+        userSelect:     "none",
+        flexShrink:     0,
+        letterSpacing:  "0.01em",
+        overflow:       "hidden",
+      }}
+    >
+      {showImg
+        ? <img src={url!} alt={name} style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={() => setImgFailed(true)} />
+        : getInitials(name)
+      }
+    </div>
+  );
+};
 
 // ── Icon button ───────────────────────────────────────────────────────────────
 
@@ -163,8 +171,9 @@ export const TopBar: React.FC = () => {
   const [profileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
 
-  const userName  = userData?.user_name  || "User";
-  const userEmail = userData?.user_email || "";
+  const userName        = userData?.user_name        || "User";
+  const userEmail       = userData?.user_email       || "";
+  const profileImageUrl = userData?.profile_image_url ?? null;
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -323,7 +332,7 @@ export const TopBar: React.FC = () => {
             onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "var(--sb-hover)"; }}
             onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = profileOpen ? "var(--sb-hover)" : "transparent"; }}
           >
-            <Avatar name={userName} size={26} />
+            <Avatar name={userName} url={profileImageUrl} size={26} />
             <ChevronDown
               style={{
                 width:     11,

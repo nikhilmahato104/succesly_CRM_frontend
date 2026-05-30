@@ -23,8 +23,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed: collapsedProp, onCo
   const accessData    = useSelector((s: any) => selectAccessData(s));
   const userDataRedux = useSelector(selectUserData);
 
-  const userName  = userDataRedux?.user_name  || "User";
-  const userEmail = userDataRedux?.user_email || "";
+  const userName        = userDataRedux?.user_name        || "User";
+  const userEmail       = userDataRedux?.user_email       || "";
+  const profileImageUrl = userDataRedux?.profile_image_url ?? null;
 
   const { isDarkMode, toggleDarkMode } = useDarkMode();
   const { showLogoutModal, handleLogoutClick, handleCancelLogout, handleLogout } = useAuth();
@@ -45,6 +46,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed: collapsedProp, onCo
   const profileProps: Omit<UserProfileProps, "isCollapsed"> = {
     userName,
     userEmail,
+    profileImageUrl,
     isDarkMode,
     profileDropdownOpen,
     onToggleDropdown : () => setProfileDropdownOpen((o) => !o),

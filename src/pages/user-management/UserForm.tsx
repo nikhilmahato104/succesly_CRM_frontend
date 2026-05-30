@@ -4,7 +4,7 @@ import * as Yup from "yup";
 import { showToastnew } from "../../services/toastifynewService/toastifynewService";
 import { getData, postData, patchData } from "../../services/crmServices";
 import {
-  CleanInput, CleanSelect, CleanButton, type SelectOption,
+  CleanInput, CleanSelect, type SelectOption,
 } from "../../atoms/my_clean_code_atoms";
 import ImageUploadAvatar from "../../atoms/ImageUploadAvatar";
 
@@ -24,6 +24,7 @@ type UserFormValues = {
 
 type UserFormProps = {
   token?: string;
+  formId: string;
   initialValues?: {
     _id?: string;
     name: string;
@@ -33,6 +34,8 @@ type UserFormProps = {
     profile_image_url?: string | null;
   };
   onSuccess: () => void;
+  onSubmittingChange?: (b: boolean) => void;
+  onResetReady?: (fn: () => void) => void;
 };
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -52,7 +55,9 @@ async function fetchRoleOptions(token?: string): Promise<SelectOption[]> {
 
 // ── Component ──────────────────────────────────────────────────────────────
 
-const UserForm: React.FC<UserFormProps> = ({ token, initialValues, onSuccess }) => {
+const UserForm: React.FC<UserFormProps> = ({
+  token, formId, initialValues, onSuccess, onSubmittingChange, onResetReady,
+}) => {
   const isEdit = !!initialValues?._id;
   const [roles,        setRoles]        = React.useState<SelectOption[]>([]);
   const [loadingRoles, setLoadingRoles] = React.useState(true);
@@ -92,6 +97,7 @@ const UserForm: React.FC<UserFormProps> = ({ token, initialValues, onSuccess }) 
     values: UserFormValues,
     { setSubmitting, resetForm }: { setSubmitting: (b: boolean) => void; resetForm: () => void },
   ) => {
+    onSubmittingChange?.(true);
     try {
       const imageUrl = values.profile_image_url.trim() || undefined;
 
@@ -127,6 +133,7 @@ const UserForm: React.FC<UserFormProps> = ({ token, initialValues, onSuccess }) 
       showToastnew.error(extractErrorMessage(err));
     } finally {
       setSubmitting(false);
+      onSubmittingChange?.(false);
     }
   };
 
@@ -137,68 +144,63 @@ const UserForm: React.FC<UserFormProps> = ({ token, initialValues, onSuccess }) 
       enableReinitialize
       onSubmit={handleSubmit}
     >
-      {({ values, errors, touched, handleChange, handleBlur, isSubmitting, setFieldValue, resetForm }) => (
-        <Form>
-          {/* Avatar upload — centred above the form */}
-          <div style={{ display: "flex", justifyContent: "center", paddingBottom: 16 }}>
-            <ImageUploadAvatar
-              url={values.profile_image_url || null}
-              name={values.name}
-              size={80}
-              onUpload={(url) => setFieldValue("profile_image_url", url)}
-            />
-          </div>
-
-          <div className="form-grid">
-            <CleanInput
-              label="Name" required placeholder="Full name"
-              name="name" value={values.name}
-              onChange={handleChange} onBlur={handleBlur}
-              error={touched.name ? errors.name : ""}
-            />
-            <CleanInput
-              label="Email" required type="email" placeholder="user@example.com"
-              name="email" value={values.email}
-              onChange={handleChange} onBlur={handleBlur}
-              error={touched.email ? errors.email : ""}
-              readOnly={isEdit}
-            />
-            <CleanInput
-              label="Mobile No" placeholder="+91XXXXXXXXXX"
-              name="mobile_no" value={values.mobile_no}
-              onChange={handleChange} onBlur={handleBlur}
-              error={touched.mobile_no ? errors.mobile_no : ""}
-            />
-            {!isEdit && (
-              <CleanInput
-                label="Password" required type="password" placeholder="Min 6 characters"
-                name="password" value={values.password}
-                onChange={handleChange} onBlur={handleBlur}
-                error={touched.password ? errors.password : ""}
+      {({ values, errors, touched, handleChange, handleBlur, setFieldValue, resetForm }) => {
+        // Expose reset function to parent footer
+        onResetReady?.(resetForm);
+        return (
+          <Form id={formId} noValidate>
+            {/* Avatar upload — centred above the form */}
+            <div style={{ display: "flex", justifyContent: "center", paddingBottom: 16 }}>
+              <ImageUploadAvatar
+                url={values.profile_image_url || null}
+                name={values.name}
+                size={80}
+                onUpload={(url) => setFieldValue("profile_image_url", url)}
               />
-            )}
-            <CleanSelect
-              label="Role" required
-              value={values.role_id}
-              options={roles}
-              placeholder={loadingRoles ? "Loading roles…" : "Select Role"}
-              disabled={loadingRoles}
-              onChange={(e) => setFieldValue("role_id", e.target.value)}
-              onBlur={handleBlur}
-              error={touched.role_id ? errors.role_id : ""}
-            />
-          </div>
+            </div>
 
-          <div style={{ display: "flex", gap: 8, paddingTop: 14 }}>
-            <CleanButton type="submit" variant="primary" size="sm" loading={isSubmitting} disabled={loadingRoles}>
-              {isEdit ? "Update User" : "Create User"}
-            </CleanButton>
-            <CleanButton type="button" variant="outline" size="sm" onClick={() => resetForm()} disabled={isSubmitting}>
-              Reset
-            </CleanButton>
-          </div>
-        </Form>
-      )}
+            <div className="form-grid">
+              <CleanInput
+                label="Name" required placeholder="Full name"
+                name="name" value={values.name}
+                onChange={handleChange} onBlur={handleBlur}
+                error={touched.name ? errors.name : ""}
+              />
+              <CleanInput
+                label="Email" required type="email" placeholder="user@example.com"
+                name="email" value={values.email}
+                onChange={handleChange} onBlur={handleBlur}
+                error={touched.email ? errors.email : ""}
+                readOnly={isEdit}
+              />
+              <CleanInput
+                label="Mobile No" placeholder="+91XXXXXXXXXX"
+                name="mobile_no" value={values.mobile_no}
+                onChange={handleChange} onBlur={handleBlur}
+                error={touched.mobile_no ? errors.mobile_no : ""}
+              />
+              {!isEdit && (
+                <CleanInput
+                  label="Password" required type="password" placeholder="Min 6 characters"
+                  name="password" value={values.password}
+                  onChange={handleChange} onBlur={handleBlur}
+                  error={touched.password ? errors.password : ""}
+                />
+              )}
+              <CleanSelect
+                label="Role" required
+                value={values.role_id}
+                options={roles}
+                placeholder={loadingRoles ? "Loading roles…" : "Select Role"}
+                disabled={loadingRoles}
+                onChange={(e) => setFieldValue("role_id", e.target.value)}
+                onBlur={handleBlur}
+                error={touched.role_id ? errors.role_id : ""}
+              />
+            </div>
+          </Form>
+        );
+      }}
     </Formik>
   );
 };

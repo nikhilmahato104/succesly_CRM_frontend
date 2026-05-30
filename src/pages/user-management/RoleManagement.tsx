@@ -56,8 +56,11 @@ const RoleManagement: React.FC = () => {
   const [hasMore,         setHasMore]         = React.useState(false);
   const [showModal,       setShowModal]       = React.useState(false);
   const [editItem,        setEditItem]        = React.useState<RoleItem | null>(null);
+  const [formSubmitting,  setFormSubmitting]  = React.useState(false);
 
-  const pageRef = useRef(1);
+  const pageRef       = useRef(1);
+  const formResetRef  = useRef<(() => void) | null>(null);
+  const ROLE_FORM_ID  = "role-mgmt-form";
 
   React.useEffect(() => {
     const id = setTimeout(() => setDebouncedSearch(search.trim()), 350);
@@ -174,16 +177,42 @@ const RoleManagement: React.FC = () => {
       {/* ── Create / Edit modal ───────────────────────────────────────────────── */}
       <CleanModal
         isOpen={showModal}
-        onClose={() => { setShowModal(false); setEditItem(null); }}
+        onClose={() => { setShowModal(false); setEditItem(null); setFormSubmitting(false); }}
         title={editItem ? "Edit Role" : "Create Role"}
         subtitle="Set role name and module permissions"
         maxWidth={680}
+        expandable={false}
         zIndex={99999}
+        footer={
+          <>
+            <CleanButton
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={formSubmitting}
+              onClick={() => formResetRef.current?.()}
+            >
+              Reset
+            </CleanButton>
+            <CleanButton
+              type="submit"
+              form={ROLE_FORM_ID}
+              variant="primary"
+              size="sm"
+              loading={formSubmitting}
+            >
+              {editItem ? "Update Role" : "Create Role"}
+            </CleanButton>
+          </>
+        }
       >
         <RoleForm
+          formId={ROLE_FORM_ID}
           token={token}
           initialValues={editItem ?? undefined}
-          onSuccess={() => { setShowModal(false); setEditItem(null); handleRefresh(); }}
+          onSuccess={() => { setShowModal(false); setEditItem(null); setFormSubmitting(false); handleRefresh(); }}
+          onSubmittingChange={setFormSubmitting}
+          onResetReady={(fn) => { formResetRef.current = fn; }}
         />
       </CleanModal>
     </div>

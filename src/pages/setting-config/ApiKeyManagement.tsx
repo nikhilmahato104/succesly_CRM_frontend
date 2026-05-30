@@ -9,7 +9,7 @@ import { selectApiKey, openApiKeyModal } from "../../store/slices/apiKeySlice";
 import { selectAccessData } from "../../store/slices/accessSlice";
 import { scrollToTop } from "../../utils/scrollToTop";
 import type { RootState } from "../../store";
-import ApiKeyForm from "./ApiKeyForm";
+import ApiKeyForm, { KeyRevealBanner } from "./ApiKeyForm";
 import {
   CleanButton, CleanSearchBar, CleanSelect, CleanModal, type SelectOption,
 } from "../../atoms/my_clean_code_atoms";
@@ -127,9 +127,13 @@ const ApiKeyManagement: React.FC = () => {
   const [deleteModal,     setDeleteModal]     = React.useState<DeleteModalState>(CLOSE_DELETE);
   const [deleteLoading,   setDeleteLoading]   = React.useState(false);
   const [showFilterPanel, setShowFilterPanel] = React.useState(false);
+  const [formSubmitting,  setFormSubmitting]  = React.useState(false);
+  const [revealedKey,     setRevealedKey]     = React.useState<string | null>(null);
 
   const pageRef        = useRef(1);
   const filterPanelRef = useRef<HTMLDivElement>(null);
+  const formResetRef   = useRef<(() => void) | null>(null);
+  const APIKEY_FORM_ID = "apikey-mgmt-form";
 
   React.useEffect(() => {
     const id = setTimeout(() => setDebouncedSearch(search.trim()), 350);
@@ -329,18 +333,68 @@ const ApiKeyManagement: React.FC = () => {
       {/* ── Create / Edit modal ───────────────────────────────────────────────── */}
       <CleanModal
         isOpen={showModal}
-        onClose={() => { setShowModal(false); setEditItem(null); }}
+        onClose={() => { setShowModal(false); setEditItem(null); setFormSubmitting(false); setRevealedKey(null); }}
         title={editItem ? "Edit API Key" : "Create API Key"}
-        subtitle={editItem ? "Update key settings" : "Keys are shown only once at creation"}
+        subtitle={
+          revealedKey
+            ? "Copy your key before closing — it won't be shown again"
+            : editItem ? "Update key settings" : "Keys are shown only once at creation"
+        }
         maxWidth={520}
+        expandable={false}
         zIndex={99999}
+        footer={
+          revealedKey ? (
+            /* After creation: just a "Done" button */
+            <>
+              <span />
+              <CleanButton
+                variant="primary"
+                size="sm"
+                onClick={() => { setShowModal(false); setEditItem(null); setRevealedKey(null); setFormSubmitting(false); }}
+              >
+                Done
+              </CleanButton>
+            </>
+          ) : (
+            /* Normal create / edit footer */
+            <>
+              <CleanButton
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={formSubmitting}
+                onClick={() => formResetRef.current?.()}
+              >
+                Reset
+              </CleanButton>
+              <CleanButton
+                type="submit"
+                form={APIKEY_FORM_ID}
+                variant="primary"
+                size="sm"
+                loading={formSubmitting}
+              >
+                {editItem ? "Update Key" : "Create API Key"}
+              </CleanButton>
+            </>
+          )
+        }
       >
-        <ApiKeyForm
-          token={token}
-          initialValues={editItem ?? undefined}
-          onSuccess={() => { setShowModal(false); setEditItem(null); handleRefresh(); }}
-          onCreated={() => { handleRefresh(); }}
-        />
+        {revealedKey ? (
+          <KeyRevealBanner apiKey={revealedKey} />
+        ) : (
+          <ApiKeyForm
+            formId={APIKEY_FORM_ID}
+            token={token}
+            initialValues={editItem ?? undefined}
+            onSuccess={() => { setShowModal(false); setEditItem(null); setRevealedKey(null); setFormSubmitting(false); handleRefresh(); }}
+            onCreated={() => { handleRefresh(); }}
+            onSubmittingChange={setFormSubmitting}
+            onResetReady={(fn) => { formResetRef.current = fn; }}
+            onKeyRevealed={(key) => { setRevealedKey(key); setFormSubmitting(false); }}
+          />
+        )}
       </CleanModal>
 
       {/* ── Delete confirm modal ─────────────────────────────────────────────── */}
@@ -348,6 +402,7 @@ const ApiKeyManagement: React.FC = () => {
         isOpen={deleteModal.isOpen}
         onClose={() => setDeleteModal(CLOSE_DELETE)}
         maxWidth={400}
+        expandable={false}
         zIndex={99999}
         closeOnBackdrop={!deleteLoading}
         footer={

@@ -62,6 +62,7 @@ interface RoleAccessItem {
 interface ProfileData {
   _id: string; username: string; email: string;
   mobile_no: string; role_id: string; is_active: boolean;
+  profile_image_url?: string | null;
   role: { _id: string; role_name: string; role_access: RoleAccessItem[] };
 }
 
@@ -213,13 +214,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const applyProfile = useCallback(
     (profile: ProfileData) => {
       dispatch(setUserData({
-        user_id:   profile._id,
-        user_name: profile.username,
-        user_email:profile.email,
-        mobile_no: profile.mobile_no,
-        role_name: profile.role.role_name,
-        role_id:   profile.role_id,
-        is_active: profile.is_active,
+        user_id:           profile._id,
+        user_name:         profile.username,
+        user_email:        profile.email,
+        mobile_no:         profile.mobile_no,
+        role_name:         profile.role.role_name,
+        role_id:           profile.role_id,
+        is_active:         profile.is_active,
+        profile_image_url: profile.profile_image_url ?? null,
       }));
       dispatch(setAccessData(buildAccessMap(profile.role.role_access)));
     },

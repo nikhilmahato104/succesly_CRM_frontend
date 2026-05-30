@@ -6,40 +6,35 @@ const getInitials = (name: string): string =>
   name.split(" ").map((w) => w.charAt(0)).join("").toUpperCase().slice(0, 2);
 
 // ── Avatar ─────────────────────────────────────────────────────────────────
-const Avatar: React.FC<{ name: string }> = ({ name }) => (
-  <div style={{ position: "relative", flexShrink: 0 }}>
-    <div
-      style={{
-        width: 32,
-        height: 32,
-        borderRadius: "50%",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: "var(--sb-text-active)",
-        color: "var(--sb-bg)",
-        fontSize: 12,
-        fontWeight: 700,
-        userSelect: "none",
-        letterSpacing: "0.02em",
-      }}
-    >
-      {getInitials(name)}
+const Avatar: React.FC<{ name: string; url?: string | null }> = ({ name, url }) => {
+  const [imgFailed, setImgFailed] = React.useState(false);
+  const showImg = !!url && !imgFailed;
+  return (
+    <div style={{ position: "relative", flexShrink: 0 }}>
+      <div
+        style={{
+          width: 32, height: 32, borderRadius: "50%",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          background: showImg ? "transparent" : "var(--sb-text-active)",
+          color: "var(--sb-bg)", fontSize: 12, fontWeight: 700,
+          userSelect: "none", letterSpacing: "0.02em", overflow: "hidden",
+        }}
+      >
+        {showImg
+          ? <img src={url!} alt={name} style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={() => setImgFailed(true)} />
+          : getInitials(name)
+        }
+      </div>
+      <div
+        style={{
+          position: "absolute", bottom: 0, right: 0,
+          width: 9, height: 9, borderRadius: "50%",
+          background: "#22c55e", border: "2px solid var(--sb-bg)",
+        }}
+      />
     </div>
-    <div
-      style={{
-        position: "absolute",
-        bottom: 0,
-        right: 0,
-        width: 9,
-        height: 9,
-        borderRadius: "50%",
-        background: "#22c55e",
-        border: "2px solid var(--sb-bg)",
-      }}
-    />
-  </div>
-);
+  );
+};
 
 // ── Telegram-style Sun/Moon pill toggle ────────────────────────────────────
 const ThemeToggle: React.FC<{ isDarkMode: boolean; onToggle: (x: number, y: number) => void }> = ({ isDarkMode, onToggle }) => {
@@ -230,6 +225,7 @@ const UserProfile: React.FC<UserProfileProps> = ({
   isCollapsed = false,
   userName,
   userEmail,
+  profileImageUrl,
   isDarkMode,
   profileDropdownOpen,
   onToggleDropdown,
@@ -258,7 +254,7 @@ const UserProfile: React.FC<UserProfileProps> = ({
       onMouseEnter={e => { e.currentTarget.style.background = "var(--sb-hover)"; }}
       onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
     >
-      <Avatar name={userName} />
+      <Avatar name={userName} url={profileImageUrl} />
       {!isCollapsed && (
         <>
           <div style={{ flex: 1, minWidth: 0, textAlign: "left" }}>

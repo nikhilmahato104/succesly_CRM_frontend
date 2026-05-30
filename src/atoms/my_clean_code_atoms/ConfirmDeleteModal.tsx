@@ -30,6 +30,7 @@ export const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
     onClose={onClose}
     maxWidth={420}
     zIndex={zIndex}
+    expandable={false}
     closeOnBackdrop={!loading}
     mode={mode}
     footer={

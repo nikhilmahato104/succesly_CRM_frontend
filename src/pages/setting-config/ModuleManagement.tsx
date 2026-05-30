@@ -75,8 +75,11 @@ const ModuleManagement: React.FC = () => {
   const [editItem,        setEditItem]        = React.useState<ModuleItem | null>(null);
   const [statusModal,     setStatusModal]     = React.useState<StatusState>(CLOSE_STATUS);
   const [statusLoading,   setStatusLoading]   = React.useState(false);
+  const [formSubmitting,  setFormSubmitting]  = React.useState(false);
 
-  const pageRef = useRef(1);
+  const pageRef          = useRef(1);
+  const formResetRef     = useRef<(() => void) | null>(null);
+  const MODULE_FORM_ID   = "module-mgmt-form";
 
   React.useEffect(() => {
     const id = setTimeout(() => setDebouncedSearch(search.trim()), 350);
@@ -221,16 +224,42 @@ const ModuleManagement: React.FC = () => {
       {/* ── Create / Edit modal ───────────────────────────────────────────────── */}
       <CleanModal
         isOpen={showModal}
-        onClose={() => { setShowModal(false); setEditItem(null); }}
+        onClose={() => { setShowModal(false); setEditItem(null); setFormSubmitting(false); }}
         title={editItem ? "Edit Module" : "Create Module"}
         subtitle={editItem ? "Update module name or status" : "Define a new permission module"}
         maxWidth={480}
+        expandable={false}
         zIndex={99999}
+        footer={
+          <>
+            <CleanButton
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={formSubmitting}
+              onClick={() => formResetRef.current?.()}
+            >
+              Reset
+            </CleanButton>
+            <CleanButton
+              type="submit"
+              form={MODULE_FORM_ID}
+              variant="primary"
+              size="sm"
+              loading={formSubmitting}
+            >
+              {editItem ? "Update Module" : "Create Module"}
+            </CleanButton>
+          </>
+        }
       >
         <ModuleForm
+          formId={MODULE_FORM_ID}
           token={token}
           initialValues={editItem ?? undefined}
-          onSuccess={() => { setShowModal(false); setEditItem(null); handleRefresh(); }}
+          onSuccess={() => { setShowModal(false); setEditItem(null); setFormSubmitting(false); handleRefresh(); }}
+          onSubmittingChange={setFormSubmitting}
+          onResetReady={(fn) => { formResetRef.current = fn; }}
         />
       </CleanModal>
 
@@ -239,6 +268,7 @@ const ModuleManagement: React.FC = () => {
         isOpen={statusModal.isOpen}
         onClose={() => setStatusModal(CLOSE_STATUS)}
         maxWidth={400}
+        expandable={false}
         zIndex={99999}
         closeOnBackdrop={!statusLoading}
         footer={

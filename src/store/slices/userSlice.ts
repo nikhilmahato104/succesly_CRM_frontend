@@ -8,6 +8,7 @@ interface UserState {
   role_name?: string;
   role_id?: string;
   is_active?: boolean;
+  profile_image_url?: string | null;
 }
 
 const initialState: UserState = {};

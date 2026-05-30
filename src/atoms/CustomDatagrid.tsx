@@ -545,7 +545,7 @@ const SkeletonBodyCell: React.FC<{ col: GridColumn; width: number; min: number }
 
 // Skeleton shimmer for the checkbox column
 const SkeletonSelectHeader: React.FC = () => (
-  <th style={{ width: SELECT_COL_WIDTH, minWidth: SELECT_COL_WIDTH, padding: '0 13px', height: 37, background: 'var(--dt-header)', borderBottom: '1px solid var(--dt-border)' }}>
+  <th style={{ width: SELECT_COL_WIDTH, minWidth: SELECT_COL_WIDTH, padding: '0 13px', height: 37, textAlign: 'left', verticalAlign: 'middle', background: 'var(--dt-header)', borderBottom: '1px solid var(--dt-border)' }}>
     <div style={{ width: 14, height: 14, borderRadius: 3, background: 'var(--dt-skeleton-from)', opacity: 0.5 }} />
   </th>
 )
@@ -1362,6 +1362,8 @@ export function CustomDatagrid<T extends Record<string, unknown>>({
                   style={{
                     width: SELECT_COL_WIDTH, minWidth: SELECT_COL_WIDTH,
                     padding: '0 13px', height: 37,
+                    textAlign: 'left',
+                    verticalAlign: 'middle',
                     background: 'var(--dt-header)',
                     borderBottom: '1px solid var(--dt-border)',
                   }}

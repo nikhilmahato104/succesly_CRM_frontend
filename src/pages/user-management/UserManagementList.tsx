@@ -10,9 +10,12 @@ import { selectApiKey, openApiKeyModal } from "../../store/slices/apiKeySlice";
 import { selectAccessData } from "../../store/slices/accessSlice";
 import type { RootState } from "../../store";
 import UserForm from "./UserForm";
+import UserProfileCard, { type CardUser } from "../../atoms/UserProfileCard";
 import {
   CleanButton, CleanSearchBar, CleanSelect, CleanModal, type SelectOption,
 } from "../../atoms/my_clean_code_atoms";
+
+const USER_FORM_ID = "user-mgmt-form";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -57,30 +60,41 @@ function getInitials(name: string): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-// ── Avatar cell ────────────────────────────────────────────────────────────
+// ── Avatar + Name cell ─────────────────────────────────────────────────────
 
-function UserAvatar({ url, name }: { url?: string | null; name: string }) {
-  const [imgError, setImgError] = React.useState(false);
-  const showImg = !!url && !imgError;
+interface UserNameCellProps {
+  row: UserItem;
+  onAvatarClick: (e: React.MouseEvent<HTMLDivElement>, row: UserItem) => void;
+}
+
+function UserNameCell({ row, onAvatarClick }: UserNameCellProps) {
+  const [imgFailed, setImgFailed] = React.useState(false);
+  const url     = row.profile_image_url;
+  const showImg = !!url && !imgFailed;
   return (
-    <div style={{
-      width: 30, height: 30, borderRadius: "50%", flexShrink: 0,
-      overflow: "hidden", border: "1.5px solid var(--fi-border)",
-      background: "var(--sc-surface)",
-      display: "flex", alignItems: "center", justifyContent: "center",
-    }}>
-      {showImg ? (
-        <img
-          src={url!}
-          alt={name}
-          style={{ width: "100%", height: "100%", objectFit: "cover" }}
-          onError={() => setImgError(true)}
-        />
-      ) : (
-        <span style={{ fontSize: 10, fontWeight: 700, color: "var(--fi-muted)", lineHeight: 1 }}>
-          {getInitials(name)}
-        </span>
-      )}
+    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <div
+        onClick={(e) => { e.stopPropagation(); onAvatarClick(e, row); }}
+        title="View profile"
+        style={{
+          width: 28, height: 28, borderRadius: "50%", flexShrink: 0,
+          overflow: "hidden", border: "1.5px solid var(--fi-border)",
+          background: showImg ? "transparent" : "var(--sc-surface)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          cursor: "pointer",
+          transition: "box-shadow 150ms ease",
+        }}
+        onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = "0 0 0 2px var(--btn-primary-bg)"; }}
+        onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = "none"; }}
+      >
+        {showImg
+          ? <img src={url!} alt={row.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={() => setImgFailed(true)} />
+          : <span style={{ fontSize: 9, fontWeight: 700, color: "var(--fi-muted)", lineHeight: 1 }}>{getInitials(row.name)}</span>
+        }
+      </div>
+      <span style={{ fontSize: 13, color: "var(--dt-text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+        {row.name}
+      </span>
     </div>
   );
 }
@@ -137,9 +151,12 @@ const UserManagementList: React.FC = () => {
   const [statusModal,     setStatusModal]     = React.useState<StatusState>(CLOSE_STATUS);
   const [statusLoading,   setStatusLoading]   = React.useState(false);
   const [showFilterPanel, setShowFilterPanel] = React.useState(false);
+  const [formSubmitting,  setFormSubmitting]  = React.useState(false);
+  const [profileCard,     setProfileCard]     = React.useState<{ el: HTMLElement; user: CardUser } | null>(null);
 
   const pageRef        = useRef(1);
   const filterPanelRef = useRef<HTMLDivElement>(null);
+  const formResetRef   = useRef<(() => void) | null>(null);
 
   React.useEffect(() => {
     const id = setTimeout(() => setDebouncedSearch(search.trim()), 350);
@@ -216,25 +233,26 @@ const UserManagementList: React.FC = () => {
     finally { setStatusLoading(false); }
   };
 
+  const closeCreateModal = () => { setShowModal(false); setEditItem(null); setFormSubmitting(false); };
+
   const activeFilterCount = statusFilter ? 1 : 0;
+
+  const handleAvatarClick = useCallback((e: React.MouseEvent<HTMLDivElement>, row: UserItem) => {
+    setProfileCard({
+      el:   e.currentTarget,
+      user: { name: row.name, email: row.email, role: row.role_name, profile_image_url: row.profile_image_url },
+    });
+  }, []);
 
   const columns = useMemo<GridColumn<UserItem>[]>(() => [
     {
-      field: "profile_image_url",
-      headerName: "",
-      minWidth: 48,
-      width: 48,
-      renderCell: ({ row }) => (
-        <UserAvatar url={row.profile_image_url} name={row.name} />
-      ),
-    },
-    {
       field: "name",
       headerName: "User Name",
-      minWidth: 160,
+      minWidth: 200,
       sortable: true,
+      renderCell: ({ row }) => <UserNameCell row={row} onAvatarClick={handleAvatarClick} />,
     },
-    { field: "email",     headerName: "Email",     minWidth: 220, sortable: true },
+    { field: "email", headerName: "Email", minWidth: 220, sortable: true },
     {
       field: "role_name", headerName: "Role", minWidth: 150,
       renderCell: ({ value }) => (
@@ -266,7 +284,6 @@ const UserManagementList: React.FC = () => {
         padding: "7px 12px", borderBottom: "1px solid var(--fi-border)",
         flexShrink: 0, flexWrap: "wrap", background: "var(--fi-bg)",
       }}>
-
         <CleanSearchBar
           value={search}
           onChange={(v) => setSearch(v)}
@@ -274,7 +291,6 @@ const UserManagementList: React.FC = () => {
           width={260}
         />
 
-        {/* Filter panel */}
         <div style={{ position: "relative" }} ref={filterPanelRef}>
           <CleanButton
             variant="outline" size="sm"
@@ -343,19 +359,52 @@ const UserManagementList: React.FC = () => {
         />
       </div>
 
+      {/* ── Profile card popover ─────────────────────────────────────────────── */}
+      <UserProfileCard
+        user={profileCard?.user ?? null}
+        anchorEl={profileCard?.el ?? null}
+        onClose={() => setProfileCard(null)}
+      />
+
       {/* ── Create / Edit modal ───────────────────────────────────────────────── */}
       <CleanModal
         isOpen={showModal}
-        onClose={() => { setShowModal(false); setEditItem(null); }}
+        onClose={closeCreateModal}
         title={editItem ? "Edit User" : "Create User"}
         subtitle={editItem ? "Update user details" : "Add a new user account"}
         maxWidth={520}
+        expandable={false}
         zIndex={99999}
+        footer={
+          <>
+            <CleanButton
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={formSubmitting}
+              onClick={() => formResetRef.current?.()}
+            >
+              Reset
+            </CleanButton>
+            <CleanButton
+              type="submit"
+              form={USER_FORM_ID}
+              variant="primary"
+              size="sm"
+              loading={formSubmitting}
+            >
+              {editItem ? "Update User" : "Create User"}
+            </CleanButton>
+          </>
+        }
       >
         <UserForm
+          formId={USER_FORM_ID}
           token={token}
           initialValues={editItem ?? undefined}
-          onSuccess={() => { setShowModal(false); setEditItem(null); handleRefresh(); }}
+          onSuccess={() => { closeCreateModal(); handleRefresh(); }}
+          onSubmittingChange={setFormSubmitting}
+          onResetReady={(fn) => { formResetRef.current = fn; }}
         />
       </CleanModal>
 
@@ -364,6 +413,7 @@ const UserManagementList: React.FC = () => {
         isOpen={statusModal.isOpen}
         onClose={() => setStatusModal(CLOSE_STATUS)}
         maxWidth={400}
+        expandable={false}
         zIndex={99999}
         closeOnBackdrop={!statusLoading}
         footer={

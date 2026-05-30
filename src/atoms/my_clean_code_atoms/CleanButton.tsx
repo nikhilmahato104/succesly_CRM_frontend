@@ -12,6 +12,7 @@ export interface CleanButtonProps {
   loading?:      boolean;
   disabled?:     boolean;
   type?:         "button" | "submit" | "reset";
+  form?:         string;
   onClick?:      (e: React.MouseEvent<HTMLButtonElement>) => void;
   children?:     React.ReactNode;
   style?:        React.CSSProperties;
@@ -68,6 +69,7 @@ export const CleanButton: React.FC<CleanButtonProps> = ({
   loading  = false,
   disabled = false,
   type     = "button",
+  form,
   onClick,
   children,
   style,
@@ -114,6 +116,7 @@ export const CleanButton: React.FC<CleanButtonProps> = ({
   return (
     <button
       type={type}
+      form={form}
       style={baseStyle}
       disabled={isDisabled}
       onClick={onClick}
