@@ -24,6 +24,7 @@ const AdminDashboard     = lazy(() => import("../pages/dashboard/admin-dashboard
 const ManagerDashboard   = lazy(() => import("../pages/dashboard/manager-dashboard/ManagerDashboard").then(m => ({ default: m.ManagerDashboard })));
 const Course             = lazy(() => import("../pages/Course"));
 const NotFoundPage       = lazy(() => import("../pages/NotFoundPage"));
+const HelpChatPage       = lazy(() => import("../pages/help-chat/HelpChatPage"));
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -237,7 +238,8 @@ export const AppRoutes: React.FC = () => {
         <Route path="/dashboard-xyz"            element={<ProtectedRoute moduleId="dashboard-xyz"            ><DashboardPage /></ProtectedRoute>} />
 
         {/* Authenticated but no module/role restriction */}
-        {/* <Route path="/help-chat" element={<ProtectedRoute><DashboardLayout><DashboardPage /></DashboardLayout></ProtectedRoute>} /> */}
+        {/* Authenticated but no module/role restriction */}
+        <Route path="/help-chat" element={<ProtectedRoute><InLayout><HelpChatPage /></InLayout></ProtectedRoute>} />
 
         {/* ── SETTINGS & CONFIG (module-id gated) ───────────────────────────
             Each sub-route checks a different module key from Redux accessSlice:
