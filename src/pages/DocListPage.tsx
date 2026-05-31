@@ -50,6 +50,13 @@ const docs = [
     tag: "UI",
     color: "#f97316",
   },
+  {
+    file: "QueryCache_Optimization.html",
+    title: "Query Cache & Tab Optimization",
+    description: "SWR cache, in-flight dedup, CSS mount preservation — eliminate redundant API calls on tab switching. Industry-standard patterns, zero dependencies.",
+    tag: "Performance",
+    color: "#3fb950",
+  },
 ];
 
 const DocListPage: React.FC = () => {
@@ -80,7 +87,7 @@ const DocListPage: React.FC = () => {
           Developer Documentation
         </h1>
         <p style={{ color: "#8b8fa8", fontSize: 14, marginBottom: 36 }}>
-          {docs.length} guides — click any card to open
+          {docs.length} guides — click any card to open in browser
         </p>
 
         {/* Doc Grid */}

@@ -74,6 +74,12 @@ export interface CustomDatagridProps<T = Record<string, unknown>> {
   rows?: T[]
   columns?: GridColumn<T>[]
   CustomNoRowsOverlay?: React.ComponentType
+  /** Image URL shown centered in the table viewport when there are no rows */
+  emptyStateImage?: string
+  /** Title text shown below the empty state image */
+  emptyStateTitle?: string
+  /** Subtitle text shown below the title */
+  emptyStateSubtitle?: string
   getRowId?: (row: T) => string | number
   onCellClick?: (
     params: { id: string | number; field: string; value: unknown; originalValue?: unknown },
@@ -1061,6 +1067,9 @@ export function CustomDatagrid<T extends Record<string, unknown>>({
   rows = [],
   columns = [],
   CustomNoRowsOverlay,
+  emptyStateImage,
+  emptyStateTitle,
+  emptyStateSubtitle,
   getRowId = DEFAULT_ROW_ID as unknown as (row: T) => string | number,
   onCellClick,
   onRowClick,
@@ -1447,7 +1456,7 @@ export function CustomDatagrid<T extends Record<string, unknown>>({
           {/* ── Data rows ─────────────────────────────────────────────── */}
           <tbody>
             {displayRows.length === 0
-              ? emptyRow
+              ? (emptyStateImage ? null : emptyRow)   // image overlay handles empty state when image is set
               : displayRows.map((row) => {
                 const rowId     = getRowId(row)
                 const isSelected = selectable && selectedIds.has(rowId)
@@ -1556,6 +1565,49 @@ export function CustomDatagrid<T extends Record<string, unknown>>({
           </tbody>
         </table>
       </div>
+
+      {/* ── Empty-state overlay — fixed to viewport center, never scrolls ── */}
+      {displayRows.length === 0 && !isLoading && emptyStateImage && (
+        <div
+          style={{
+            // Covers the entire component (outer div is position:relative via className)
+            position:       'absolute',
+            inset:          0,
+            // Center the image+text without blocking header or footer clicks
+            display:        'flex',
+            flexDirection:  'column',
+            alignItems:     'center',
+            justifyContent: 'center',
+            gap:            0,
+            pointerEvents:  'none',
+            zIndex:         5,
+            paddingBottom:  40,
+          }}
+        >
+          <img
+            src={emptyStateImage}
+            alt={emptyStateTitle ?? 'No data'}
+            style={{ width: 380, height: 'auto', opacity: 0.95, userSelect: 'none' }}
+            draggable={false}
+          />
+          {emptyStateTitle && (
+            <p style={{
+              margin: 0, marginTop: -60, fontSize: 16, fontWeight: 700,
+              color: 'var(--dt-text)', textAlign: 'center',
+            }}>
+              {emptyStateTitle}
+            </p>
+          )}
+          {emptyStateSubtitle && (
+            <p style={{
+              margin: '2px 0 0', fontSize: 13,
+              color: 'var(--dt-muted)', textAlign: 'center',
+            }}>
+              {emptyStateSubtitle}
+            </p>
+          )}
+        </div>
+      )}
 
       {/* ── Footer ──────────────────────────────────────────────────────── */}
       {onScrollPagination ? (

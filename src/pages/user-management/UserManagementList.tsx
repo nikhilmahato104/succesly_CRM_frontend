@@ -5,6 +5,7 @@ import { ListFilter, Plus, AlertTriangle } from "lucide-react";
 import { CustomDatagrid, type GridColumn } from "../../atoms/CustomDatagrid";
 import { showToastnew } from "../../services/toastifynewService/toastifynewService";
 import { getData, patchData, deleteData } from "../../services/crmServices";
+import { fetchSWR, invalidatePrefix, cacheKey } from "../../lib/queryCache";
 import { emitNavDone } from "../../atoms/NavigationProgress";
 import { selectApiKey, openApiKeyModal } from "../../store/slices/apiKeySlice";
 import { selectAccessData } from "../../store/slices/accessSlice";
@@ -186,9 +187,26 @@ const UserManagementList: React.FC = () => {
       if (!apiKey) { dispatch(openApiKeyModal(false)); return; }
       append ? setLoadingMore(true) : setLoading(true);
       try {
-        const res = await getData<UsersApiResponse>({
-          endpoint: "users", token: token, instance: "identity", params: buildParams(page),
-        });
+        const params = buildParams(page);
+        const key    = cacheKey("users", params as Record<string, unknown>);
+
+        // Page 1 (non-append) uses SWR: serve cached data instantly while
+        // revalidating in background. Append / pagination always fetches fresh.
+        const tok = token ?? undefined;
+        const res = append || page > 1
+          ? await getData<UsersApiResponse>({ endpoint: "users", token: tok, instance: "identity", params })
+          : await fetchSWR<UsersApiResponse>(
+              key,
+              () => getData<UsersApiResponse>({ endpoint: "users", token: tok, instance: "identity", params }),
+              30_000, 60_000,
+              (fresh) => {
+                const freshItems = fresh.data.data.map(mapUser);
+                setData(freshItems);
+                setTotal(fresh.data.total);
+                setHasMore(1 < fresh.data.totalPages);
+              },
+            );
+
         const items = res.data.data.map(mapUser);
         setData((prev) => (append ? [...prev, ...items] : items));
         setTotal(res.data.total);
@@ -203,7 +221,7 @@ const UserManagementList: React.FC = () => {
   React.useEffect(() => { pageRef.current = 1; setData([]); fetchPage(1, false); }, [fetchPage]);
 
   const handleLoadMore = useCallback(() => fetchPage(pageRef.current + 1, true), [fetchPage]);
-  const handleRefresh  = useCallback(() => { pageRef.current = 1; setData([]); fetchPage(1, false); }, [fetchPage]);
+  const handleRefresh  = useCallback(() => { invalidatePrefix("users"); pageRef.current = 1; setData([]); fetchPage(1, false); }, [fetchPage]);
 
   const handleEdit   = useCallback((row: UserItem) => { setEditItem(row); setShowModal(true); }, []);
   const handleDelete = useCallback(async (row: UserItem) => {

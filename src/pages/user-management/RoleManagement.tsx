@@ -5,6 +5,7 @@ import { Plus } from "lucide-react";
 import { CustomDatagrid, type GridColumn } from "../../atoms/CustomDatagrid";
 import { showToastnew } from "../../services/toastifynewService/toastifynewService";
 import { getData, deleteData } from "../../services/crmServices";
+import { fetchSWR, invalidatePrefix, cacheKey } from "../../lib/queryCache";
 import { selectApiKey, openApiKeyModal } from "../../store/slices/apiKeySlice";
 import { selectAccessData } from "../../store/slices/accessSlice";
 import type { RootState } from "../../store";
@@ -77,9 +78,21 @@ const RoleManagement: React.FC = () => {
       if (!apiKey) { dispatch(openApiKeyModal(false)); return; }
       append ? setLoadingMore(true) : setLoading(true);
       try {
-        const res = await getData<RolesApiResponse>({
-          endpoint: "roles", token: token, instance: "identity", params: buildParams(page),
-        });
+        const tok    = token ?? undefined;
+        const params = buildParams(page);
+        const key    = cacheKey("roles", params as Record<string, unknown>);
+        const res = append || page > 1
+          ? await getData<RolesApiResponse>({ endpoint: "roles", token: tok, instance: "identity", params })
+          : await fetchSWR<RolesApiResponse>(
+              key,
+              () => getData<RolesApiResponse>({ endpoint: "roles", token: tok, instance: "identity", params }),
+              30_000, 60_000,
+              (fresh) => {
+                setData(fresh.data.data.map(mapRole));
+                setTotal(fresh.data.total);
+                setHasMore(1 < fresh.data.totalPages);
+              },
+            );
         const items = res.data.data.map(mapRole);
         setData((prev) => (append ? [...prev, ...items] : items));
         setTotal(res.data.total);
@@ -94,7 +107,7 @@ const RoleManagement: React.FC = () => {
   React.useEffect(() => { pageRef.current = 1; setData([]); fetchPage(1, false); }, [fetchPage]);
 
   const handleLoadMore = useCallback(() => fetchPage(pageRef.current + 1, true), [fetchPage]);
-  const handleRefresh  = useCallback(() => { pageRef.current = 1; setData([]); fetchPage(1, false); }, [fetchPage]);
+  const handleRefresh  = useCallback(() => { invalidatePrefix("roles"); pageRef.current = 1; setData([]); fetchPage(1, false); }, [fetchPage]);
 
   const handleEdit   = useCallback((row: RoleItem) => { setEditItem(row); setShowModal(true); }, []);
   const handleDelete = useCallback(async (row: RoleItem) => {

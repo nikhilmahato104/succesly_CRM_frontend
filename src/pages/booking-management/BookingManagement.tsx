@@ -546,6 +546,9 @@ const BookingManagement: React.FC = () => {
           hasMore={hasMore}
           loadingMore={loadingMore}
           onRefresh={handleRefresh}
+          emptyStateImage="/icons/no-booking-found.png"
+          emptyStateTitle="No bookings found"
+          emptyStateSubtitle="Try adjusting your search or filters"
           // ── Selection + bulk delete ──────────────────────────────────────
           selectable={perms.delete !== false}
           onBulkDelete={perms.delete !== false ? handleBulkDelete : undefined}
