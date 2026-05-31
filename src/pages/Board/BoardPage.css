@@ -1,0 +1,342 @@
+/* ── FigJam Whiteboard ───────────────────────────────────────────────────── */
+.fj-root *, .fj-root *::before, .fj-root *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+.fj-root {
+  display: flex;
+  flex-direction: column;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', Roboto, sans-serif;
+  background: #f0f0f0;
+  user-select: none;
+  -webkit-user-select: none;
+  overscroll-behavior: none; /* no bounce/pull-to-refresh */
+}
+
+/* ── Header ─────────────────────────────────────────────────────────────── */
+.fj-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  height: 48px;
+  background: #fff;
+  border-bottom: 1px solid #e2e8f0;
+  z-index: 50;
+  flex-shrink: 0;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+
+.fj-header-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.fj-header-logo {
+  width: 28px; height: 28px;
+  border-radius: 7px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px; color: #fff;
+  flex-shrink: 0;
+}
+
+.fj-header-title { font-size: 13.5px; font-weight: 700; color: #1e293b; }
+
+.fj-header-right { display: flex; align-items: center; gap: 8px; }
+
+.fj-hbtn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 0 12px; height: 30px;
+  border-radius: 8px; border: 1.5px solid #e2e8f0;
+  background: transparent; cursor: pointer;
+  font-size: 12px; font-weight: 600; color: #475569;
+  transition: all 0.15s; font-family: inherit;
+}
+.fj-hbtn:hover { background: #f8fafc; color: #1e293b; }
+.fj-hbtn-danger { color: #ef4444; border-color: #fca5a5; }
+.fj-hbtn-danger:hover { background: #fef2f2; }
+
+/* ── Canvas Viewport ─────────────────────────────────────────────────────── */
+.fj-viewport {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  cursor: crosshair;
+  touch-action: none;        /* browser must NOT handle touch gestures */
+  overscroll-behavior: none; /* no bounce */
+  -webkit-overflow-scrolling: auto;
+}
+.fj-viewport.tool-select  { cursor: default; }
+.fj-viewport.tool-hand    { cursor: grab; }
+.fj-viewport.panning      { cursor: grabbing !important; }
+.fj-viewport.tool-eraser  { cursor: cell; }
+.fj-viewport.tool-text    { cursor: text; }
+.fj-viewport.tool-sticky  { cursor: copy; }
+
+/* Canvas fills viewport */
+.fj-canvas {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  display: block;
+}
+
+/* Objects overlay — transform applied via JS ref */
+.fj-overlay {
+  position: absolute;
+  top: 0; left: 0;
+  transform-origin: 0 0;
+  pointer-events: none;
+  width: 0; height: 0;
+  overflow: visible;
+}
+
+.fj-overlay > * { pointer-events: all; }
+
+/* SVG shapes overlay */
+.fj-svg {
+  position: absolute;
+  top: 0; left: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+.fj-svg > g > * { pointer-events: all; }
+
+/* ── Sticky Notes ────────────────────────────────────────────────────────── */
+.fj-sticky {
+  position: absolute;
+  border-radius: 3px;
+  box-shadow: 2px 3px 10px rgba(0,0,0,0.18);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  cursor: move;
+}
+
+.fj-sticky-hdr {
+  height: 28px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px;
+  cursor: grab;
+}
+.fj-sticky-hdr:active { cursor: grabbing; }
+
+.fj-sticky-colors {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+
+.fj-sticky-swatch {
+  width: 11px; height: 11px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(0,0,0,0.25);
+  cursor: pointer;
+  transition: transform 0.1s;
+  flex-shrink: 0;
+}
+.fj-sticky-swatch:hover  { transform: scale(1.3); border-color: rgba(0,0,0,0.5); }
+.fj-sticky-swatch.active { transform: scale(1.25); border-color: rgba(0,0,0,0.7); }
+
+.fj-sticky-del {
+  width: 18px; height: 18px;
+  border: none; border-radius: 50%;
+  background: rgba(0,0,0,0.18);
+  color: rgba(0,0,0,0.7);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; line-height: 1;
+  font-family: inherit;
+  transition: background 0.12s;
+}
+.fj-sticky-del:hover { background: rgba(200,40,40,0.75); color: #fff; }
+
+.fj-sticky-body {
+  flex: 1;
+  padding: 8px 10px 10px;
+  overflow: hidden;
+}
+
+.fj-sticky-ta {
+  width: 100%; height: 100%;
+  border: none; background: transparent;
+  resize: none; outline: none;
+  font-size: 12.5px; line-height: 1.6;
+  font-family: inherit;
+  cursor: text;
+  pointer-events: all;
+}
+
+/* ── Text Objects ────────────────────────────────────────────────────────── */
+.fj-textobj {
+  position: absolute;
+  cursor: move;
+  border: 1.5px solid transparent;
+  border-radius: 4px;
+  padding: 3px 6px;
+  transition: border-color 0.12s;
+  min-width: 40px;
+  line-height: 1;
+}
+.fj-textobj:hover { border-color: rgba(99,102,241,0.5); }
+
+.fj-textobj-input {
+  background: transparent;
+  border: none; outline: none;
+  font-family: inherit;
+  resize: none; display: block;
+  padding: 0; min-width: 40px;
+  cursor: text; pointer-events: all;
+}
+
+.fj-textobj-del {
+  position: absolute;
+  top: -8px; right: -8px;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: #6366f1; color: #fff;
+  border: none; cursor: pointer;
+  font-size: 12px; display: none;
+  align-items: center; justify-content: center;
+  font-family: inherit; pointer-events: all;
+}
+.fj-textobj:hover .fj-textobj-del { display: flex; }
+
+/* ── Zoom Buttons (bottom-right) ─────────────────────────────────────────── */
+.fj-zoom-cluster {
+  position: fixed;
+  bottom: 24px; right: 24px;
+  z-index: 300;
+  display: flex; gap: 8px; align-items: center;
+}
+
+.fj-zcircle {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: #fff;
+  border: 1.5px solid #e2e8f0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  cursor: pointer; font-size: 18px; font-weight: 300;
+  display: flex; align-items: center; justify-content: center;
+  color: #475569; transition: all 0.15s; font-family: inherit;
+}
+.fj-zcircle:hover { background: #f8fafc; color: #1e293b; box-shadow: 0 4px 12px rgba(0,0,0,0.14); }
+.fj-zcircle:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.fj-zoom-val {
+  background: #fff; border: 1.5px solid #e2e8f0;
+  border-radius: 8px; padding: 0 10px; height: 32px;
+  font-size: 12px; font-weight: 700; color: #475569;
+  display: flex; align-items: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+  cursor: pointer; font-family: inherit;
+}
+.fj-zoom-val:hover { background: #f8fafc; }
+
+/* ── Bottom Toolbars ─────────────────────────────────────────────────────── */
+.fj-toolbars {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 300;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.fj-tool-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: #fff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 6px 10px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1), 0 1px 4px rgba(0,0,0,0.06);
+  pointer-events: all;
+}
+
+.fj-tsep {
+  width: 1px; height: 26px;
+  background: #e2e8f0;
+  margin: 0 5px;
+  flex-shrink: 0;
+}
+
+/* Tool button */
+.fj-tbtn {
+  width: 36px; height: 36px;
+  border-radius: 9px; border: none;
+  background: transparent; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px; color: #475569;
+  transition: background 0.12s, color 0.12s;
+  font-family: inherit; flex-shrink: 0;
+  position: relative;
+}
+.fj-tbtn:hover { background: #f1f5f9; color: #1e293b; }
+.fj-tbtn.active {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+.fj-tbtn.active-draw {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+
+/* Color dot in palette */
+.fj-cdot {
+  width: 22px; height: 22px; border-radius: 50%;
+  border: 2.5px solid transparent;
+  cursor: pointer;
+  transition: transform 0.12s, border-color 0.12s;
+  flex-shrink: 0;
+}
+.fj-cdot:hover { transform: scale(1.2); }
+.fj-cdot.active {
+  border-color: #1e293b;
+  transform: scale(1.15);
+  box-shadow: 0 0 0 2px #fff inset;
+}
+/* white dot has dark border always */
+.fj-cdot-white { border-color: #cbd5e1 !important; }
+.fj-cdot-white.active { border-color: #6366f1 !important; }
+
+/* Size buttons */
+.fj-sbtn {
+  width: 28px; height: 28px; border-radius: 50%;
+  border: 1.5px solid #e2e8f0;
+  background: transparent; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.12s; font-family: inherit;
+}
+.fj-sbtn:hover { border-color: #6366f1; background: #ede9fe; }
+.fj-sbtn.active { border-color: #6366f1; background: #6366f1; }
+
+.fj-sdot {
+  border-radius: 50%;
+  background: #475569;
+}
+.fj-sbtn.active .fj-sdot { background: #fff; }
+
+/* Tooltip */
+.fj-tip {
+  position: absolute;
+  bottom: calc(100% + 8px); left: 50%;
+  transform: translateX(-50%);
+  background: #1e293b; color: #fff;
+  font-size: 11px; font-weight: 600;
+  padding: 4px 8px; border-radius: 6px;
+  white-space: nowrap; pointer-events: none;
+  opacity: 0; transition: opacity 0.15s; z-index: 400;
+}
+.fj-tbtn:hover .fj-tip { opacity: 1; }
