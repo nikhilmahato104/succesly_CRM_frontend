@@ -6,6 +6,7 @@ import {
   Key,
   BookOpen,
   MessageSquare,
+  PenTool,
 } from "lucide-react";
 
 import { NavItemType } from "../types";
@@ -62,6 +63,11 @@ export const useNavigation = (
         : []),
     ];
 
+    // Board is always visible — no auth check (public route)
+    const tools: NavItemType[] = [
+      { name: "Project Board", href: "/boards", icon: PenTool },
+    ];
+
     const support: NavItemType[] = [
       { name: "Help Chat", href: "/help-chat", icon: MessageSquare },
     ];
@@ -74,9 +80,10 @@ export const useNavigation = (
 
     return [
       ...dashboards,
-      ...(operations.length > 0 ? [group("Operations"), ...operations] : []),
-      ...(support.length    > 0 ? [group("Support"),    ...support]    : []),
-      ...(config.length     > 0 ? [group("Configuration"), ...config]  : []),
+      ...(operations.length > 0 ? [group("Operations"),    ...operations] : []),
+      group("Tools"),           ...tools,
+      ...(support.length    > 0 ? [group("Support"),       ...support]    : []),
+      ...(config.length     > 0 ? [group("Configuration"), ...config]     : []),
     ];
   }, [accessData, roleName]);
 };

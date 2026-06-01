@@ -78,10 +78,11 @@ const uid = () => `c${++_id}`;
 
 /* ─── Handle ─────────────────────────────────────────────────────────────── */
 export interface CanvasHandle {
-  undo:      () => void;
-  clearAll:  () => void;
-  getCamera: () => Camera;
-  setCamera: (c: Camera) => void;
+  undo:        () => void;
+  clearAll:    () => void;
+  getCamera:   () => Camera;
+  setCamera:   (c: Camera) => void;
+  getSnapshot: () => string | null; // compressed JPEG thumbnail (base64)
 }
 
 interface Props {
@@ -290,10 +291,7 @@ const BoardCanvas = forwardRef<CanvasHandle, Props>(({
 
   /* ── Imperative API ──────────────────────────────────────────────────── */
   useImperativeHandle(ref, () => ({
-    undo: () => {
-      onObjects(prev => prev.slice(0, -1));
-      // bg will rebuild via useEffect([objects])
-    },
+    undo: () => { onObjects(prev => prev.slice(0, -1)); },
     clearAll: () => {
       onObjects([]);
       const ctx = bgCanvasRef.current?.getContext('2d');
@@ -301,6 +299,18 @@ const BoardCanvas = forwardRef<CanvasHandle, Props>(({
     },
     getCamera: () => ({ ...cam.current }),
     setCamera: (c: Camera) => { cam.current = c; applyTransform(); onCamScale(c.scale); scheduleBg(); },
+    getSnapshot: () => {
+      const src = bgCanvasRef.current;
+      if (!src || src.width === 0) return null;
+      const thumb = document.createElement('canvas');
+      const ratio = Math.min(1, 400 / src.width);
+      thumb.width  = Math.floor(src.width  * ratio);
+      thumb.height = Math.floor(src.height * ratio);
+      const ctx = thumb.getContext('2d');
+      if (!ctx) return null;
+      ctx.drawImage(src, 0, 0, thumb.width, thumb.height);
+      return thumb.toDataURL('image/jpeg', 0.55);
+    },
   }), [onObjects, applyTransform, onCamScale, scheduleBg]);
 
   /* ── Stable mutators (functional updates) ────────────────────────────── */
