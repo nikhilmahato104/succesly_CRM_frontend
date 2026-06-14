@@ -1,9 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { Search, Bell, Settings, ChevronDown, Sun, Moon, User, LogOut } from "lucide-react";
+import { Search, Bell, Settings, ChevronDown, Sun, Moon, User, LogOut, ArrowLeft, LayoutDashboard, Maximize2 } from "lucide-react";
 import { selectUserData } from "../../store/slices/userSlice";
+import { selectPageTitle } from "../../store/slices/pageTitleSlice";
 import { useDarkMode } from "../../hooks/useDarkMode";
+import { useLayoutMode, type LayoutMode } from "../../hooks/useLayoutMode";
 import { useAuth } from "../SidebarV2/hooks/useAuth";
 import WarningModal from "../../atoms/WarningModal";
 
@@ -161,26 +163,108 @@ const ProfileDropdown: React.FC<{
   </div>
 );
 
+// ── Layout picker ─────────────────────────────────────────────────────────────
+
+const LAYOUT_OPTIONS: { mode: LayoutMode; label: string; description: string; icon: React.ReactNode }[] = [
+  {
+    mode:        "comfortable",
+    label:       "Comfortable",
+    description: "Gaps and rounded panels",
+    icon: (
+      <svg width="38" height="26" viewBox="0 0 38 26" fill="none">
+        <rect x="1" y="1" width="10" height="24" rx="2" fill="currentColor" opacity="0.25" stroke="currentColor" strokeWidth="1" />
+        <rect x="14" y="1" width="23" height="24" rx="2" fill="currentColor" opacity="0.15" stroke="currentColor" strokeWidth="1" />
+        <rect x="14" y="1" width="23" height="6" rx="2" fill="currentColor" opacity="0.3" />
+      </svg>
+    ),
+  },
+  {
+    mode:        "compact",
+    label:       "Full Screen",
+    description: "Flush edge to edge",
+    icon: (
+      <svg width="38" height="26" viewBox="0 0 38 26" fill="none">
+        <rect x="0" y="0" width="11" height="26" fill="currentColor" opacity="0.25" />
+        <rect x="11" y="0" width="27" height="26" fill="currentColor" opacity="0.15" />
+        <rect x="11" y="0" width="27" height="7" fill="currentColor" opacity="0.3" />
+      </svg>
+    ),
+  },
+];
+
+const LayoutPicker: React.FC<{ mode: LayoutMode; onSelect: (m: LayoutMode) => void }> = ({ mode, onSelect }) => (
+  <div
+    style={{
+      position:     "absolute",
+      top:          "calc(100% + 6px)",
+      right:        0,
+      background:   "var(--sb-elevated)",
+      border:       "1px solid var(--sb-border)",
+      borderRadius: 10,
+      boxShadow:    "0 4px 20px rgba(0,0,0,0.18)",
+      padding:      "10px",
+      zIndex:       200,
+      display:      "flex",
+      gap:          8,
+      minWidth:     200,
+    }}
+  >
+    {LAYOUT_OPTIONS.map((opt) => {
+      const active = mode === opt.mode;
+      return (
+        <button
+          key={opt.mode}
+          type="button"
+          onClick={() => onSelect(opt.mode)}
+          style={{
+            flex:         1,
+            display:      "flex",
+            flexDirection:"column",
+            alignItems:   "center",
+            gap:          6,
+            padding:      "10px 8px 8px",
+            borderRadius: 8,
+            border:       active ? "1.5px solid var(--sb-text-active)" : "1.5px solid var(--sb-border)",
+            background:   active ? "rgba(255,255,255,0.06)" : "transparent",
+            cursor:       "pointer",
+            color:        active ? "var(--sb-text-active)" : "var(--sb-text-dim)",
+            transition:   "border-color 140ms, background 140ms",
+          }}
+          onMouseEnter={e => { if (!active) e.currentTarget.style.background = "var(--sb-hover)"; }}
+          onMouseLeave={e => { if (!active) e.currentTarget.style.background = "transparent"; }}
+        >
+          {opt.icon}
+          <span style={{ fontSize: 11, fontWeight: 600, whiteSpace: "nowrap" }}>{opt.label}</span>
+          <span style={{ fontSize: 10, opacity: 0.6, whiteSpace: "nowrap" }}>{opt.description}</span>
+        </button>
+      );
+    })}
+  </div>
+);
+
 // ── TopBar ────────────────────────────────────────────────────────────────────
 
 export const TopBar: React.FC = () => {
   const navigate    = useNavigate();
   const userData    = useSelector(selectUserData);
+  const pageTitle   = useSelector(selectPageTitle);
   const { isDarkMode, toggleDarkMode } = useDarkMode();
+  const [layoutMode, setLayoutMode] = useLayoutMode();
   const { showLogoutModal, handleLogoutClick, handleCancelLogout, handleLogout } = useAuth();
-  const [profileOpen, setProfileOpen] = useState(false);
+  const [profileOpen, setProfileOpen]     = useState(false);
+  const [layoutOpen,  setLayoutOpen]      = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
+  const layoutRef  = useRef<HTMLDivElement>(null);
 
   const userName        = userData?.user_name        || "User";
   const userEmail       = userData?.user_email       || "";
   const profileImageUrl = userData?.profile_image_url ?? null;
 
-  // Close dropdown on outside click
+  // Close dropdowns on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
-        setProfileOpen(false);
-      }
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) setProfileOpen(false);
+      if (layoutRef.current  && !layoutRef.current.contains(e.target as Node))  setLayoutOpen(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
@@ -203,43 +287,70 @@ export const TopBar: React.FC = () => {
 
     <div
       style={{
-        flexShrink:     0,
-        display:        "flex",
-        alignItems:     "center",
-        height:         42,
-        padding:        "0 12px",
-        borderBottom:   "1px solid var(--sc-border)",
-        backgroundColor: "var(--sc-card)",
-        gap:            10,
-        boxSizing:      "border-box",
+        flexShrink:      0,
+        display:         "flex",
+        alignItems:      "center",
+        height:          42,
+        padding:         "0 12px",
+        borderBottom:    "1px solid var(--sb-border)",
+        backgroundColor: "var(--sb-bg)",
+        gap:             10,
+        boxSizing:       "border-box",
       }}
     >
-      {/* ── Left: workspace identity ───────────────────────────────────────── */}
-      <div style={{ display: "flex", alignItems: "center", gap: 7, flexShrink: 0 }}>
-        {/* Logo mark */}
-        <div
+      {/* ── Left: workspace brand OR page title ───────────────────────────── */}
+      {pageTitle.title ? (
+        /* Page-title mode: ← Title */
+        <button
+          type="button"
+          onClick={() => pageTitle.backPath && navigate(pageTitle.backPath)}
           style={{
-            width:          24,
-            height:         24,
-            borderRadius:   6,
-            display:        "flex",
-            alignItems:     "center",
-            justifyContent: "center",
-            background:     "var(--sb-text-active)",
-            color:          "var(--sb-bg)",
-            fontSize:       13,
-            fontWeight:     800,
-            userSelect:     "none",
-            letterSpacing:  "-0.02em",
+            display:    "flex",
+            alignItems: "center",
+            gap:        7,
+            flexShrink: 0,
+            background: "none",
+            border:     "none",
+            cursor:     "pointer",
+            padding:    "4px 6px",
+            borderRadius: 6,
+            color:      "var(--sb-text-active)",
           }}
+          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "var(--sb-hover)"; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
         >
-          N
+          <ArrowLeft style={{ width: 14, height: 14, flexShrink: 0 }} />
+          <span style={{ fontSize: 14, fontWeight: 600, whiteSpace: "nowrap", letterSpacing: "-0.01em" }}>
+            {pageTitle.title}
+          </span>
+        </button>
+      ) : (
+        /* Brand mode: N My Learning ▼ */
+        <div style={{ display: "flex", alignItems: "center", gap: 7, flexShrink: 0 }}>
+          <div
+            style={{
+              width:          24,
+              height:         24,
+              borderRadius:   6,
+              display:        "flex",
+              alignItems:     "center",
+              justifyContent: "center",
+              background:     "var(--sb-text-active)",
+              color:          "var(--sb-bg)",
+              fontSize:       13,
+              fontWeight:     800,
+              userSelect:     "none",
+              letterSpacing:  "-0.02em",
+            }}
+          >
+            N
+          </div>
+          <span style={{ fontSize: 13, fontWeight: 600, color: "var(--sb-text-active)", whiteSpace: "nowrap", letterSpacing: "-0.01em" }}>
+            My Learning
+          </span>
+          <ChevronDown style={{ width: 13, height: 13, color: "var(--sb-text-dim)" }} />
         </div>
-        <span style={{ fontSize: 13, fontWeight: 600, color: "var(--sb-text-active)", whiteSpace: "nowrap", letterSpacing: "-0.01em" }}>
-          My Learning
-        </span>
-        <ChevronDown style={{ width: 13, height: 13, color: "var(--sb-text-dim)" }} />
-      </div>
+      )}
 
       {/* ── Separator ──────────────────────────────────────────────────────── */}
       <div style={{ width: 1, height: 18, background: "var(--sc-border)", flexShrink: 0 }} />
@@ -304,6 +415,22 @@ export const TopBar: React.FC = () => {
         <IconBtn title="Notifications">
           <Bell style={{ width: 15, height: 15 }} />
         </IconBtn>
+
+        {/* Layout picker */}
+        <div style={{ position: "relative" }} ref={layoutRef}>
+          <IconBtn title={`Layout: ${layoutMode}`} onClick={() => setLayoutOpen((o) => !o)}>
+            {layoutMode === "compact"
+              ? <Maximize2 style={{ width: 14, height: 14 }} />
+              : <LayoutDashboard style={{ width: 14, height: 14 }} />
+            }
+          </IconBtn>
+          {layoutOpen && (
+            <LayoutPicker
+              mode={layoutMode}
+              onSelect={(m) => { setLayoutMode(m); setLayoutOpen(false); }}
+            />
+          )}
+        </div>
 
         <IconBtn title="Settings" onClick={() => navigate("/settings")}>
           <Settings style={{ width: 15, height: 15 }} />

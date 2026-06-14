@@ -7,11 +7,12 @@ import accessData from "./slices/accessSlice";
 import loader from "./slices/loaderSlice";
 import apiKey from "./slices/apiKeySlice";
 import auth from "./slices/authSlice"; // NOT in whitelist — tokens stay in memory only
+import pageTitle from "./slices/pageTitleSlice"; // transient UI state — not persisted
 
 const persistConfig = {
   key: "root",
   storage,
-  whitelist: ["user", "accessData", "apiKey"], // "auth" intentionally excluded
+  whitelist: ["user", "accessData", "apiKey"], // "auth" and "pageTitle" intentionally excluded
 };
 
 const rootReducer = combineReducers({
@@ -20,6 +21,7 @@ const rootReducer = combineReducers({
   loader,
   apiKey,
   auth,
+  pageTitle,
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

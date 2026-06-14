@@ -28,6 +28,9 @@ const BoardPage          = lazy(() => import("../pages/Board/BoardPage"));
 const BoardsPage         = lazy(() => import("../pages/Boards/BoardsPage"));
 const HelpChatPage       = lazy(() => import("../pages/help-chat/HelpChatPage"));
 const DocListPage        = lazy(() => import("../pages/DocListPage"));
+const ProjectPage        = lazy(() => import("../pages/project-management"));
+const ProjectDetailPage  = lazy(() => import("../pages/project-management/ProjectDetail"));
+const ProjectFormPage    = lazy(() => import("../pages/project-management/ProjectForm"));
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -335,6 +338,41 @@ export const AppRoutes: React.FC = () => {
           element={
             <ProtectedRoute moduleId="booking_management">
               <InLayout><BookingPage /></InLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* ── PROJECT MANAGEMENT ─────────────────────────────────────────────
+            OPEN WHEN: accessSlice["project_management"].view === true         */}
+        <Route
+          path="/projects"
+          element={
+            <ProtectedRoute moduleId="project_management">
+              <InLayout><ProjectPage /></InLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/projects/new"
+          element={
+            <ProtectedRoute moduleId="project_management">
+              <InLayout><ProjectFormPage /></InLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/projects/:id"
+          element={
+            <ProtectedRoute moduleId="project_management">
+              <InLayout><ProjectDetailPage /></InLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/projects/:id/edit"
+          element={
+            <ProtectedRoute moduleId="project_management">
+              <InLayout><ProjectFormPage /></InLayout>
             </ProtectedRoute>
           }
         />

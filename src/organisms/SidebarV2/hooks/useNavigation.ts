@@ -7,6 +7,7 @@ import {
   BookOpen,
   MessageSquare,
   PenTool,
+  FolderKanban,
 } from "lucide-react";
 
 import { NavItemType } from "../types";
@@ -60,6 +61,9 @@ export const useNavigation = (
     const operations: NavItemType[] = [
       ...(hasAccess("booking_management")
         ? [{ name: "Booking Management", href: "/booking-management", icon: BookOpen }]
+        : []),
+      ...(hasAccess("project_management")
+        ? [{ name: "Project Management", href: "/projects", icon: FolderKanban }]
         : []),
     ];
 

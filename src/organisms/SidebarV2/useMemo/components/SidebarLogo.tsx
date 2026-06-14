@@ -34,8 +34,8 @@ const collapseBtn: React.CSSProperties = {
   border: "none",
   background: "transparent",
   cursor: "pointer",
-  color: "var(--sb-text-dim)",
-  transition: "background 140ms ease, color 140ms ease",
+  color: "#ffffff",
+  transition: "background 140ms ease",
   flexShrink: 0,
 };
 
@@ -65,8 +65,11 @@ const SidebarLogo: React.FC<SidebarLogoProps> = ({ isCollapsed, isHovered, onCol
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        padding: "12px 12px 10px",
+        height: 42,
+        padding: "0 12px",
         borderBottom: "1px solid var(--sb-border)",
+        boxSizing: "border-box",
+        flexShrink: 0,
       }}
     >
       {/* Logo mark + brand name */}
@@ -92,8 +95,8 @@ const SidebarLogo: React.FC<SidebarLogoProps> = ({ isCollapsed, isHovered, onCol
         onClick={onCollapse}
         aria-label="Collapse sidebar"
         style={collapseBtn}
-        onMouseEnter={e => { e.currentTarget.style.background = "var(--sb-hover)"; e.currentTarget.style.color = "var(--sb-text)"; }}
-        onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--sb-text-dim)"; }}
+        onMouseEnter={e => { e.currentTarget.style.background = "var(--sb-hover)"; }}
+        onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
       >
         <PanelLeftClose style={{ width: 15, height: 15 }} />
       </button>

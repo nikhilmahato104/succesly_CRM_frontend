@@ -4,6 +4,7 @@ import Sidebar from "@/organisms/SidebarV2";
 import { TopBar } from "../organisms/TopBar/TopBar";
 import { useDarkMode } from "../hooks/useDarkMode";
 import { useIOSViewport } from "../hooks/useIOSViewport";
+import { useLayoutMode } from "../hooks/useLayoutMode";
 
 const STORAGE_KEY = "uttm_sidebar_collapsed_v4";
 const SIDEBAR_WIDTH = 260;
@@ -31,6 +32,8 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
   useDarkMode();      // applies/removes .dark on <html> — all var(--*) tokens flip automatically
   useIOSViewport();   // sets --vh, handles keyboard resize on iOS
   const isMobileOrTablet = useIsMobileOrTablet();
+  const [layoutMode] = useLayoutMode();
+  const isCompact = layoutMode === "compact";
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
     try {
@@ -68,13 +71,15 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
     <div
       className="dashboard-shell"
       style={{
-        width:            "100%",
-        overflow:         "auto",
+        width:              "100%",
+        overflow:           "hidden",
         overscrollBehavior: "none",
-        backgroundColor:  "var(--sc-shell)",
-        display:          "flex",
-        gap:              isMobileOrTablet ? 0 : "6px",
-        boxSizing:        "border-box",
+        backgroundColor:    "var(--sc-shell)",
+        display:            "flex",
+        gap:                isMobileOrTablet || isCompact ? 0 : "6px",
+        boxSizing:          "border-box",
+        // compact overrides the CSS safe-area padding to 0
+        ...(isCompact && !isMobileOrTablet ? { padding: 0 } : {}),
       }}
     >
       {/* ── Sidebar card ─────────────────────────────────────────────────── */}
@@ -84,8 +89,9 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
             flexShrink:      0,
             width:           sidebarCollapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH,
             overflow:        "hidden",
-            borderRadius:    "8px",
-            border:          "1px solid var(--sb-border)",
+            borderRadius:    isCompact ? 0 : "8px",
+            border:          isCompact ? "none" : "1px solid var(--sb-border)",
+            borderRight:     isCompact ? "1px solid var(--sb-border)" : undefined,
             backgroundColor: "var(--sb-bg)",
             transition:      `width ${DURATION} ${EASE}`,
             willChange:      "width",
@@ -123,13 +129,13 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
         <div
           className="content-card"
           style={{
-            flex:           1,
-            display:        "flex",
-            flexDirection:  "column",
-            overflow:       "hidden",
-            borderRadius:   "8px",
+            flex:            1,
+            display:         "flex",
+            flexDirection:   "column",
+            overflow:        "hidden",
+            borderRadius:    isCompact ? 0 : "8px",
             backgroundColor: "var(--sc-card)",
-            border:         "1px solid var(--sc-border)",
+            border:          isCompact ? "none" : "1px solid var(--sc-border)",
           }}
         >
           {/* ── Top bar: workspace name | global search | profile ─────── */}
@@ -139,14 +145,14 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
           <main
             className="sc-scrollbar"
             style={{
-              flex:       1,
-              overflowY:  "auto",
-              overflowX:  "hidden",
-              display:    "flex",
+              flex:          1,
+              overflowY:     "auto",
+              overflowX:     "hidden",
+              display:       "flex",
               flexDirection: "column",
             }}
           >
-            <div style={{ flex: 1, padding: "0px", minHeight: "100%", boxSizing: "border-box" }}>
+            <div style={{ flex: 1, minHeight: "100%", boxSizing: "border-box" }}>
               {children}
             </div>
           </main>

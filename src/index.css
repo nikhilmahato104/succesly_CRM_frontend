@@ -100,7 +100,7 @@ button, nav, header, aside, label, [role="button"], [role="tab"] {
   --sb-text:        #0d0d0d;
   --sb-text-dim:    #6b6b6b;
   --sb-text-active: #000000;
-  --sb-border:      #ebebeb;
+  --sb-border:      #cecece;
 
   /* ── Form / Input atoms ─────────────────────────────────────────────── */
   --fi-bg:           #ffffff;
@@ -147,17 +147,16 @@ button, nav, header, aside, label, [role="button"], [role="tab"] {
   --dt-skeleton-to:     #e0e0e0;
 }
 
-/* Dark mode — exact DeepSeek palette ─────────────────────────────────────── */
+/* Dark mode ──────────────────────────────────────────────────────────────── */
 .dark {
-  /* ── Modal background — ChatGPT-style comfortable dark ───────────────── */
-  /* --modal-bg: #212121; */
-  --modal-bg:#0e0e0e;
+  /* ── Modal background ────────────────────────────────────────────────── */
+  --modal-bg: #000000;
 
-  /* ── Shell ───────────────────────────────────────────────────────────── */
-  --sc-shell:      #0d0d0d;
-  --sc-card:       #141414;
-  --sc-surface:    #1a1a1a;
-  --sc-border:     #2a2a2a;
+  /* ── Shell — pure black surfaces ─────────────────────────────────────── */
+  --sc-shell:   #000000;
+  --sc-card:    #000000;
+  --sc-surface: #0a0a0a;
+  --sc-border:  #2a2a2a;
 
   /* ── Sidebar ─────────────────────────────────────────────────────────── */
   --sb-bg:          #171717;
@@ -169,54 +168,73 @@ button, nav, header, aside, label, [role="button"], [role="tab"] {
   --sb-text-active: #ffffff;
   --sb-border:      #2e2e2e;
 
-  /* ── Form / Input atoms (dark) — ChatGPT-style, no focus ring ──────── */
-  --fi-bg:           #2f2f2f;              /* ChatGPT-match input background        */
-  --fi-bg-panel:     var(--modal-bg);      /* panel behind inputs = modal bg        */
-  --fi-border:       #3d3d3d;              /* subtle border                         */
-  --fi-border-focus: #3d3d3d;              /* SAME — no highlight on focus          */
+  /* ── Form / Input atoms — pure white text, black bg, dark inputs ─────── */
+  --fi-bg:           #1a1a1a;
+  --fi-bg-panel:     #000000;
+  --fi-border:       #333333;
+  --fi-border-focus: #555555;
   --fi-border-error: #f87171;
-  --fi-text:         #ffffff;              /* pure white for readability in dark    */
-  --fi-muted:        #6b6b6b;
-  --fi-label:        #e0e0e0;              /* near-white labels for dark bg         */
-  --fi-height:       32px;
-  --fi-radius:       7px;
-  --fi-font-size:    13px;
-  --fi-shadow-focus: 0 0 0 0 transparent; /* no glow ring — clean flat focus       */
+  --fi-text:         #ffffff;
+  --fi-muted:        #c8c8c8;
+  --fi-label:        #ffffff;
+  --fi-height:       36px;
+  --fi-radius:       10px;
+  --fi-font-size:    14px;
+  --fi-shadow-focus: 0 0 0 0 transparent;
 
-  /* ── Button primary token (dark) ─────────────────────────────────────── */
-  --btn-primary-bg:   #ffffff;
-  --btn-primary-text: #111111;
-  --btn-primary-hover:#f0f0f0;
+  /* ── Button primary token ────────────────────────────────────────────── */
+  --btn-primary-bg:    #ffffff;
+  --btn-primary-text:  #000000;
+  --btn-primary-hover: #e5e5e5;
 
-  /* ── Badge color tokens (dark) ─────────────────────────────────────── */
+  /* ── Badge color tokens ──────────────────────────────────────────────── */
   --badge-purple-bg:    rgba(167,139,250,0.15);  --badge-purple-text:  #c4b5fd;
   --badge-green-bg:     rgba(34,197,94,0.12);    --badge-green-text:   #86efac;
-  --badge-gray-bg:      rgba(255,255,255,0.08);  --badge-gray-text:    #e0e0e0;
+  --badge-gray-bg:      rgba(255,255,255,0.08);  --badge-gray-text:    #ffffff;
   --badge-amber-bg:     rgba(245,158,11,0.15);   --badge-amber-text:   #fcd34d;
   --badge-orange-bg:    rgba(249,115,22,0.15);   --badge-orange-text:  #fdba74;
   --badge-red-bg:       rgba(239,68,68,0.15);    --badge-red-text:     #fca5a5;
   --badge-blue-bg:      rgba(59,130,246,0.15);   --badge-blue-text:    #93c5fd;
 
-  /* ── DataTable — exact DeepSeek dark ────────────────────────────────── */
-  --dt-bg:              #1c1c1c;
-  --dt-header:          #1a1a1a;
-  --dt-hover:           #1e1e1e;
-  --dt-header-hover:    #222222;
+  /* ── DataTable ───────────────────────────────────────────────────────── */
+  --dt-bg:              #000000;
+  --dt-header:          #0a0a0a;
+  --dt-hover:           #111111;
+  --dt-header-hover:    #141414;
   --dt-border:          #2a2a2a;
   --dt-border-strong:   #3a3a3a;
   --dt-text:            #ffffff;
-  --dt-dim:             #f7f3f3;
+  --dt-dim:             #ffffff;
   --dt-muted:           #ffffff;
-  --dt-accent:          #f0f0f0;
-  --dt-scrollbar:       rgba(255, 255, 255, 0.12);
-  --dt-scrollbar-hover: rgba(255, 255, 255, 0.22);
-  --dt-skeleton-from:   #1e1e1e;
-  --dt-skeleton-to:     #2a2a2a;
+  --dt-accent:          #ffffff;
+  --dt-scrollbar:       rgba(255,255,255,0.12);
+  --dt-scrollbar-hover: rgba(255,255,255,0.22);
+  --dt-skeleton-from:   #111111;
+  --dt-skeleton-to:     #1e1e1e;
 }
 
-/* Dark mode: override body background to match shell */
+/* Dark mode: body matches shell */
 .dark body {
-  background-color: #0d0d0d; /* var(--sc-shell) in dark */
+  background-color: #000000;
+}
+
+/* ── Dark mode input/textarea/select polish ─────────────────────────────────
+   Placeholder matches ChatGPT muted color; native select uses dark color-scheme
+   so dropdown options render with a dark background (no white flash).
+   ──────────────────────────────────────────────────────────────────────────── */
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #c8c8c8;
+  opacity: 1;
+}
+
+.dark select {
+  color-scheme: dark;
+}
+
+.dark select option {
+  background-color: #1a1a1a;
+  color: #ffffff;
 }
 
 /* ── Dashboard layout shell ─────────────────────────────────────────────────
@@ -256,6 +274,16 @@ button, nav, header, aside, label, [role="button"], [role="tab"] {
     border-left:   none !important;
     border-right:  none !important;
   }
+}
+
+/* ── Project form responsive grids ─────────────────────────────────────────
+   Use className="pf-g2" or "pf-g4" on grid containers.
+   On mobile (≤ 640px) everything collapses to a single column.
+   ──────────────────────────────────────────────────────────────────────────── */
+.pf-g2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px 16px; }
+.pf-g4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px 16px; }
+@media (max-width: 640px) {
+  .pf-g2, .pf-g4 { grid-template-columns: 1fr; }
 }
 
 /* ── Scrollbar utility — mirrors the DataTable cdg-scroll exactly ──────── */

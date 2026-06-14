@@ -2,8 +2,10 @@ import React from "react";
 import { Formik, Form } from "formik";
 import * as Yup from "yup";
 import axios from "axios";
+import { useSelector } from "react-redux";
 import { showToastnew } from "../../services/toastifynewService/toastifynewService";
 import { patchData } from "../../services/crmServices";
+import { selectCsrfToken } from "../../store/slices/authSlice";
 import { Copy, Check, Eye, EyeOff } from "lucide-react";
 import { CleanInput } from "../../atoms/my_clean_code_atoms";
 import type { ApiKeyItem } from "./ApiKeyManagement";
@@ -133,6 +135,7 @@ const ApiKeyForm: React.FC<ApiKeyFormProps> = ({
   token, formId, initialValues, onSuccess, onCreated,
   onSubmittingChange, onResetReady, onKeyRevealed,
 }) => {
+  const csrfToken = useSelector(selectCsrfToken);
   const isEdit = Boolean(initialValues?._id);
 
   // ── Edit form ──────────────────────────────────────────────────────────
@@ -244,6 +247,7 @@ const ApiKeyForm: React.FC<ApiKeyFormProps> = ({
             "Content-Type": "application/json",
             Authorization:  `Bearer ${token ?? ""}`,
             "x-api-key":    values.bootstrap_key.trim(),
+            ...(csrfToken ? { "x-csrf-token": csrfToken } : {}),
           },
         },
       );
