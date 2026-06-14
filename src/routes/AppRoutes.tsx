@@ -31,6 +31,7 @@ const DocListPage        = lazy(() => import("../pages/DocListPage"));
 const ProjectPage        = lazy(() => import("../pages/project-management"));
 const ProjectDetailPage  = lazy(() => import("../pages/project-management/ProjectDetail"));
 const ProjectFormPage    = lazy(() => import("../pages/project-management/ProjectForm"));
+const ActivityLogsPage   = lazy(() => import("../pages/activity-logs"));
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -373,6 +374,17 @@ export const AppRoutes: React.FC = () => {
           element={
             <ProtectedRoute moduleId="project_management">
               <InLayout><ProjectFormPage /></InLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* ── ACTIVITY LOGS ──────────────────────────────────────────────────
+            OPEN WHEN: accessSlice["activity_log"].view === true               */}
+        <Route
+          path="/activity-logs"
+          element={
+            <ProtectedRoute moduleId="activity_log">
+              <InLayout><ActivityLogsPage /></InLayout>
             </ProtectedRoute>
           }
         />

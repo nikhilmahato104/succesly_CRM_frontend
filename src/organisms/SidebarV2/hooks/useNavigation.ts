@@ -8,6 +8,7 @@ import {
   MessageSquare,
   PenTool,
   FolderKanban,
+  Activity,
 } from "lucide-react";
 
 import { NavItemType } from "../types";
@@ -64,6 +65,9 @@ export const useNavigation = (
         : []),
       ...(hasAccess("project_management")
         ? [{ name: "Project Management", href: "/projects", icon: FolderKanban }]
+        : []),
+      ...(hasAccess("activity_log")
+        ? [{ name: "Activity Logs", href: "/activity-logs", icon: Activity }]
         : []),
     ];
 
