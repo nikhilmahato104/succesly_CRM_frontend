@@ -1,15 +1,15 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ToolType, CanvasObject, StickyNote, TextObject, PALETTE } from './types';
+import { ToolType, CanvasObject, StickyNote, TextObject, ImageObject, PALETTE } from './types';
 import BoardHeader from './BoardHeader';
 import BoardToolbar from './BoardToolbar';
 import BoardCanvas, { CanvasHandle } from './BoardCanvas';
 import { boardApi } from '../../services/boardApi';
+import { uploadToImageKit } from '../../utils/imagekitUpload';
 import './BoardPage.css';
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
-const ZOOM_STEPS = [0.1,0.17,0.25,0.33,0.5,0.67,0.75,0.9,1,1.1,1.25,1.5,1.75,2,2.5,3,4,5];
 let _uid = Date.now();
 const uid = () => `p${++_uid}`;
 
@@ -25,9 +25,10 @@ const BoardPage: React.FC = () => {
   const [isPanning,  setIsPanning]  = useState(false);
 
   /* ── API state ──────────────────────────────────────────────────────── */
-  const [boardName,  setBoardName]  = useState('Untitled Board');
-  const [loadState,  setLoadState]  = useState<'loading' | 'ready' | 'error'>('loading');
-  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
+  const [boardName,   setBoardName]   = useState('Untitled Board');
+  const [loadState,   setLoadState]   = useState<'loading' | 'ready' | 'error'>('loading');
+  const [saveStatus,  setSaveStatus]  = useState<SaveStatus>('idle');
+  const [uploadToast, setUploadToast] = useState<'uploading' | 'success' | 'error' | 'no-cookies' | null>(null);
 
   const canvasRef   = useRef<CanvasHandle>(null);
   const isDirtyRef  = useRef(false);
@@ -84,12 +85,20 @@ const BoardPage: React.FC = () => {
       isDirtyRef.current = false;
       setSaveStatus('saving');
       try {
-        const cam      = canvasRef.current?.getCamera() ?? { x: 0, y: 0, scale: 1 };
-        const snapshot = canvasRef.current?.getSnapshot() ?? undefined;
+        const cam = canvasRef.current?.getCamera() ?? { x: 0, y: 0, scale: 1 };
+        const b64 = canvasRef.current?.getSnapshot();
+        let thumbnail: string | undefined;
+        if (b64) {
+          try {
+            const blob = await fetch(b64).then(r => r.blob());
+            const tf   = new File([blob], `thumb-${Date.now()}.jpg`, { type: 'image/jpeg' });
+            thumbnail  = await uploadToImageKit(tf);
+          } catch { /* ignore thumbnail upload failure — save without it */ }
+        }
         await boardApi.save(boardId, {
           objects,
           cameraState: cam,
-          thumbnail:   snapshot ?? undefined,
+          thumbnail,
         });
         setSaveStatus('saved');
         setTimeout(() => setSaveStatus('idle'), 2000);
@@ -107,23 +116,85 @@ const BoardPage: React.FC = () => {
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
   }, [objects, loadState, triggerAutosave]);
 
-  /* ── Zoom helpers ───────────────────────────────────────────────────── */
-  const stepZoom = useCallback((dir: 1 | -1) => {
-    const handle = canvasRef.current; if (!handle) return;
-    const cam    = handle.getCamera();
-    const sorted = dir === 1 ? ZOOM_STEPS : [...ZOOM_STEPS].reverse();
-    const next   = dir === 1 ? sorted.find(s => s > cam.scale) : sorted.find(s => s < cam.scale);
-    if (next == null) return;
-    const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
-    handle.setCamera({ scale: next, x: cx - (cx - cam.x) * next / cam.scale, y: cy - (cy - cam.y) * next / cam.scale });
+  /* ── Image upload (file picker or paste) ───────────────────────────── */
+  const handleImageUpload = useCallback(async (file: File) => {
+    // 1. Create a local blob URL so image appears on board instantly
+    const blobUrl = URL.createObjectURL(file);
+
+    const dims = await new Promise<{ w: number; h: number }>(resolve => {
+      const img = new Image();
+      img.onload = () => {
+        // Keep full HD resolution so images stay crisp when zoomed in.
+        // Only cap extremely large images (> 1920px on longest edge).
+        const MAX = 1920;
+        let w = img.naturalWidth  || 800;
+        let h = img.naturalHeight || 600;
+        if (w > MAX || h > MAX) {
+          const r = Math.min(MAX / w, MAX / h);
+          w = Math.round(w * r); h = Math.round(h * r);
+        }
+        resolve({ w, h });
+      };
+      img.onerror = () => resolve({ w: 800, h: 600 });
+      img.src = blobUrl;
+    });
+
+    const cam = canvasRef.current?.getCamera() ?? { x: 0, y: 0, scale: 1 };
+    const { cx, cy } = canvasRef.current?.getViewportCenter() ?? { cx: window.innerWidth / 2, cy: window.innerHeight / 2 };
+    const wx = (cx - cam.x) / cam.scale;
+    const wy = (cy - cam.y) / cam.scale;
+    const id  = uid();
+
+    // Add image immediately with blob URL — user sees it right away
+    setObjects(prev => [...prev, {
+      id, kind: 'image' as const,
+      x: wx - dims.w / 2, y: wy - dims.h / 2,
+      width: dims.w, height: dims.h,
+      url: blobUrl, uploading: true,
+    }]);
+
+    // 2. Upload to ImageKit in the background
+    const ext        = file.name.split('.').pop()?.toLowerCase() || 'png';
+    const uniqueFile = new File([file], `board-${Date.now()}.${ext}`, { type: file.type });
+    try {
+      const cdnUrl = await uploadToImageKit(uniqueFile);
+      // Swap blob URL → CDN URL; clear uploading flag
+      setObjects(prev => prev.map(o =>
+        o.id === id ? { ...o, url: cdnUrl, uploading: false } : o
+      ));
+      // Revoke blob URL only after the canvas has had a chance to load the CDN image
+      // (the imageCache holds the blob HTMLImageElement as a fallback until then)
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 10_000);
+    } catch (err) {
+      URL.revokeObjectURL(blobUrl);
+      setObjects(prev => prev.filter(o => o.id !== id)); // remove placeholder
+      const msg = err instanceof Error ? err.message : '';
+      setUploadToast(msg === 'NO_COOKIES' ? 'no-cookies' : 'error');
+      setTimeout(() => setUploadToast(null), 4000);
+    }
   }, []);
 
-  const resetZoom = useCallback(() => {
-    const handle = canvasRef.current; if (!handle) return;
-    const cam = handle.getCamera();
-    const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
-    handle.setCamera({ scale: 1, x: cx - (cx - cam.x) / cam.scale, y: cy - (cy - cam.y) / cam.scale });
-  }, []);
+  /* ── Paste image from clipboard (Win+Shift+S, PrtSc, copy image…) ─── */
+  useEffect(() => {
+    const handler = (e: ClipboardEvent) => {
+      const tgt = e.target as HTMLElement;
+      if (tgt.tagName === 'TEXTAREA' || tgt.tagName === 'INPUT') return;
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (const item of Array.from(items)) {
+        if (item.type.startsWith('image/')) {
+          const file = item.getAsFile();
+          if (file) { handleImageUpload(file); break; }
+        }
+      }
+    };
+    window.addEventListener('paste', handler);
+    return () => window.removeEventListener('paste', handler);
+  }, [handleImageUpload]);
+
+  /* ── Zoom helpers ───────────────────────────────────────────────────── */
+  const stepZoom  = useCallback((dir: 1 | -1) => { canvasRef.current?.zoomStep(dir); }, []);
+  const resetZoom = useCallback(() => { canvasRef.current?.resetZoom(); }, []);
 
   /* ── Keyboard shortcuts ─────────────────────────────────────────────── */
   useEffect(() => {
@@ -208,7 +279,16 @@ const BoardPage: React.FC = () => {
         tool={tool}   onTool={setTool}
         color={color} onColor={setColor}
         size={size}   onSize={setSize}
+        onImageFile={handleImageUpload}
       />
+
+      {/* Upload toast */}
+      {uploadToast && (
+        <div className="fj-upload-toast error">
+          {uploadToast === 'error'      && 'Upload failed — try again'}
+          {uploadToast === 'no-cookies' && 'Image storage not configured — go to Help Chat to set it up'}
+        </div>
+      )}
 
       {/* Zoom cluster */}
       <div className="fj-zoom-cluster">

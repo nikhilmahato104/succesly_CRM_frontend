@@ -53,10 +53,19 @@
 .fj-viewport.tool-text    { cursor: text; }
 .fj-viewport.tool-sticky  { cursor: copy; }
 
+/* CSS dot grid — scales with zoom like FigJam; backgroundSize set by JS in applyTransform */
+.fj-dot-grid {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  background-color: #f5f5f5;
+  background-image: radial-gradient(circle, #c3c3c3 1px, transparent 1px);
+  background-size: 20px 20px; /* default at 100% zoom; JS updates on every zoom */
+  pointer-events: none;
+}
+
 .fj-canvas {
   position: absolute; top: 0; left: 0;
   width: 100%; height: 100%; display: block;
-  background: #f5f5f5; /* FigJam background */
+  background: transparent; /* dot grid div provides the background */
 }
 
 /* Overlays */
@@ -73,25 +82,25 @@
 }
 .fj-svg > g > * { pointer-events: all; }
 
-/* ── Scrollbars (visual only) ────────────────────────────────────────────── */
+/* ── Scrollbars (FigJam-style — thin, no track background) ──────────────── */
 .fj-scrollbar-x {
-  position: absolute; bottom: 4px; left: 8px; right: 8px;
-  height: 6px; border-radius: 3px;
-  background: rgba(0,0,0,0.06);
+  position: absolute; bottom: 3px; left: 6px; right: 6px;
+  height: 4px; border-radius: 2px;
+  background: transparent;
   z-index: 40; pointer-events: none;
 }
 .fj-scrollbar-y {
-  position: absolute; top: 8px; right: 4px; bottom: 8px;
-  width: 6px; border-radius: 3px;
-  background: rgba(0,0,0,0.06);
+  position: absolute; top: 6px; right: 3px; bottom: 6px;
+  width: 4px; border-radius: 2px;
+  background: transparent;
   z-index: 40; pointer-events: none;
 }
 .fj-scrollbar-thumb {
-  position: absolute; border-radius: 3px;
-  background: rgba(0,0,0,0.22);
+  position: absolute; border-radius: 2px;
+  background: rgba(0,0,0,0.18);
   transition: background 0.15s;
 }
-.fj-scrollbar-thumb:hover { background: rgba(0,0,0,0.38); }
+.fj-scrollbar-thumb:hover { background: rgba(0,0,0,0.3); }
 
 /* ── Sticky Notes ────────────────────────────────────────────────────────── */
 .fj-sticky {
@@ -197,29 +206,34 @@
 .fj-fmt-cdot:hover { transform: scale(1.15); }
 .fj-fmt-cdot.active { border-color: #fff; transform: scale(1.1); }
 
-/* ── Zoom Cluster (bottom-right) ─────────────────────────────────────────── */
+/* ── Zoom Cluster — FigJam-style single pill: [−][100%][+] ──────────────── */
 .fj-zoom-cluster {
-  position: fixed; bottom: 24px; right: 24px; z-index: 300;
-  display: flex; gap: 6px; align-items: center;
+  position: fixed; bottom: 16px; right: 16px; z-index: 300;
+  display: flex; align-items: stretch;
+  background: #fff;
+  border: 1px solid rgba(0,0,0,0.12);
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.06);
+  overflow: hidden;
 }
 .fj-zcircle {
-  width: 34px; height: 34px; border-radius: 50%;
-  background: #fff; border: 1px solid rgba(0,0,0,0.14);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.09);
-  cursor: pointer; font-size: 18px; font-weight: 300;
+  width: 30px; height: 30px;
+  background: transparent; border: none; border-radius: 0; box-shadow: none;
+  cursor: pointer; font-size: 17px; font-weight: 400;
   display: flex; align-items: center; justify-content: center;
-  color: #444; transition: all 0.15s; font-family: inherit;
+  color: #555; transition: background 0.12s; font-family: inherit;
 }
-.fj-zcircle:hover { background: #f5f5f5; box-shadow: 0 3px 10px rgba(0,0,0,0.14); }
+.fj-zcircle:hover { background: #f0f0f0; }
 .fj-zcircle:disabled { opacity: 0.3; cursor: not-allowed; }
 .fj-zoom-val {
-  background: #fff; border: 1px solid rgba(0,0,0,0.14);
-  border-radius: 8px; padding: 0 10px; height: 30px;
-  font-size: 12px; font-weight: 700; color: #555;
-  display: flex; align-items: center;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.07); cursor: pointer; font-family: inherit;
+  background: transparent; border: none;
+  border-left: 1px solid rgba(0,0,0,0.1); border-right: 1px solid rgba(0,0,0,0.1);
+  border-radius: 0; padding: 0 8px; height: 30px; min-width: 44px;
+  font-size: 11.5px; font-weight: 700; color: #444;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: none; cursor: pointer; font-family: inherit;
 }
-.fj-zoom-val:hover { background: #f5f5f5; }
+.fj-zoom-val:hover { background: #f0f0f0; }
 
 /* ── Bottom Toolbars ─────────────────────────────────────────────────────── */
 .fj-toolbars {
@@ -265,6 +279,118 @@
 .fj-sbtn.active { border-color: #6366f1; background: #6366f1; }
 .fj-sdot { border-radius: 50%; background: #555; }
 .fj-sbtn.active .fj-sdot { background: #fff; }
+
+/* ── Image layer: world-space div below bgCanvas (pointer-events: none) ─── */
+.fj-img-layer {
+  position: absolute; top: 0; left: 0;
+  transform-origin: 0 0; pointer-events: none;
+  width: 0; height: 0; overflow: visible;
+}
+
+/* White card container for each image — gives FigJam card look.
+   pointer-events: none is required here; CSS does NOT auto-inherit it from the parent. */
+.fj-imgcard,
+.fj-imgcard * {
+  pointer-events: none;
+}
+.fj-imgcard {
+  position: absolute;
+  background: #ffffff;
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.1);
+}
+
+/* ── Image Objects — transparent interaction overlay (handles only) ──────── */
+.fj-imgobj {
+  position: absolute;
+  cursor: default;
+  border-radius: 4px;
+  background: transparent;
+}
+.fj-imgobj.hovered {
+  box-shadow: 0 0 0 2px #6366f1;
+  cursor: move;
+}
+.fj-imgobj-del {
+  position: absolute; top: 5px; right: 5px;
+  width: 22px; height: 22px; border-radius: 50%;
+  background: rgba(0,0,0,0.5); color: #fff; border: none;
+  cursor: pointer; font-size: 15px; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+  font-family: inherit; transition: background 0.12s;
+}
+.fj-imgobj-del:hover { background: #ef4444; }
+
+/* Resize corner handles */
+.fj-imgobj-handle {
+  position: absolute;
+  width: 10px; height: 10px;
+  background: #fff;
+  border: 2px solid #6366f1;
+  border-radius: 3px;
+  z-index: 5;
+  pointer-events: all;
+}
+/* Corner handles */
+.fj-imgobj-handle-nw { top: -5px;    left: -5px;    cursor: nw-resize; }
+.fj-imgobj-handle-ne { top: -5px;    right: -5px;   cursor: ne-resize; }
+.fj-imgobj-handle-se { bottom: -5px; right: -5px;   cursor: se-resize; }
+.fj-imgobj-handle-sw { bottom: -5px; left: -5px;    cursor: sw-resize; }
+/* Mid-edge handles */
+.fj-imgobj-handle-n  { top: -5px;    left: 50%; transform: translateX(-50%); cursor: n-resize; }
+.fj-imgobj-handle-s  { bottom: -5px; left: 50%; transform: translateX(-50%); cursor: s-resize; }
+.fj-imgobj-handle-e  { right: -5px;  top: 50%;  transform: translateY(-50%); cursor: e-resize; }
+.fj-imgobj-handle-w  { left: -5px;   top: 50%;  transform: translateY(-50%); cursor: w-resize; }
+.fj-imgobj-handle:hover { background: #6366f1; }
+
+/* Remove background button — floats below the image frame */
+.fj-imgobj-removebg {
+  position: absolute;
+  bottom: -30px; left: 50%;
+  transform: translateX(-50%);
+  background: #1e1e1e; color: #fff;
+  border: none; border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 11px; font-weight: 600;
+  cursor: pointer; white-space: nowrap;
+  z-index: 10; font-family: inherit;
+  pointer-events: all;
+  transition: background 0.12s;
+}
+.fj-imgobj-removebg:hover { background: #6366f1; }
+
+/* Uploading spinner overlay */
+.fj-imgobj-uploading {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,0.45);
+  border-radius: 4px;
+}
+.fj-imgobj-spinner {
+  width: 28px; height: 28px;
+  border: 3px solid rgba(99,102,241,0.25);
+  border-top-color: #6366f1;
+  border-radius: 50%;
+  animation: fj-spin 0.75s linear infinite;
+}
+@keyframes fj-spin { to { transform: rotate(360deg); } }
+
+/* ── Upload Toast ────────────────────────────────────────────────────────── */
+.fj-upload-toast {
+  position: fixed; top: 58px; left: 50%;
+  transform: translateX(-50%);
+  background: #1e293b; color: #fff;
+  padding: 8px 18px; border-radius: 8px;
+  font-size: 13px; font-weight: 500; font-family: inherit;
+  z-index: 500;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.22);
+  pointer-events: none;
+  white-space: nowrap;
+}
+.fj-upload-toast.error   { background: #ef4444; }
+.fj-upload-toast.success { background: #16a34a; }
+
 .fj-tip {
   position: absolute; bottom: calc(100% + 8px); left: 50%;
   transform: translateX(-50%); background: #1a1a1a; color: #fff;

@@ -187,10 +187,17 @@ export default defineConfig({
     },
   },
 
+  // Prevent esbuild from pre-bundling @imgly/background-removal and its heavy ONNX deps.
+  // They are loaded lazily via dynamic import() at runtime and must not be inlined.
+  optimizeDeps: {
+    exclude: ['@imgly/background-removal', 'onnxruntime-web'],
+  },
+
   build: {
     target: 'es2015',
     chunkSizeWarningLimit: 600,
     rollupOptions: {
+      external: [/^onnxruntime-web/],
       output: {
         manualChunks: {
           'vendor-react':  ['react', 'react-dom'],

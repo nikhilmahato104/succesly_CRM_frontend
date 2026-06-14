@@ -62,6 +62,13 @@ const Icons: Record<string, React.ReactNode> = {
       <polyline points="12 5 19 12 12 19"/>
     </svg>
   ),
+  image: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="18" height="18" rx="3"/>
+      <circle cx="8.5" cy="8.5" r="1.5"/>
+      <polyline points="21 15 16 10 5 21"/>
+    </svg>
+  ),
 };
 
 const SIZES = [
@@ -77,12 +84,16 @@ interface Props {
   onColor: (c: string) => void;
   size: number;
   onSize: (s: number) => void;
+  onImageFile: (f: File) => void;
 }
 
 const DRAW_TOOLS: ToolType[] = ['pen', 'marker', 'eraser'];
-const isDrawTool = (t: ToolType) => DRAW_TOOLS.includes(t) || t === 'arrow';
+const isDrawTool  = (t: ToolType) => DRAW_TOOLS.includes(t) || t === 'arrow';
+// Which draw sub-tool is currently active (defaults to 'pen' when none selected)
+const activeDrawIcon = (t: ToolType): ToolType => DRAW_TOOLS.includes(t) ? t : 'pen';
 
-const BoardToolbar: React.FC<Props> = ({ tool, onTool, color, onColor, size, onSize }) => {
+const BoardToolbar: React.FC<Props> = ({ tool, onTool, color, onColor, size, onSize, onImageFile }) => {
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
   const showContext = isDrawTool(tool) || tool === 'rect' || tool === 'circle';
 
   return (
@@ -140,8 +151,12 @@ const BoardToolbar: React.FC<Props> = ({ tool, onTool, color, onColor, size, onS
 
         <div className="fj-tsep" />
 
-        {/* Drawing */}
-        <Btn id="pen"     active={tool === 'pen'}     onClick={() => onTool('pen')}     tip="Pen  P">{Icons.pen}</Btn>
+        {/* Drawing — icon updates to reflect active sub-tool (pen / marker / eraser) */}
+        <Btn id="draw"
+          active={DRAW_TOOLS.includes(tool)}
+          onClick={() => onTool(activeDrawIcon(tool))}
+          tip="Draw  P"
+        >{Icons[activeDrawIcon(tool)]}</Btn>
 
         {/* Sticky notes */}
         <Btn id="sticky"  active={tool === 'sticky'}  onClick={() => onTool('sticky')}  tip="Sticky Note  N">{Icons.sticky}</Btn>
@@ -160,8 +175,30 @@ const BoardToolbar: React.FC<Props> = ({ tool, onTool, color, onColor, size, onS
 
         <div className="fj-tsep" />
 
-        {/* Eraser */}
+        {/* Eraser — also accessible via context row when draw tool is active */}
         <Btn id="eraser"  active={tool === 'eraser'}  onClick={() => onTool('eraser')}  tip="Eraser  E">{Icons.eraser}</Btn>
+
+        <div className="fj-tsep" />
+
+        {/* Image upload */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          style={{ display: 'none' }}
+          onChange={e => {
+            const f = e.target.files?.[0];
+            if (f) { onImageFile(f); e.target.value = ''; }
+          }}
+        />
+        <button
+          className="fj-tbtn"
+          onClick={() => fileInputRef.current?.click()}
+          title="Upload Image (or paste screenshot)"
+        >
+          {Icons.image}
+          <span className="fj-tip">Image</span>
+        </button>
       </div>
     </div>
   );

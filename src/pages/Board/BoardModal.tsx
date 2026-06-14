@@ -1,20 +1,24 @@
 import React, { useRef, useCallback } from 'react';
-import { ShapeObject, ArrowObject } from './types';
+import { ShapeObject, ArrowObject, ToolType } from './types';
 
 /* ── ShapeEl — direct DOM drag, no React re-renders during move ───────────── */
 interface ShapeProps {
-  obj:       ShapeObject;
+  obj:         ShapeObject;
+  tool:        ToolType;
   getCamScale: () => number;
-  onDelete:  (id: string) => void;
-  onMoveEnd: (id: string, x: number, y: number) => void;
+  onDelete:    (id: string) => void;
+  onMoveEnd:   (id: string, x: number, y: number) => void;
 }
 
-export const ShapeEl: React.FC<ShapeProps> = React.memo(({ obj, getCamScale, onDelete, onMoveEnd }) => {
+export const ShapeEl: React.FC<ShapeProps> = React.memo(({ obj, tool, getCamScale, onDelete, onMoveEnd }) => {
   const gRef = useRef<SVGGElement>(null);
 
   const handleMouseDown = useCallback((e: React.MouseEvent<SVGElement>) => {
     const el = e.target as SVGElement;
     if (el.dataset.del) return;
+    // Only intercept in select mode — other tools (hand, pen, etc.) should
+    // receive the event so panning and drawing work over shapes.
+    if (tool !== 'select') return;
     e.stopPropagation();
 
     const g = gRef.current; if (!g) return;
@@ -36,7 +40,7 @@ export const ShapeEl: React.FC<ShapeProps> = React.memo(({ obj, getCamScale, onD
     };
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup',   onUp);
-  }, [obj.id, obj.x, obj.y, getCamScale, onMoveEnd]);
+  }, [tool, obj.id, obj.x, obj.y, getCamScale, onMoveEnd]);
 
   const cx = obj.x + obj.width / 2, cy = obj.y + obj.height / 2;
 

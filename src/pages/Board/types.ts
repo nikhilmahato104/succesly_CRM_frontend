@@ -57,7 +57,16 @@ export interface ArrowObject {
   size: number;
 }
 
-export type CanvasObject = DrawStroke | StickyNote | TextObject | ShapeObject | ArrowObject;
+export interface ImageObject {
+  id: string;
+  kind: 'image';
+  x: number; y: number;
+  width: number; height: number;
+  url: string;
+  uploading?: boolean; // true while blob URL is live, false after CDN URL replaces it
+}
+
+export type CanvasObject = DrawStroke | StickyNote | TextObject | ShapeObject | ArrowObject | ImageObject;
 
 export const NOTE_COLORS: Record<NoteColor, { bg: string; header: string; text: string }> = {
   yellow: { bg: '#fff9c4', header: '#f5e642', text: '#4a3900' },
