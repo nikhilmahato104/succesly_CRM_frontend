@@ -1,10 +1,55 @@
 import React, { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
+import { useDispatch } from "react-redux";
 import { Navbar } from "../organisms/Navbar";
 import Sidebar from "@/organisms/SidebarV2";
 import { TopBar } from "../organisms/TopBar/TopBar";
 import { useDarkMode } from "../hooks/useDarkMode";
 import { useIOSViewport } from "../hooks/useIOSViewport";
 import { useLayoutMode } from "../hooks/useLayoutMode";
+import { setPageTitle, clearPageTitle } from "../store/slices/pageTitleSlice";
+
+// ── Route → TopBar title map ──────────────────────────────────────────────────
+// Checked in order; first match wins. null title → clear (show brand logo).
+// ProjectForm pages are included here too — ProjectForm's own useEffect runs
+// after and overrides with its dynamic "Edit Project" / "New Project" titles.
+const ROUTE_MAP: Array<{ re: RegExp; title: string | null; back: ((m: RegExpMatchArray) => string) | string | null }> = [
+  { re: /^\/projects\/([^/]+)\/edit$/,             title: "Edit Project",        back: (m) => `/projects/${m[1]}` },
+  { re: /^\/projects\/new$/,                       title: "New Project",         back: "/projects" },
+  { re: /^\/projects\/([^/]+)$/,                   title: "Project Detail",      back: "/projects" },
+  { re: /^\/projects$/,                            title: "Project Management",  back: "/" },
+  { re: /^\/booking-management$/,                  title: "Booking Management",  back: "/" },
+  { re: /^\/setting-config\/user-management$/,     title: "User Management",     back: "/" },
+  { re: /^\/setting-config\/role-management$/,     title: "Role Management",     back: "/" },
+  { re: /^\/setting-config\/module-management$/,   title: "Module Management",   back: "/" },
+  { re: /^\/setting-config\/api-key-management$/,  title: "API Keys",            back: "/" },
+  { re: /^\/help-chat$/,                           title: "Help Chat",           back: "/" },
+  { re: /^\/dashboard/,                            title: null,                  back: null },
+  { re: /^\/no-access$/,                           title: null,                  back: null },
+];
+
+const RoutePageTitleSync: React.FC = () => {
+  const { pathname } = useLocation();
+  const dispatch = useDispatch();
+
+  useEffect(() => {
+    for (const row of ROUTE_MAP) {
+      const m = pathname.match(row.re);
+      if (m) {
+        if (row.title === null) {
+          dispatch(clearPageTitle());
+        } else {
+          const backPath = typeof row.back === "function" ? row.back(m) : row.back;
+          dispatch(setPageTitle({ title: row.title, backPath }));
+        }
+        return;
+      }
+    }
+    dispatch(clearPageTitle()); // unknown route → show brand
+  }, [pathname, dispatch]);
+
+  return null;
+};
 
 const STORAGE_KEY = "uttm_sidebar_collapsed_v4";
 const SIDEBAR_WIDTH = 260;
@@ -68,6 +113,8 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
   void spacerWidth; // used by layout calculation above, suppress unused warning
 
   return (
+    <>
+    <RoutePageTitleSync />
     <div
       className="dashboard-shell"
       style={{
@@ -90,8 +137,10 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
             width:           sidebarCollapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH,
             overflow:        "hidden",
             borderRadius:    isCompact ? 0 : "8px",
-            border:          isCompact ? "none" : "1px solid var(--sb-border)",
-            borderRight:     isCompact ? "1px solid var(--sb-border)" : undefined,
+            borderTop:       isCompact ? "none" : "1px solid var(--sb-border)",
+            borderLeft:      isCompact ? "none" : "1px solid var(--sb-border)",
+            borderBottom:    isCompact ? "none" : "1px solid var(--sb-border)",
+            borderRight:     "1px solid var(--sb-border)",
             backgroundColor: "var(--sb-bg)",
             transition:      `width ${DURATION} ${EASE}`,
             willChange:      "width",
@@ -159,5 +208,6 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
         </div>
       </div>
     </div>
+    </>
   );
 };

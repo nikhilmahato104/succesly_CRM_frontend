@@ -100,7 +100,7 @@ button, nav, header, aside, label, [role="button"], [role="tab"] {
   --sb-text:        #0d0d0d;
   --sb-text-dim:    #6b6b6b;
   --sb-text-active: #000000;
-  --sb-border:      #cecece;
+  --sb-border:      #b8b8b8;
 
   /* ── Form / Input atoms ─────────────────────────────────────────────── */
   --fi-bg:           #ffffff;

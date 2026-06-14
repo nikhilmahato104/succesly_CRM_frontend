@@ -258,7 +258,7 @@ const ProjectDetail: React.FC = () => {
 
           {project.project_description && (
             <div style={{ marginTop: 14 }}>
-              <Field label="Description" value={<p style={{ margin: 0, lineHeight: 1.6 }}>{project.project_description}</p>} />
+              <Field label="Description" value={<p style={{ margin: 0, lineHeight: 1.6, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{project.project_description}</p>} />
             </div>
           )}
 
