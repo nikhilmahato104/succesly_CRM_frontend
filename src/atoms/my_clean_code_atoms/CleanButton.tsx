@@ -11,6 +11,7 @@ export interface CleanButtonProps {
   iconRight?:    React.ReactNode;   // icon on the right of label
   loading?:      boolean;
   disabled?:     boolean;
+  active?:       boolean;  // keeps focus-border without hover
   type?:         "button" | "submit" | "reset";
   form?:         string;
   onClick?:      (e: React.MouseEvent<HTMLButtonElement>) => void;
@@ -21,11 +22,13 @@ export interface CleanButtonProps {
 }
 
 // ── Size tokens ────────────────────────────────────────────────────────────────
-const SIZE: Record<ButtonSize, { height: number; px: number; fontSize: number; gap: number; iconSize: number }> = {
-  xs: { height: 26, px: 8,  fontSize: 11, gap: 4, iconSize: 12 },
-  sm: { height: 30, px: 10, fontSize: 12, gap: 5, iconSize: 13 },
-  md: { height: 34, px: 14, fontSize: 13, gap: 6, iconSize: 14 },
-  lg: { height: 38, px: 18, fontSize: 14, gap: 7, iconSize: 15 },
+// Heights reference CSS variables (--btn-h-*) so changing index.css updates
+// every button in the platform at once without touching TypeScript.
+const SIZE: Record<ButtonSize, { h: string; px: number; fontSize: number; gap: number; iconSize: number }> = {
+  xs: { h: "var(--btn-h-xs)", px: 7,  fontSize: 11, gap: 3, iconSize: 11 },
+  sm: { h: "var(--btn-h-sm)", px: 9,  fontSize: 12, gap: 4, iconSize: 12 },
+  md: { h: "var(--btn-h-md)", px: 12, fontSize: 13, gap: 5, iconSize: 13 },
+  lg: { h: "var(--btn-h-lg)", px: 16, fontSize: 14, gap: 6, iconSize: 14 },
 };
 
 // ── Variant styles ─────────────────────────────────────────────────────────────
@@ -33,22 +36,30 @@ const VARIANT_BASE: Record<ButtonVariant, React.CSSProperties> = {
   primary: {
     background:  "var(--btn-primary-bg)",
     color:       "var(--btn-primary-text)",
-    border:      "1px solid transparent",
+    borderWidth: "1px",
+    borderStyle: "solid",
+    borderColor: "transparent",
   },
   outline: {
     background:  "var(--fi-bg)",
     color:       "var(--fi-text)",
-    border:      "1px solid var(--fi-border)",
+    borderWidth: "1px",
+    borderStyle: "solid",
+    borderColor: "var(--fi-border)",
   },
   ghost: {
     background:  "transparent",
     color:       "var(--fi-label)",
-    border:      "1px solid transparent",
+    borderWidth: "1px",
+    borderStyle: "solid",
+    borderColor: "transparent",
   },
   danger: {
     background:  "transparent",
     color:       "#ef4444",
-    border:      "1px solid rgba(239,68,68,0.35)",
+    borderWidth: "1px",
+    borderStyle: "solid",
+    borderColor: "rgba(239,68,68,0.35)",
   },
 };
 
@@ -68,6 +79,7 @@ export const CleanButton: React.FC<CleanButtonProps> = ({
   iconRight,
   loading  = false,
   disabled = false,
+  active   = false,
   type     = "button",
   form,
   onClick,
@@ -85,7 +97,7 @@ export const CleanButton: React.FC<CleanButtonProps> = ({
     alignItems:     "center",
     justifyContent: "center",
     gap:            sz.gap,
-    height:         sz.height,
+    height:         sz.h,
     padding:        isIconOnly ? `0 ${sz.px * 0.7}px` : `0 ${sz.px}px`,
     borderRadius:   "var(--fi-radius)",
     fontSize:       sz.fontSize,
@@ -98,18 +110,28 @@ export const CleanButton: React.FC<CleanButtonProps> = ({
     userSelect:     "none",
     boxSizing:      "border-box",
     ...VARIANT_BASE[variant],
+    // active = panel open → keep focus border without hover
+    ...(active && variant === "outline" ? { borderColor: "var(--fi-border-focus)" } : {}),
     ...style,
   };
 
   const handleHover = (enter: boolean) => (e: React.MouseEvent<HTMLButtonElement>) => {
     if (isDisabled) return;
     const el = e.currentTarget;
-    const h = VARIANT_HOVER[variant];
+    const h  = VARIANT_HOVER[variant];
     if (enter) {
-      Object.entries(h).forEach(([k, v]) => ((el.style as any)[k] = v));
+      // when active, only change background — keep the focus border
+      Object.entries(h).forEach(([k, v]) => {
+        if (active && k === "borderColor") return;
+        (el.style as any)[k] = v;
+      });
     } else {
       const base = VARIANT_BASE[variant];
-      Object.keys(h).forEach((k) => ((el.style as any)[k] = (base as any)[k] ?? ""));
+      Object.keys(h).forEach((k) => {
+        // restore border only if not in active state
+        if (active && k === "borderColor") return;
+        (el.style as any)[k] = (base as any)[k] ?? "";
+      });
     }
   };
 

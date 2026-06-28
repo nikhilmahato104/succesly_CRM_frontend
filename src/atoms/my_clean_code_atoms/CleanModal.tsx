@@ -1,4 +1,4 @@
-import React, { Fragment, useCallback, useEffect, useRef, useState } from "react"; // useRef kept for BottomSheet drag system
+import React, { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   Dialog, DialogPanel, DialogTitle,
   Transition, TransitionChild,
@@ -35,6 +35,7 @@ const EXPAND_THRESHOLD   = 60;
 const COLLAPSE_THRESHOLD = 80;
 const SNAP_MS            = 280;
 const DISMISS_MS         = 220;
+const ENTER_MS           = 340;   // enter spring duration (iOS-style)
 const BODY_DRAG_MIN_PX   = 6;
 
 // Backdrop values at each sheet position
@@ -215,6 +216,10 @@ function useDrag(
 
   const body = useRef({
     onPointerDown(e: React.PointerEvent) {
+      // If the tap landed on (or inside) an interactive form element, skip drag
+      // tracking. This covers direct taps on <input>, <select>, <label>, etc.
+      if ((e.target as HTMLElement).closest('input, select, textarea, button, a, label, [role="listbox"], [role="option"]')) return;
+
       const el = bodyRef.current;
       if (!el) return;
       const atTop = el.scrollTop <= 0;
@@ -234,6 +239,11 @@ function useDrag(
     },
     onPointerUp:     (e: React.PointerEvent) => { pending.current = false; h.release(e.clientY); },
     onPointerCancel: () => h.cancel(),
+    // Safety net: when any child form element receives focus (e.g. user tapped
+    // a styled wrapper <div> around an <input>), the pointerdown may have set
+    // pending=true before we could detect it was a form tap. Cancel drag state
+    // immediately so OS-picker pointer leakage can never trigger a dismiss.
+    onFocus() { pending.current = false; active.current = false; },
   }).current;
 
   return { zone, body };
@@ -416,6 +426,9 @@ const DesktopModal: React.FC<CleanModalProps> = ({
 };
 
 // ── Mobile bottom sheet ────────────────────────────────────────────────────
+// Animation is 100% imperative (transform via DOM ref) so HeadlessUI's
+// TransitionChild never conflicts with mid-animation state. This is the
+// same pattern used by YouTube / Instagram sheets.
 
 const BottomSheet: React.FC<CleanModalProps> = ({
   isOpen, onClose: parentOnClose,
@@ -427,20 +440,82 @@ const BottomSheet: React.FC<CleanModalProps> = ({
   const backdropRef   = useRef<HTMLDivElement>(null);
   const snapTimerRef  = useRef<SnapTimer>(null);
   const isExpandedRef = useRef(false);
-  const [expanded, setExpandState] = useState(false);
+  const dismissingRef = useRef(false);
+
+  const [mounted,    setMounted]    = useState(isOpen);
+  const [backdropIn, setBackdropIn] = useState(false);
+  const [expanded,   setExpandState] = useState(false);
 
   const setExpand = useCallback((v: boolean) => {
     isExpandedRef.current = v;
     setExpandState(v);
   }, []);
 
-  // Drive backdrop blur from panel visibility ratio [0..1]
+  // ── Open: mount then animate in ──────────────────────────────────────────
+  useEffect(() => {
+    if (!isOpen) return;
+    if (snapTimerRef.current) { clearTimeout(snapTimerRef.current); snapTimerRef.current = null; }
+    dismissingRef.current = false;
+    setMounted(true);
+    setExpand(false);
+  }, [isOpen, setExpand]);
+
+  // After mount, slide up from off-screen (double-rAF = paint then transition).
+  // `transform` is NOT in the JSX style so React reconciliation never overwrites
+  // an in-progress animation on unrelated re-renders (height, borderRadius, etc.)
+  useLayoutEffect(() => {
+    if (!mounted || !isOpen) return;
+    const el = panelRef.current;
+    if (!el) return;
+
+    // Synchronous: position off-screen before first paint
+    el.style.transform  = "translateY(105%)";
+    el.style.transition = "none";
+
+    let r1: number, r2: number;
+    r1 = requestAnimationFrame(() => {
+      r2 = requestAnimationFrame(() => {
+        const p = panelRef.current;
+        if (!p) return;
+        p.style.transition = `transform ${ENTER_MS}ms cubic-bezier(0.32,0.72,0,1)`;
+        p.style.transform  = "translateY(0)";
+        setBackdropIn(true);
+        // Clear inline styles after animation so drag system owns them cleanly
+        snapTimerRef.current = setTimeout(() => {
+          snapTimerRef.current = null;
+          const p2 = panelRef.current;
+          if (p2) { p2.style.transform = ""; p2.style.transition = ""; }
+        }, ENTER_MS + 16);
+      });
+    });
+
+    return () => { cancelAnimationFrame(r1); cancelAnimationFrame(r2); };
+  }, [mounted, isOpen]);
+
+  // ── Close ────────────────────────────────────────────────────────────────
+  const doClose = useCallback(() => {
+    if (dismissingRef.current) return;
+    dismissingRef.current = true;
+    setBackdropIn(false);
+    animateDismiss(panelRef.current, snapTimerRef, () => {
+      dismissingRef.current = false;
+      setMounted(false);
+      parentOnClose();
+    });
+  }, [parentOnClose]);
+
+  // External close: parent sets isOpen=false without going through doClose
+  useEffect(() => {
+    if (!isOpen && mounted && !dismissingRef.current) doClose();
+  }, [isOpen, mounted, doClose]);
+
+  // ── Backdrop blur driver (used by drag system) ────────────────────────────
   const setBackdrop = useCallback((ratio: number, withTransition = false) => {
     const el = backdropRef.current;
     if (!el) return;
     const blur  = BLUR_PARTIAL  + (BLUR_CAP  - BLUR_PARTIAL)  * ratio;
     const alpha = ALPHA_PARTIAL + (ALPHA_CAP - ALPHA_PARTIAL) * ratio;
-    el.style.transition = withTransition
+    el.style.transition         = withTransition
       ? `backdrop-filter ${SNAP_MS}ms ease, background ${SNAP_MS}ms ease`
       : "none";
     el.style.backdropFilter        = `blur(${blur.toFixed(1)}px)`;
@@ -448,42 +523,18 @@ const BottomSheet: React.FC<CleanModalProps> = ({
     el.style.background            = `rgba(0,0,0,${alpha.toFixed(2)})`;
   }, []);
 
-  // On re-open: cancel any pending timer and reverse any in-progress dismiss
-  useEffect(() => {
-    if (isOpen) {
-      if (snapTimerRef.current) { clearTimeout(snapTimerRef.current); snapTimerRef.current = null; }
-      const el = panelRef.current;
-      if (el && el.style.transform) {
-        el.style.transition = `transform ${SNAP_MS}ms cubic-bezier(0.4,0,0.2,1)`;
-        el.style.transform  = "translateY(0)";
-        const tid = setTimeout(() => { el.style.transform = ""; el.style.transition = ""; }, SNAP_MS + 10);
-        return () => clearTimeout(tid);
-      }
-    } else {
-      setExpand(false);
-    }
-  }, [isOpen, setExpand]);
-
-  // X button: same slide-down animation as drag dismiss — locks current height,
-  // animates translateY(100%), then calls parentOnClose after the slide finishes.
-  const onClose = useCallback(() => {
-    animateDismiss(panelRef.current, snapTimerRef, parentOnClose);
-  }, [parentOnClose]);
-
-  // Drag dismiss: lock current height then slide off — prevents CSS height snap.
-  const onDismiss = useCallback(() => {
-    animateDismiss(panelRef.current, snapTimerRef, parentOnClose);
-  }, [parentOnClose]);
-
   const drag = useDrag(panelRef, bodyRef, {
-    onDismiss,
-    onExpand:     () => { setExpand(true);  setBackdrop(1, true); },
-    onCollapse:   () => { setExpand(false); setBackdrop(PARTIAL_RATIO / MAX_RATIO, true); },
+    onDismiss:  doClose,
+    onExpand:   () => { setExpand(true);  setBackdrop(1, true); },
+    onCollapse: () => { setExpand(false); setBackdrop(PARTIAL_RATIO / MAX_RATIO, true); },
     isExpandedRef,
     snapTimerRef,
-    onVisRatio:   (r) => setBackdrop(r),
+    onVisRatio: (r) => setBackdrop(r),
   });
 
+  if (!mounted) return null;
+
+  // No `transform` in JSX — owned entirely by the imperative animation system
   const panelStyle: React.CSSProperties = {
     width:         "100%",
     maxHeight:     `${MAX_RATIO * 100}dvh`,
@@ -496,56 +547,67 @@ const BottomSheet: React.FC<CleanModalProps> = ({
     border:        "1px solid var(--fi-border)",
     borderBottom:  "none",
     overflow:      "hidden",
-    willChange:    "transform, height",
+    willChange:    "transform",
   };
 
   return (
-    <Transition appear show={isOpen} as={Fragment}>
-      <Dialog as="div" style={{ position: "relative", zIndex }} onClose={closeOnBackdrop ? onClose : () => {}}>
-        <Backdrop ref={backdropRef} />
-        <div style={{ position: "fixed", inset: 0, display: "flex", alignItems: "flex-end" }}>
-          <TransitionChild
-            as={Fragment}
-            enter="ease-out duration-300" enterFrom="translate-y-full" enterTo="translate-y-0"
-            leave="ease-in duration-300" leaveFrom="translate-y-0"   leaveTo="translate-y-full"
+    <Dialog
+      as="div"
+      open
+      style={{ position: "relative", zIndex }}
+      onClose={closeOnBackdrop ? doClose : () => {}}
+    >
+      {/* Backdrop — opacity via React state, blur/alpha driven by drag via DOM ref */}
+      <div
+        ref={backdropRef}
+        style={{
+          position:             "fixed",
+          inset:                0,
+          background:           `rgba(0,0,0,${ALPHA_PARTIAL})`,
+          backdropFilter:       `blur(${BLUR_PARTIAL}px)`,
+          WebkitBackdropFilter: `blur(${BLUR_PARTIAL}px)`,
+          opacity:              backdropIn ? 1 : 0,
+          transition:           `opacity ${ENTER_MS}ms ease`,
+          pointerEvents:        backdropIn ? "auto" : "none",
+        }}
+      />
+
+      <div style={{ position: "fixed", inset: 0, display: "flex", alignItems: "flex-end" }}>
+        <DialogPanel ref={panelRef} style={panelStyle}>
+
+          {/* Drag zone: pill + header */}
+          <div
+            {...drag.zone}
+            style={{ flexShrink: 0, touchAction: "none", userSelect: "none", cursor: "grab" }}
           >
-            <DialogPanel ref={panelRef} style={panelStyle}>
+            <div style={{ padding: "10px 0 4px", display: "flex", justifyContent: "center" }}>
+              <div style={{ width: 36, height: 4, borderRadius: 2, background: "var(--fi-border)" }} />
+            </div>
+            <ModalHeader title={title} subtitle={subtitle} headerExtra={headerExtra} onClose={doClose} />
+          </div>
 
-              {/* Drag zone: pill + full header bar */}
-              <div
-                {...drag.zone}
-                style={{ flexShrink: 0, touchAction: "none", userSelect: "none", cursor: "grab" }}
-              >
-                <div style={{ padding: "10px 0 4px", display: "flex", justifyContent: "center" }}>
-                  <div style={{ width: 36, height: 4, borderRadius: 2, background: "var(--fi-border)" }} />
-                </div>
-                <ModalHeader title={title} subtitle={subtitle} headerExtra={headerExtra} onClose={onClose} />
-              </div>
+          {/* Scrollable body — drag activates at scroll boundaries */}
+          <div
+            ref={bodyRef}
+            {...drag.body}
+            className="sc-scrollbar"
+            style={{
+              flex:               1,
+              overflowY:          "auto",
+              overflowX:          "hidden",
+              padding:            10,
+              background:         "var(--modal-bg)",
+              overscrollBehavior: "contain",
+            }}
+          >
+            {children}
+          </div>
 
-              {/* Scroll body: drag activates at scroll boundaries */}
-              <div
-                ref={bodyRef}
-                {...drag.body}
-                className="sc-scrollbar"
-                style={{
-                  flex:               1,
-                  overflowY:          "auto",
-                  overflowX:          "hidden",
-                  padding:            10,
-                  background:         "var(--modal-bg)",
-                  overscrollBehavior: "contain",
-                }}
-              >
-                {children}
-              </div>
+          {footer && <ModalFooter footer={footer} />}
 
-              {footer && <ModalFooter footer={footer} />}
-
-            </DialogPanel>
-          </TransitionChild>
-        </div>
-      </Dialog>
-    </Transition>
+        </DialogPanel>
+      </div>
+    </Dialog>
   );
 };
 

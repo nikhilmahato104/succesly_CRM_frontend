@@ -1,13 +1,24 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { Plus, CalendarRange, ListFilter, X, ChevronDown } from "lucide-react";
+import { Plus, SlidersHorizontal } from "lucide-react";
+
+const useIsMobile = () => {
+  const [v, setV] = useState(() => window.innerWidth < 1024);
+  useEffect(() => {
+    const h = () => setV(window.innerWidth < 1024);
+    window.addEventListener("resize", h);
+    return () => window.removeEventListener("resize", h);
+  }, []);
+  return v;
+};
 import { CustomDatagrid, type GridColumn } from "../../atoms/CustomDatagrid";
 import {
   CleanButton,
   CleanSearchBar,
-  CleanInput,
-  CleanSelect,
+  CleanModal,
+  CleanDropdown,
+  CleanDateRangePicker,
 } from "../../atoms/my_clean_code_atoms";
 import { showToastnew } from "../../services/toastifynewService/toastifynewService";
 import { emitNavDone } from "../../atoms/NavigationProgress";
@@ -141,28 +152,94 @@ const COLUMNS: GridColumn<Project>[] = [
   },
 ];
 
-// ── Panel overlay style ────────────────────────────────────────────────────────
+// ── Filter content — shared between desktop dropdown & mobile modal ────────────
 
-const panelStyle: React.CSSProperties = {
+interface FilterContentProps {
+  filters:          ProjectFilters;
+  setFilter:        <K extends keyof ProjectFilters>(key: K, val: string) => void;
+  clearAllFilters:  () => void;
+  activeFilterCount: number;
+}
+
+const FilterContent: React.FC<FilterContentProps> = ({
+  filters, setFilter, clearAllFilters, activeFilterCount,
+}) => (
+  <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+
+    {/* Date range */}
+    <CleanDateRangePicker
+      label="Date Range"
+      fromValue={filters.date_from}
+      toValue={filters.date_to}
+      onFromChange={v => setFilter("date_from", v)}
+      onToChange={v => setFilter("date_to", v)}
+      clearable
+      onClear={() => { setFilter("date_from", ""); setFilter("date_to", ""); }}
+      stacked
+    />
+
+    {/* Divider */}
+    <div style={{ height: 1, background: "var(--fi-border)", margin: "0 -2px" }} />
+
+    {/* Status / type / payment dropdowns */}
+    <CleanDropdown
+      label="Project Status"
+      value={filters.project_status}
+      options={PROJECT_STATUS_OPTIONS as unknown as { value: string; label: string }[]}
+      onChange={v => setFilter("project_status", v)}
+      placeholder="All statuses"
+      clearable
+    />
+    <CleanDropdown
+      label="Project Type"
+      value={filters.project_type}
+      options={PROJECT_TYPE_OPTIONS as unknown as { value: string; label: string }[]}
+      onChange={v => setFilter("project_type", v)}
+      placeholder="All types"
+      clearable
+    />
+    <CleanDropdown
+      label="Payment Status"
+      value={filters.payment_status}
+      options={PAYMENT_STATUS_OPTIONS as unknown as { value: string; label: string }[]}
+      onChange={v => setFilter("payment_status", v)}
+      placeholder="All payments"
+      clearable
+    />
+
+    {/* Clear all */}
+    {activeFilterCount > 0 && (
+      <CleanButton variant="danger" size="xs" onClick={clearAllFilters} style={{ width: "100%" }}>
+        Clear all filters
+      </CleanButton>
+    )}
+  </div>
+);
+
+// ── Desktop dropdown panel style ───────────────────────────────────────────────
+
+const dropdownPanelStyle: React.CSSProperties = {
   position:     "absolute",
   top:          "calc(100% + 4px)",
-  left:         0,
+  right:        0,
   zIndex:       50,
   background:   "var(--fi-bg-panel)",
   border:       "1px solid var(--fi-border)",
   borderRadius: "var(--fi-radius)",
   boxShadow:    "0 4px 20px rgba(0,0,0,0.10)",
-  padding:      12,
+  padding:      14,
+  minWidth:     260,
 };
 
 // ── Component ──────────────────────────────────────────────────────────────────
 
 const ProjectManagement: React.FC = () => {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const dispatch = useDispatch();
-  const apiKey = useSelector((s: RootState) => selectApiKey(s));
-  const access = useSelector((s: RootState) => selectAccessData(s));
-  const perms  = (access?.["project_management"] ?? {}) as Record<string, boolean>;
+  const apiKey   = useSelector((s: RootState) => selectApiKey(s));
+  const access   = useSelector((s: RootState) => selectAccessData(s));
+  const perms    = (access?.["project_management"] ?? {}) as Record<string, boolean>;
 
   const [data,        setData]        = useState<Project[]>([]);
   const [filters,     setFilters]     = useState<ProjectFilters>(EMPTY_FILTERS);
@@ -172,35 +249,37 @@ const ProjectManagement: React.FC = () => {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore,     setHasMore]     = useState(false);
 
-  const [showDatePanel,   setShowDatePanel]   = useState(false);
-  const [showFilterPanel, setShowFilterPanel] = useState(false);
-  const datePanelRef   = useRef<HTMLDivElement>(null);
+  // Desktop: inline dropdown panel; Mobile: CleanModal
+  const [showFilterPanel,  setShowFilterPanel]  = useState(false);
+  const [filterModalOpen,  setFilterModalOpen]  = useState(false);
   const filterPanelRef = useRef<HTMLDivElement>(null);
 
-  const pageRef      = useRef(1);
-  const abortRef     = useRef<AbortController | null>(null);
-  const PER_PAGE     = 25;
+  const pageRef  = useRef(1);
+  const abortRef = useRef<AbortController | null>(null);
+  const PER_PAGE = 25;
 
-  // close panels on outside click
+  // Close desktop panel on outside click.
+  // Ignore clicks on CleanDropdown portal lists (data-clean-dropdown-portal)
+  // since those elements render at document.body but logically belong to the panel.
   useEffect(() => {
     const h = (e: MouseEvent) => {
-      if (datePanelRef.current && !datePanelRef.current.contains(e.target as Node))
-        setShowDatePanel(false);
-      if (filterPanelRef.current && !filterPanelRef.current.contains(e.target as Node))
-        setShowFilterPanel(false);
+      const target = e.target as Element;
+      const insidePanel   = filterPanelRef.current?.contains(target);
+      const insidePortal  = !!target?.closest?.("[data-portal-popup]");
+      if (!insidePanel && !insidePortal) setShowFilterPanel(false);
     };
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
   }, []);
 
-  // debounce search
+  // Debounce search
   useEffect(() => {
     const id = setTimeout(() => setDebouncedQ(filters.search.trim()), 500);
     return () => clearTimeout(id);
   }, [filters.search]);
 
   const setFilter = <K extends keyof ProjectFilters>(key: K, val: string) =>
-    setFilters((f) => ({ ...f, [key]: val }));
+    setFilters(f => ({ ...f, [key]: val }));
 
   const clearAllFilters = () => setFilters(EMPTY_FILTERS);
 
@@ -208,11 +287,6 @@ const ProjectManagement: React.FC = () => {
     filters.project_status, filters.project_type,
     filters.payment_status, filters.date_from, filters.date_to,
   ].filter(Boolean).length;
-
-  const hasDates  = !!(filters.date_from || filters.date_to);
-  const dateLabel = hasDates
-    ? `${filters.date_from || "…"} – ${filters.date_to || "…"}`
-    : "Date range";
 
   const buildParams = useCallback(
     (page: number) => ({
@@ -241,9 +315,9 @@ const ProjectManagement: React.FC = () => {
 
       append ? setLoadingMore(true) : setLoading(true);
       try {
-        const res = await fetchProjects({ ...buildParams(page) });
+        const res   = await fetchProjects({ ...buildParams(page) });
         const items = res.data.data;
-        setData((prev) => (append ? [...prev, ...items] : items));
+        setData(prev => append ? [...prev, ...items] : items);
         setTotal(res.data.total);
         setHasMore(page < res.data.totalPages);
         pageRef.current = page;
@@ -284,7 +358,7 @@ const ProjectManagement: React.FC = () => {
 
   const handleBulkDelete = useCallback(async (ids: (string | number)[]) => {
     try {
-      await Promise.all(ids.map((id) => deleteProject(String(id))));
+      await Promise.all(ids.map(id => deleteProject(String(id))));
       showToastnew.success(`${ids.length} project${ids.length > 1 ? "s" : ""} deleted`);
       handleRefresh();
     } catch {
@@ -292,130 +366,114 @@ const ProjectManagement: React.FC = () => {
     }
   }, [handleRefresh]);
 
-  return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden", background: "var(--dt-bg)" }}>
+  const filterProps: FilterContentProps = {
+    filters, setFilter, clearAllFilters, activeFilterCount,
+  };
 
-      {/* ── Toolbar ──────────────────────────────────────────────────────────── */}
+  return (
+    <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, overflow: "hidden", background: "var(--dt-bg)" }}>
+
+      {/* ── Toolbar ───────────────────────────────────────────────────────── */}
       <div style={{
         display:      "flex",
         alignItems:   "center",
-        gap:          6,
-        padding:      "7px 12px",
+        gap:          8,
+        padding:      "8px 12px",
         borderBottom: "1px solid var(--dt-border)",
         flexShrink:   0,
-        flexWrap:     "wrap",
         background:   "var(--dt-header)",
       }}>
 
+        {/* Search */}
         <CleanSearchBar
           value={filters.search}
-          onChange={(v) => setFilter("search", v)}
-          placeholder="Search name, mobile, email, project…"
-          width={240}
+          onChange={v => setFilter("search", v)}
+          placeholder={isMobile ? "Search projects…" : "Search name, mobile, email, project…"}
+          style={{ flex: 1, minWidth: 0, height: "var(--fi-height)" }}
         />
 
-        {/* Date range panel */}
-        <div style={{ position: "relative" }} ref={datePanelRef}>
+        {/* Combined filter button */}
+        <div style={{ position: "relative", flexShrink: 0 }} ref={filterPanelRef}>
           <CleanButton
             variant="outline"
             size="sm"
-            iconLeft={<CalendarRange style={{ width: 13, height: 13 }} />}
-            iconRight={hasDates ? undefined : <ChevronDown style={{ width: 11, height: 11 }} />}
-            onClick={() => setShowDatePanel((v) => !v)}
-            style={hasDates ? { borderColor: "var(--fi-border-focus)" } : undefined}
-          >
-            {hasDates ? (
-              <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                {dateLabel}
-                <span onClick={(e) => { e.stopPropagation(); setFilter("date_from", ""); setFilter("date_to", ""); }} style={{ display: "flex", cursor: "pointer", color: "var(--fi-muted)" }}>
-                  <X style={{ width: 11, height: 11 }} />
-                </span>
-              </span>
-            ) : dateLabel}
-          </CleanButton>
-
-          {showDatePanel && (
-            <div style={{ ...panelStyle, display: "flex", alignItems: "center", gap: 8, whiteSpace: "nowrap" }}>
-              <CleanInput type="date" value={filters.date_from} onChange={(e) => setFilter("date_from", e.target.value)} style={{ width: 148 }} />
-              <span style={{ fontSize: 12, color: "var(--fi-muted)" }}>–</span>
-              <CleanInput type="date" value={filters.date_to} onChange={(e) => setFilter("date_to", e.target.value)} style={{ width: 148 }} />
-              <CleanButton variant="primary" size="sm" onClick={() => setShowDatePanel(false)}>Done</CleanButton>
-            </div>
-          )}
-        </div>
-
-        {/* Filter panel */}
-        <div style={{ position: "relative" }} ref={filterPanelRef}>
-          <CleanButton
-            variant="outline"
-            size="sm"
-            iconLeft={<ListFilter style={{ width: 13, height: 13 }} />}
+            active={showFilterPanel}
+            icon={isMobile ? <SlidersHorizontal style={{ width: 15, height: 15 }} /> : undefined}
+            iconLeft={!isMobile ? <SlidersHorizontal style={{ width: 13, height: 13 }} /> : undefined}
             badge={activeFilterCount > 0 ? activeFilterCount : undefined}
-            onClick={() => setShowFilterPanel((v) => !v)}
-            style={activeFilterCount > 0 ? { borderColor: "var(--fi-border-focus)" } : undefined}
+            onClick={() => {
+              if (isMobile) {
+                setFilterModalOpen(true);
+              } else {
+                setShowFilterPanel(v => !v);
+              }
+            }}
+            style={{ height: "var(--fi-height)" }}
           >
-            Filter
+            {isMobile ? undefined : "Filter"}
           </CleanButton>
 
-          {showFilterPanel && (
-            <div style={{ ...panelStyle, minWidth: 240, display: "flex", flexDirection: "column", gap: 10 }}>
-              <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--fi-muted)" }}>
-                Filters
-              </span>
-
-              <CleanSelect
-                label="Project Status"
-                value={filters.project_status}
-                onChange={(e) => setFilter("project_status", e.target.value)}
-                options={PROJECT_STATUS_OPTIONS as unknown as { value: string; label: string }[]}
-                placeholder="All statuses"
-              />
-
-              <CleanSelect
-                label="Project Type"
-                value={filters.project_type}
-                onChange={(e) => setFilter("project_type", e.target.value)}
-                options={PROJECT_TYPE_OPTIONS as unknown as { value: string; label: string }[]}
-                placeholder="All types"
-              />
-
-              <CleanSelect
-                label="Payment Status"
-                value={filters.payment_status}
-                onChange={(e) => setFilter("payment_status", e.target.value)}
-                options={PAYMENT_STATUS_OPTIONS as unknown as { value: string; label: string }[]}
-                placeholder="All payments"
-              />
-
-              {activeFilterCount > 0 && (
-                <CleanButton variant="danger" size="xs" onClick={clearAllFilters} style={{ width: "100%" }}>
-                  Clear all filters
-                </CleanButton>
-              )}
+          {/* Desktop dropdown panel */}
+          {!isMobile && showFilterPanel && (
+            <div style={dropdownPanelStyle}>
+              <FilterContent {...filterProps} />
             </div>
           )}
         </div>
 
-        <div style={{ flex: 1 }} />
-
-        {perms.create !== false && (
+        {/* New Project — desktop only */}
+        {!isMobile && perms.create !== false && (
           <CleanButton
             variant="primary"
             size="sm"
             iconLeft={<Plus style={{ width: 13, height: 13 }} />}
             onClick={() => navigate("/projects/new")}
+            style={{ height: "var(--fi-height)", flexShrink: 0 }}
           >
             New Project
           </CleanButton>
         )}
       </div>
 
-      {/* ── Table ─────────────────────────────────────────────────────────────── */}
+      {/* ── Mobile filter modal (bottom sheet) ───────────────────────────── */}
+      <CleanModal
+        isOpen={filterModalOpen}
+        onClose={() => setFilterModalOpen(false)}
+        title="Filters"
+        subtitle={activeFilterCount > 0 ? `${activeFilterCount} active filter${activeFilterCount > 1 ? "s" : ""}` : undefined}
+        mode="sheet"
+        footer={
+          <div style={{ display: "flex", gap: 8, width: "100%" }}>
+            {activeFilterCount > 0 && (
+              <CleanButton
+                variant="danger"
+                size="sm"
+                onClick={() => { clearAllFilters(); setFilterModalOpen(false); }}
+                style={{ flex: 1 }}
+              >
+                Clear all
+              </CleanButton>
+            )}
+            <CleanButton
+              variant="primary"
+              size="sm"
+              onClick={() => setFilterModalOpen(false)}
+              style={{ flex: 1 }}
+            >
+              Apply
+            </CleanButton>
+          </div>
+        }
+      >
+        <FilterContent {...filterProps} />
+      </CleanModal>
+
+      {/* ── Table ────────────────────────────────────────────────────────── */}
       <div style={{ flex: 1, minHeight: 0 }}>
         <CustomDatagrid<Project>
           rows={data}
           columns={COLUMNS}
-          getRowId={(row) => row._id}
+          getRowId={row => row._id}
           isLoading={loading}
           totalItems={total}
           onScrollPagination

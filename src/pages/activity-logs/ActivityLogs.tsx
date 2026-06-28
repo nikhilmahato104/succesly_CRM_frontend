@@ -335,7 +335,7 @@ const ActivityLogs: React.FC = () => {
   const handleView     = useCallback((row: ActivityLogItem) => setDetailLog(row), []);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden", background: "var(--dt-bg)" }}>
+    <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, overflow: "hidden", background: "var(--dt-bg)" }}>
 
       {/* ── Toolbar ────────────────────────────────────────────────────────────── */}
       <div style={{

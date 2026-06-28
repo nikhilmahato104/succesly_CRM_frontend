@@ -305,7 +305,7 @@ const ProjectForm: React.FC = () => {
 
   return (
     // ── Full-screen flex column — scrollable body | fixed footer ──────────
-    <div style={{ height: "100%", display: "flex", flexDirection: "column", overflow: "hidden", background: "var(--sc-card)" }}>
+    <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden", background: "var(--sc-card)" }}>
 
       {/* ── Scrollable content ───────────────────────────────────────────── */}
       <div style={{ flex: 1, overflowY: "auto", padding: "12px 16px" }} className="sc-scrollbar">

@@ -360,7 +360,7 @@ export const TopBar: React.FC = () => {
             display:        "inline-flex",
             alignItems:     "center",
             gap:            7,
-            height:         28,
+            height:         "var(--btn-h-sm)",
             padding:        "0 10px",
             width:          "min(340px, 100%)",
             background:     "var(--sc-surface)",
@@ -370,12 +370,12 @@ export const TopBar: React.FC = () => {
             transition:     "border-color 140ms ease, box-shadow 140ms ease",
           }}
           onMouseEnter={e => {
-            (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--fi-border-focus)";
-            (e.currentTarget as HTMLButtonElement).style.boxShadow = "var(--fi-shadow-focus)";
+            (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--sb-border)";
+            (e.currentTarget as HTMLButtonElement).style.boxShadow   = "none";
           }}
           onMouseLeave={e => {
             (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--sc-border)";
-            (e.currentTarget as HTMLButtonElement).style.boxShadow = "none";
+            (e.currentTarget as HTMLButtonElement).style.boxShadow   = "none";
           }}
         >
           <Search style={{ width: 12, height: 12, color: "var(--sb-text-dim)", flexShrink: 0 }} />

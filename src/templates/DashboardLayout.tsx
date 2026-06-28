@@ -182,7 +182,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
                 WebkitOverflowScrolling: "touch" as any,
               }}
             >
-              <div style={{ flex: 1, boxSizing: "border-box" }}>
+              <div style={{ flex: 1, boxSizing: "border-box", display: "flex", flexDirection: "column", minHeight: 0 }}>
                 {children}
               </div>
               {/* Spacer so last content clears the fixed bottom bar on mobile */}

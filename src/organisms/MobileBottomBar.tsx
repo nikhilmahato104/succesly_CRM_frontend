@@ -1,10 +1,17 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { LayoutDashboard, BookOpen, Plus, FolderKanban, Menu } from "lucide-react";
 
 interface Props {
   onMenuOpen: () => void;
 }
+
+// Custom events — each page listens for its own event to open the create modal
+export const OPEN_CREATE_BOOKING_EVENT  = "uttm-open-create-booking";
+export const OPEN_CREATE_USER_EVENT     = "uttm-open-create-user";
+export const OPEN_CREATE_ROLE_EVENT     = "uttm-open-create-role";
+export const OPEN_CREATE_APIKEY_EVENT   = "uttm-open-create-api-key";
+export const OPEN_CREATE_MODULE_EVENT   = "uttm-open-create-module";
 
 const NAV = [
   { icon: LayoutDashboard, label: "Dashboard",  href: "/" },
@@ -15,11 +22,58 @@ const NAV = [
 ] as const;
 
 const MobileBottomBar: React.FC<Props> = ({ onMenuOpen }) => {
-  const navigate  = useNavigate();
+  const navigate     = useNavigate();
   const { pathname } = useLocation();
 
   const isActive = (href: string | null) =>
     href ? (href === "/" ? pathname === "/" : pathname.startsWith(href)) : false;
+
+  // Route-aware FAB — null means hidden (no FAB rendered for that route)
+  const fab = useMemo<{ label: string; action: () => void } | null>(() => {
+    if (pathname === "/booking-management") {
+      return {
+        label:  "New Booking",
+        action: () => window.dispatchEvent(new CustomEvent(OPEN_CREATE_BOOKING_EVENT)),
+      };
+    }
+    if (pathname.startsWith("/projects")) {
+      return {
+        label:  "New Project",
+        action: () => navigate("/projects/new"),
+      };
+    }
+    if (pathname === "/setting-config/user-management") {
+      return {
+        label:  "New User",
+        action: () => window.dispatchEvent(new CustomEvent(OPEN_CREATE_USER_EVENT)),
+      };
+    }
+    if (pathname === "/setting-config/role-management") {
+      return {
+        label:  "New Role",
+        action: () => window.dispatchEvent(new CustomEvent(OPEN_CREATE_ROLE_EVENT)),
+      };
+    }
+    if (pathname === "/setting-config/api-key-management") {
+      return {
+        label:  "New API Key",
+        action: () => window.dispatchEvent(new CustomEvent(OPEN_CREATE_APIKEY_EVENT)),
+      };
+    }
+    if (pathname === "/setting-config/module-management") {
+      return {
+        label:  "New Module",
+        action: () => window.dispatchEvent(new CustomEvent(OPEN_CREATE_MODULE_EVENT)),
+      };
+    }
+    // Other setting-config sub-pages — no relevant create action
+    if (pathname.startsWith("/setting-config")) return null;
+    // Default: show FAB that creates a project
+    return {
+      label:  "New Project",
+      action: () => navigate("/projects/new"),
+    };
+  }, [pathname, navigate]);
 
   return (
     <>
@@ -33,7 +87,7 @@ const MobileBottomBar: React.FC<Props> = ({ onMenuOpen }) => {
           bottom:          0,
           left:            0,
           right:           0,
-          zIndex:          300,
+          zIndex:          700,
           background:      "var(--bottom-bar-bg)",
           backdropFilter:  "blur(20px) saturate(180%)",
           WebkitBackdropFilter: "blur(20px) saturate(180%)",
@@ -60,31 +114,32 @@ const MobileBottomBar: React.FC<Props> = ({ onMenuOpen }) => {
                   paddingBottom:  6,
                 }}
               >
-                <button
-                  onClick={() => navigate("/projects/new")}
-                  aria-label="New Project"
-                  style={{
-                    width:           52,
-                    height:          52,
-                    borderRadius:    "50%",
-                    background:      "var(--primary)",
-                    border:          "none",
-                    cursor:          "pointer",
-                    display:         "flex",
-                    alignItems:      "center",
-                    justifyContent:  "center",
-                    boxShadow:       "0 4px 16px rgba(124,58,237,0.45)",
-                    transform:       "translateY(-10px)",
-                    /* touch feedback */
-                    WebkitTapHighlightColor: "transparent",
-                    transition:      "transform 120ms ease, box-shadow 120ms ease",
-                    flexShrink:      0,
-                  }}
-                  onTouchStart={e => { (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-8px) scale(0.93)"; }}
-                  onTouchEnd={e => { (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-10px) scale(1)"; }}
-                >
-                  <Plus style={{ width: 24, height: 24, color: "#ffffff" }} />
-                </button>
+                {fab && (
+                  <button
+                    onClick={fab.action}
+                    aria-label={fab.label}
+                    style={{
+                      width:           52,
+                      height:          52,
+                      borderRadius:    "50%",
+                      background:      "var(--primary)",
+                      border:          "none",
+                      cursor:          "pointer",
+                      display:         "flex",
+                      alignItems:      "center",
+                      justifyContent:  "center",
+                      boxShadow:       "0 4px 16px rgba(124,58,237,0.45)",
+                      transform:       "translateY(-10px)",
+                      WebkitTapHighlightColor: "transparent",
+                      transition:      "transform 120ms ease, box-shadow 120ms ease",
+                      flexShrink:      0,
+                    }}
+                    onTouchStart={e => { (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-8px) scale(0.93)"; }}
+                    onTouchEnd={e => { (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-10px) scale(1)"; }}
+                  >
+                    <Plus style={{ width: 24, height: 24, color: "#ffffff" }} />
+                  </button>
+                )}
               </div>
             );
           }

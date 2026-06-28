@@ -1,14 +1,7 @@
 import React, { useCallback, useRef, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { selectAccessToken } from "../../store/slices/authSlice";
-import {
-  CalendarRange,
-  ListFilter,
-  Upload,
-  Plus,
-  X,
-  ChevronDown,
-} from "lucide-react";
+import { SlidersHorizontal, Plus } from "lucide-react";
 import { CustomDatagrid, type GridColumn } from "../../atoms/CustomDatagrid";
 import { showToastnew } from "../../services/toastifynewService/toastifynewService";
 import { getData, deleteData } from "../../services/crmServices";
@@ -17,12 +10,13 @@ import { selectApiKey, openApiKeyModal } from "../../store/slices/apiKeySlice";
 import { selectAccessData } from "../../store/slices/accessSlice";
 import type { RootState } from "../../store";
 import CreateBookingModal, { type InitialBookingData } from "./CreateBookingModal";
+import { OPEN_CREATE_BOOKING_EVENT } from "../../organisms/MobileBottomBar";
 import {
   CleanButton,
   CleanSearchBar,
-  CleanInput,
-  CleanSelect,
-  type SelectOption,
+  CleanModal,
+  CleanDropdown,
+  CleanDateRangePicker,
 } from "../../atoms/my_clean_code_atoms";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -62,25 +56,25 @@ interface BookingsApiResponse {
 // ── Static maps ────────────────────────────────────────────────────────────────
 
 const STATUS_STYLE: Record<BookingStatus, React.CSSProperties> = {
-  ongoing:              { background: "var(--badge-amber-bg)",  color: "var(--badge-amber-text)" },
-  completed:            { background: "var(--badge-green-bg)",  color: "var(--badge-green-text)" },
-  cancelled_via_user:   { background: "var(--badge-red-bg)",    color: "var(--badge-red-text)"   },
-  cancelled_by_admin_crm: { background: "var(--badge-red-bg)", color: "var(--badge-red-text)"   },
+  ongoing:               { background: "var(--badge-amber-bg)",  color: "var(--badge-amber-text)"  },
+  completed:             { background: "var(--badge-green-bg)",  color: "var(--badge-green-text)"  },
+  cancelled_via_user:    { background: "var(--badge-red-bg)",    color: "var(--badge-red-text)"    },
+  cancelled_by_admin_crm:{ background: "var(--badge-red-bg)",    color: "var(--badge-red-text)"    },
 };
 
 const STATUS_LABEL: Record<BookingStatus, string> = {
-  ongoing:              "Ongoing",
-  completed:            "Completed",
-  cancelled_via_user:   "Cancelled (User)",
-  cancelled_by_admin_crm: "Cancelled (Admin)",
+  ongoing:               "Ongoing",
+  completed:             "Completed",
+  cancelled_via_user:    "Cancelled (User)",
+  cancelled_by_admin_crm:"Cancelled (Admin)",
 };
 
 const VIA_STYLE: Record<BookingVia, React.CSSProperties> = {
-  app:            { background: "var(--badge-purple-bg)", color: "var(--badge-purple-text)" },
-  website:        { background: "var(--badge-blue-bg)",   color: "var(--badge-blue-text)"   },
-  laptop:         { background: "var(--badge-gray-bg)",   color: "var(--badge-gray-text)"   },
-  whatsapp_to_crm:{ background: "var(--badge-green-bg)",  color: "var(--badge-green-text)"  },
-  call:           { background: "var(--badge-orange-bg)", color: "var(--badge-orange-text)" },
+  app:             { background: "var(--badge-purple-bg)", color: "var(--badge-purple-text)" },
+  website:         { background: "var(--badge-blue-bg)",   color: "var(--badge-blue-text)"   },
+  laptop:          { background: "var(--badge-gray-bg)",   color: "var(--badge-gray-text)"   },
+  whatsapp_to_crm: { background: "var(--badge-green-bg)",  color: "var(--badge-green-text)"  },
+  call:            { background: "var(--badge-orange-bg)", color: "var(--badge-orange-text)" },
 };
 
 const VIA_LABEL: Record<BookingVia, string> = {
@@ -88,18 +82,18 @@ const VIA_LABEL: Record<BookingVia, string> = {
   whatsapp_to_crm: "WhatsApp", call: "Call",
 };
 
-const STATUS_OPTIONS: SelectOption[] = [
-  { value: "ongoing",              label: "Ongoing" },
-  { value: "completed",            label: "Completed" },
-  { value: "cancelled_via_user",   label: "Cancelled (User)" },
-  { value: "cancelled_by_admin_crm", label: "Cancelled (Admin)" },
+const STATUS_OPTIONS = [
+  { value: "ongoing",               label: "Ongoing"           },
+  { value: "completed",             label: "Completed"         },
+  { value: "cancelled_via_user",    label: "Cancelled (User)"  },
+  { value: "cancelled_by_admin_crm",label: "Cancelled (Admin)" },
 ];
-const VIA_OPTIONS: SelectOption[] = [
-  { value: "app",             label: "App" },
-  { value: "website",         label: "Website" },
-  { value: "laptop",          label: "Laptop" },
-  { value: "whatsapp_to_crm", label: "WhatsApp" },
-  { value: "call",            label: "Call" },
+const VIA_OPTIONS = [
+  { value: "app",             label: "App"       },
+  { value: "website",         label: "Website"   },
+  { value: "laptop",          label: "Laptop"    },
+  { value: "whatsapp_to_crm", label: "WhatsApp"  },
+  { value: "call",            label: "Call"      },
 ];
 
 function formatShortDate(iso: string): string {
@@ -108,7 +102,7 @@ function formatShortDate(iso: string): string {
   });
 }
 
-// ── Inline badge helpers ───────────────────────────────────────────────────────
+// ── Badge helpers ──────────────────────────────────────────────────────────────
 
 const pillStyle: React.CSSProperties = {
   display: "inline-flex", alignItems: "center",
@@ -123,7 +117,7 @@ const ViaBadge: React.FC<{ via: BookingVia }> = ({ via }) => (
   <span style={{ ...pillStyle, ...VIA_STYLE[via] }}>{VIA_LABEL[via] ?? via}</span>
 );
 
-// ── Columns ───────────────────────────────────────────────────────────────────
+// ── Columns ────────────────────────────────────────────────────────────────────
 
 const COLUMNS: GridColumn<BookingApiItem>[] = [
   {
@@ -195,15 +189,15 @@ const COLUMNS: GridColumn<BookingApiItem>[] = [
   },
 ];
 
-// ── Types ──────────────────────────────────────────────────────────────────────
+// ── Filter types ───────────────────────────────────────────────────────────────
 
 interface Filters {
-  search: string;
+  search:         string;
   booking_status: string;
-  booking_via: string;
-  branch: string;
-  date_from: string;
-  date_to: string;
+  booking_via:    string;
+  branch:         string;
+  date_from:      string;
+  date_to:        string;
 }
 
 const EMPTY: Filters = {
@@ -211,91 +205,153 @@ const EMPTY: Filters = {
   branch: "", date_from: "", date_to: "",
 };
 
-// ── Panel overlay style (shared) ───────────────────────────────────────────────
+// ── FilterContent — shared between desktop dropdown & mobile modal ─────────────
 
-const panelStyle: React.CSSProperties = {
+interface FilterContentProps {
+  filters:          Filters;
+  setFilter:        <K extends keyof Filters>(key: K, val: string) => void;
+  clearAllFilters:  () => void;
+  activeFilterCount: number;
+}
+
+const FilterContent: React.FC<FilterContentProps> = ({
+  filters, setFilter, clearAllFilters, activeFilterCount,
+}) => (
+  <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+    <CleanDateRangePicker
+      label="Date Range"
+      fromValue={filters.date_from}
+      toValue={filters.date_to}
+      onFromChange={v => setFilter("date_from", v)}
+      onToChange={v => setFilter("date_to", v)}
+      clearable
+      onClear={() => { setFilter("date_from", ""); setFilter("date_to", ""); }}
+      stacked
+    />
+
+    <div style={{ height: 1, background: "var(--fi-border)", margin: "0 -2px" }} />
+
+    <CleanDropdown
+      label="Status"
+      value={filters.booking_status}
+      options={STATUS_OPTIONS}
+      onChange={v => setFilter("booking_status", v)}
+      placeholder="All statuses"
+      clearable
+    />
+    <CleanDropdown
+      label="Source"
+      value={filters.booking_via}
+      options={VIA_OPTIONS}
+      onChange={v => setFilter("booking_via", v)}
+      placeholder="All sources"
+      clearable
+    />
+
+    {activeFilterCount > 0 && (
+      <CleanButton variant="danger" size="xs" onClick={clearAllFilters} style={{ width: "100%" }}>
+        Clear all filters
+      </CleanButton>
+    )}
+  </div>
+);
+
+// ── Desktop dropdown panel style ───────────────────────────────────────────────
+
+const dropdownPanelStyle: React.CSSProperties = {
   position:     "absolute",
   top:          "calc(100% + 4px)",
-  left:         0,
+  right:        0,
   zIndex:       50,
   background:   "var(--fi-bg-panel)",
   border:       "1px solid var(--fi-border)",
   borderRadius: "var(--fi-radius)",
   boxShadow:    "0 4px 20px rgba(0,0,0,0.10)",
-  padding:      12,
+  padding:      14,
+  minWidth:     260,
+};
+
+// ── useIsMobile ────────────────────────────────────────────────────────────────
+
+const useIsMobile = () => {
+  const [v, setV] = React.useState(() => window.innerWidth < 1024);
+  useEffect(() => {
+    const h = () => setV(window.innerWidth < 1024);
+    window.addEventListener("resize", h);
+    return () => window.removeEventListener("resize", h);
+  }, []);
+  return v;
 };
 
 // ── Component ──────────────────────────────────────────────────────────────────
 
 const BookingManagement: React.FC = () => {
-  const token = useSelector(selectAccessToken);
+  const token    = useSelector(selectAccessToken);
   const dispatch = useDispatch();
-  const apiKey = useSelector((s: RootState) => selectApiKey(s));
-  const access = useSelector((s: RootState) => selectAccessData(s));
-  const perms = (access?.["booking_management"] ?? {}) as Record<string, boolean>;
+  const apiKey   = useSelector((s: RootState) => selectApiKey(s));
+  const access   = useSelector((s: RootState) => selectAccessData(s));
+  const perms    = (access?.["booking_management"] ?? {}) as Record<string, boolean>;
+  const isMobile = useIsMobile();
 
-  const [data, setData] = React.useState<BookingApiItem[]>([]);
-  const [filters, setFilters] = React.useState<Filters>(EMPTY);
-  const [debouncedSearch, setDebouncedSearch] = React.useState("");
-  const [total, setTotal] = React.useState(0);
-  const [loading, setLoading] = React.useState(false);
-  const [loadingMore, setLoadingMore] = React.useState(false);
-  const [hasMore, setHasMore] = React.useState(false);
-  const [showModal,      setShowModal]      = React.useState(false);
-  const [modalMode,      setModalMode]      = React.useState<"create" | "view" | "edit">("create");
-  const [selectedBooking,setSelectedBooking]= React.useState<InitialBookingData | null>(null);
+  const [data,           setData]          = React.useState<BookingApiItem[]>([]);
+  const [filters,        setFilters]       = React.useState<Filters>(EMPTY);
+  const [debouncedSearch,setDebouncedSearch] = React.useState("");
+  const [total,          setTotal]         = React.useState(0);
+  const [loading,        setLoading]       = React.useState(false);
+  const [loadingMore,    setLoadingMore]   = React.useState(false);
+  const [hasMore,        setHasMore]       = React.useState(false);
 
-  const [showDatePanel, setShowDatePanel] = React.useState(false);
+  // Modal state (create / view / edit)
+  const [showModal,       setShowModal]       = React.useState(false);
+  const [modalMode,       setModalMode]       = React.useState<"create" | "view" | "edit">("create");
+  const [selectedBooking, setSelectedBooking] = React.useState<InitialBookingData | null>(null);
+
+  // Filter panel state
   const [showFilterPanel, setShowFilterPanel] = React.useState(false);
-  const datePanelRef = useRef<HTMLDivElement>(null);
+  const [filterModalOpen, setFilterModalOpen] = React.useState(false);
   const filterPanelRef = useRef<HTMLDivElement>(null);
 
-  const pageRef      = useRef(1);
+  const pageRef       = useRef(1);
   const fetchAbortRef = useRef<AbortController | null>(null);
-  const PER_PAGE = 25;
+  const PER_PAGE      = 25;
 
+  // Close desktop panel on outside click (ignore portal popups)
   useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (datePanelRef.current && !datePanelRef.current.contains(e.target as Node))
-        setShowDatePanel(false);
-      if (filterPanelRef.current && !filterPanelRef.current.contains(e.target as Node))
-        setShowFilterPanel(false);
+    const h = (e: MouseEvent) => {
+      const target       = e.target as Element;
+      const insidePanel  = filterPanelRef.current?.contains(target);
+      const insidePortal = !!target?.closest?.("[data-portal-popup]");
+      if (!insidePanel && !insidePortal) setShowFilterPanel(false);
     };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
   }, []);
 
   useEffect(() => {
-    // 500ms — fires only after the user pauses, not on each keystroke
     const id = setTimeout(() => setDebouncedSearch(filters.search.trim()), 500);
     return () => clearTimeout(id);
   }, [filters.search]);
 
   const setFilter = <K extends keyof Filters>(key: K, val: string) =>
-    setFilters((f) => ({ ...f, [key]: val }));
+    setFilters(f => ({ ...f, [key]: val }));
 
   const clearAllFilters = () => setFilters(EMPTY);
 
   const activeFilterCount = [
     filters.booking_status, filters.booking_via,
-    filters.branch, filters.date_from, filters.date_to,
+    filters.date_from, filters.date_to,
   ].filter(Boolean).length;
-
-  const hasDates = !!(filters.date_from || filters.date_to);
-  const dateLabel = hasDates
-    ? `${filters.date_from || "…"} – ${filters.date_to || "…"}`
-    : "Date range";
 
   const buildParams = useCallback(
     (page: number) => ({
       page,
-      limit: PER_PAGE,
+      limit:          PER_PAGE,
       search:         debouncedSearch || undefined,
       booking_status: filters.booking_status || undefined,
-      booking_via:    filters.booking_via || undefined,
-      branch:         filters.branch || undefined,
-      date_from:      filters.date_from || undefined,
-      date_to:        filters.date_to || undefined,
+      booking_via:    filters.booking_via    || undefined,
+      branch:         filters.branch         || undefined,
+      date_from:      filters.date_from      || undefined,
+      date_to:        filters.date_to        || undefined,
     }),
     [debouncedSearch, filters],
   );
@@ -304,8 +360,6 @@ const BookingManagement: React.FC = () => {
     async (page: number, append: boolean) => {
       if (!apiKey) { dispatch(openApiKeyModal(false)); return; }
 
-      // Abort the previous non-append fetch so stale responses never overwrite
-      // newer results (rapid typing / rapid F5 race condition).
       let signal: AbortSignal | undefined;
       if (!append) {
         fetchAbortRef.current?.abort();
@@ -315,26 +369,23 @@ const BookingManagement: React.FC = () => {
 
       append ? setLoadingMore(true) : setLoading(true);
       try {
-        const res = await getData<BookingsApiResponse>({
+        const res   = await getData<BookingsApiResponse>({
           endpoint: "bookings",
-          token: token,
+          token,
           instance: "identity",
-          params: buildParams(page),
+          params:   buildParams(page),
           signal,
         });
         const items = res.data.data;
-        setData((prev) => (append ? [...prev, ...items] : items));
+        setData(prev => append ? [...prev, ...items] : items);
         setTotal(res.data.total);
         setHasMore(page < res.data.totalPages);
         pageRef.current = page;
       } catch (err: unknown) {
-        // A newer request aborted this one — silently ignore, don't show error
         const name = (err as any)?.name ?? (err as any)?.code;
         if (name === "AbortError" || name === "CanceledError" || (err as any)?.message === "canceled") return;
         showToastnew.error("Failed to fetch bookings");
       } finally {
-        // Skip clearing loading state for aborted requests — the newer request
-        // is still in-flight and owns the loading state.
         if (!signal?.aborted) {
           append ? setLoadingMore(false) : setLoading(false);
           if (!append) requestAnimationFrame(() => requestAnimationFrame(() => emitNavDone()));
@@ -353,7 +404,6 @@ const BookingManagement: React.FC = () => {
   const handleLoadMore = useCallback(() => fetchPage(pageRef.current + 1, true), [fetchPage]);
   const handleRefresh  = useCallback(() => { pageRef.current = 1; setData([]); fetchPage(1, false); }, [fetchPage]);
 
-  // ── Modal open helpers ────────────────────────────────────────────────────
   const openModal = useCallback((mode: "create" | "view" | "edit", row?: BookingApiItem) => {
     setSelectedBooking(row ?? null);
     setModalMode(mode);
@@ -366,26 +416,36 @@ const BookingManagement: React.FC = () => {
     setModalMode("create");
   }, []);
 
-  // ── Row action handlers ───────────────────────────────────────────────────
   const handleView = useCallback((row: BookingApiItem) => openModal("view", row), [openModal]);
   const handleEdit = useCallback((row: BookingApiItem) => openModal("edit", row), [openModal]);
 
+  // Mobile FAB on /booking-management dispatches this event → open create modal
+  useEffect(() => {
+    const handler = () => openModal("create");
+    window.addEventListener(OPEN_CREATE_BOOKING_EVENT, handler);
+    return () => window.removeEventListener(OPEN_CREATE_BOOKING_EVENT, handler);
+  }, [openModal]);
+
   const handleDelete = useCallback(async (row: BookingApiItem) => {
-    await deleteData({ endpoint: `bookings/${row._id}`, token: token, instance: "identity" });
+    await deleteData({ endpoint: `bookings/${row._id}`, token, instance: "identity" });
     showToastnew.success("Booking deleted");
     handleRefresh();
   }, [token, handleRefresh]);
 
   const handleBulkDelete = useCallback(async (ids: (string | number)[]) => {
     await Promise.all(
-      ids.map((id) => deleteData({ endpoint: `bookings/${id}`, token: token, instance: "identity" }))
+      ids.map(id => deleteData({ endpoint: `bookings/${id}`, token, instance: "identity" }))
     );
     showToastnew.success(`${ids.length} booking${ids.length > 1 ? "s" : ""} deleted`);
     handleRefresh();
   }, [token, handleRefresh]);
 
+  const filterProps: FilterContentProps = {
+    filters, setFilter, clearAllFilters, activeFilterCount,
+  };
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden", background: "var(--dt-bg)" }}>
+    <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, overflow: "hidden", background: "var(--dt-bg)" }}>
 
       {/* ── Toolbar ──────────────────────────────────────────────────────────── */}
       <div style={{
@@ -395,115 +455,40 @@ const BookingManagement: React.FC = () => {
         padding:      "7px 12px",
         borderBottom: "1px solid var(--dt-border)",
         flexShrink:   0,
-        flexWrap:     "wrap",
         background:   "var(--dt-header)",
       }}>
 
         {/* Search */}
         <CleanSearchBar
           value={filters.search}
-          onChange={(v) => setFilter("search", v)}
+          onChange={v => setFilter("search", v)}
           placeholder="Search reference, name, phone…"
-          width={230}
+          width={isMobile ? undefined : 230}
+          style={isMobile ? { flex: 1 } : undefined}
         />
 
-        {/* Date range */}
-        <div style={{ position: "relative" }} ref={datePanelRef}>
+        {/* Combined filter button */}
+        <div style={{ position: "relative", flexShrink: 0 }} ref={filterPanelRef}>
           <CleanButton
             variant="outline"
             size="sm"
-            iconLeft={<CalendarRange style={{ width: 13, height: 13 }} />}
-            iconRight={hasDates
-              ? undefined
-              : <ChevronDown style={{ width: 11, height: 11 }} />}
-            onClick={() => setShowDatePanel((v) => !v)}
-            style={hasDates ? { borderColor: "var(--fi-border-focus)" } : undefined}
-          >
-            {hasDates ? (
-              <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                {dateLabel}
-                <span
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setFilter("date_from", "");
-                    setFilter("date_to", "");
-                  }}
-                  style={{ display: "flex", cursor: "pointer", color: "var(--fi-muted)" }}
-                >
-                  <X style={{ width: 11, height: 11 }} />
-                </span>
-              </span>
-            ) : dateLabel}
-          </CleanButton>
-
-          {showDatePanel && (
-            <div style={{ ...panelStyle, display: "flex", alignItems: "center", gap: 8, whiteSpace: "nowrap" }}>
-              <CleanInput
-                type="date"
-                value={filters.date_from}
-                onChange={(e) => setFilter("date_from", e.target.value)}
-                style={{ width: 148 }}
-              />
-              <span style={{ fontSize: 12, color: "var(--fi-muted)" }}>–</span>
-              <CleanInput
-                type="date"
-                value={filters.date_to}
-                onChange={(e) => setFilter("date_to", e.target.value)}
-                style={{ width: 148 }}
-              />
-              <CleanButton variant="primary" size="sm" onClick={() => setShowDatePanel(false)}>Done</CleanButton>
-            </div>
-          )}
-        </div>
-
-        {/* Filter */}
-        <div style={{ position: "relative" }} ref={filterPanelRef}>
-          <CleanButton
-            variant="outline"
-            size="sm"
-            iconLeft={<ListFilter style={{ width: 13, height: 13 }} />}
+            active={showFilterPanel}
+            icon={isMobile ? <SlidersHorizontal style={{ width: 15, height: 15 }} /> : undefined}
+            iconLeft={!isMobile ? <SlidersHorizontal style={{ width: 13, height: 13 }} /> : undefined}
             badge={activeFilterCount > 0 ? activeFilterCount : undefined}
-            onClick={() => setShowFilterPanel((v) => !v)}
-            style={activeFilterCount > 0 ? { borderColor: "var(--fi-border-focus)" } : undefined}
+            onClick={() => {
+              if (isMobile) setFilterModalOpen(true);
+              else setShowFilterPanel(v => !v);
+            }}
+            style={{ height: "var(--fi-height)" }}
           >
-            Filter
+            {isMobile ? undefined : "Filter"}
           </CleanButton>
 
-          {showFilterPanel && (
-            <div style={{ ...panelStyle, minWidth: 240, display: "flex", flexDirection: "column", gap: 10 }}>
-              <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--fi-muted)" }}>
-                Filters
-              </span>
-
-              <CleanSelect
-                label="Status"
-                value={filters.booking_status}
-                onChange={(e) => setFilter("booking_status", e.target.value)}
-                options={STATUS_OPTIONS}
-                placeholder="All statuses"
-              />
-
-              <CleanSelect
-                label="Source"
-                value={filters.booking_via}
-                onChange={(e) => setFilter("booking_via", e.target.value)}
-                options={VIA_OPTIONS}
-                placeholder="All sources"
-              />
-
-              <CleanInput
-                label="Branch"
-                type="text"
-                value={filters.branch}
-                onChange={(e) => setFilter("branch", e.target.value)}
-                placeholder="Branch name…"
-              />
-
-              {activeFilterCount > 0 && (
-                <CleanButton variant="danger" size="xs" onClick={clearAllFilters} style={{ width: "100%" }}>
-                  Clear all filters
-                </CleanButton>
-              )}
+          {/* Desktop dropdown panel */}
+          {!isMobile && showFilterPanel && (
+            <div style={dropdownPanelStyle}>
+              <FilterContent {...filterProps} />
             </div>
           )}
         </div>
@@ -512,33 +497,71 @@ const BookingManagement: React.FC = () => {
         <CleanButton
           variant="outline"
           size="sm"
-          iconLeft={<Upload style={{ width: 13, height: 13 }} />}
+          iconLeft={
+            <svg style={{ width: 13, height: 13 }} viewBox="0 0 13 13" fill="none">
+              <path d="M6.5 1v7M3.5 5l3 3 3-3M1.5 10h10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          }
           title="Export bookings"
         >
-          Export
+          {isMobile ? undefined : "Export"}
         </CleanButton>
 
         <div style={{ flex: 1 }} />
 
-        {/* Create */}
-        {perms.create !== false && (
+        {/* Create Booking — hidden on mobile; FAB handles it */}
+        {!isMobile && perms.create !== false && (
           <CleanButton
             variant="primary"
             size="sm"
             iconLeft={<Plus style={{ width: 13, height: 13 }} />}
             onClick={() => openModal("create")}
+            style={{ height: "var(--fi-height)", flexShrink: 0 }}
           >
             Create Booking
           </CleanButton>
         )}
       </div>
 
+      {/* ── Mobile filter modal (bottom sheet) ───────────────────────────── */}
+      <CleanModal
+        isOpen={filterModalOpen}
+        onClose={() => setFilterModalOpen(false)}
+        title="Filters"
+        subtitle={activeFilterCount > 0 ? `${activeFilterCount} active filter${activeFilterCount > 1 ? "s" : ""}` : undefined}
+        mode="sheet"
+        footer={
+          <div style={{ display: "flex", gap: 8, width: "100%" }}>
+            {activeFilterCount > 0 && (
+              <CleanButton
+                variant="danger"
+                size="sm"
+                onClick={() => { clearAllFilters(); setFilterModalOpen(false); }}
+                style={{ flex: 1 }}
+              >
+                Clear all
+              </CleanButton>
+            )}
+            <CleanButton
+              variant="primary"
+              size="sm"
+              onClick={() => setFilterModalOpen(false)}
+              style={{ flex: 1 }}
+            >
+              Apply
+            </CleanButton>
+          </div>
+        }
+      >
+        <FilterContent {...filterProps} />
+      </CleanModal>
+
       {/* ── Table ─────────────────────────────────────────────────────────────── */}
       <div style={{ flex: 1, minHeight: 0 }}>
         <CustomDatagrid<BookingApiItem>
           rows={data}
           columns={COLUMNS}
-          getRowId={(row) => row._id}
+          getRowId={row => row._id}
           isLoading={loading}
           totalItems={total}
           onScrollPagination
@@ -549,11 +572,9 @@ const BookingManagement: React.FC = () => {
           emptyStateImage="/icons/no-booking-found.png"
           emptyStateTitle="No bookings found"
           emptyStateSubtitle="Try adjusting your search or filters"
-          // ── Selection + bulk delete ──────────────────────────────────────
           selectable={perms.delete !== false}
           onBulkDelete={perms.delete !== false ? handleBulkDelete : undefined}
           bulkDeleteLabel="Delete selected bookings — this cannot be undone"
-          // ── Row actions ──────────────────────────────────────────────────
           onView={handleView}
           onEdit={perms.update !== false ? handleEdit : undefined}
           onDelete={perms.delete !== false ? handleDelete : undefined}

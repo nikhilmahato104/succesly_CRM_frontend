@@ -11,6 +11,7 @@ import { selectAccessData } from "../../store/slices/accessSlice";
 import type { RootState } from "../../store";
 import ModuleForm from "./ModuleForm";
 import { CleanButton, CleanSearchBar, CleanModal } from "../../atoms/my_clean_code_atoms";
+import { OPEN_CREATE_MODULE_EVENT } from "../../organisms/MobileBottomBar";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -77,10 +78,23 @@ const ModuleManagement: React.FC = () => {
   const [statusModal,     setStatusModal]     = React.useState<StatusState>(CLOSE_STATUS);
   const [statusLoading,   setStatusLoading]   = React.useState(false);
   const [formSubmitting,  setFormSubmitting]  = React.useState(false);
+  const [isMobile,        setIsMobile]        = React.useState(() => window.innerWidth < 1024);
 
   const pageRef          = useRef(1);
   const formResetRef     = useRef<(() => void) | null>(null);
   const MODULE_FORM_ID   = "module-mgmt-form";
+
+  React.useEffect(() => {
+    const h = () => setIsMobile(window.innerWidth < 1024);
+    window.addEventListener("resize", h);
+    return () => window.removeEventListener("resize", h);
+  }, []);
+
+  React.useEffect(() => {
+    const handler = () => { setEditItem(null); setShowModal(true); };
+    window.addEventListener(OPEN_CREATE_MODULE_EVENT, handler);
+    return () => window.removeEventListener(OPEN_CREATE_MODULE_EVENT, handler);
+  }, []);
 
   React.useEffect(() => {
     const id = setTimeout(() => setDebouncedSearch(search.trim()), 350);
@@ -200,7 +214,7 @@ const ModuleManagement: React.FC = () => {
 
         <div style={{ flex: 1 }} />
 
-        {perms.create && (
+        {!isMobile && perms.create && (
           <CleanButton
             variant="primary" size="sm"
             iconLeft={<Plus style={{ width: 13, height: 13 }} />}

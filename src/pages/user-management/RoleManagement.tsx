@@ -12,6 +12,7 @@ import type { RootState } from "../../store";
 import RoleForm from "./RoleForm";
 import { ActionSetBadge } from "./Permissionsbottomsheet";
 import { CleanButton, CleanSearchBar, CleanModal } from "../../atoms/my_clean_code_atoms";
+import { OPEN_CREATE_ROLE_EVENT } from "../../organisms/MobileBottomBar";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -58,10 +59,17 @@ const RoleManagement: React.FC = () => {
   const [showModal,       setShowModal]       = React.useState(false);
   const [editItem,        setEditItem]        = React.useState<RoleItem | null>(null);
   const [formSubmitting,  setFormSubmitting]  = React.useState(false);
+  const [isMobile,        setIsMobile]        = React.useState(() => window.innerWidth < 1024);
 
   const pageRef       = useRef(1);
   const formResetRef  = useRef<(() => void) | null>(null);
   const ROLE_FORM_ID  = "role-mgmt-form";
+
+  React.useEffect(() => {
+    const h = () => setIsMobile(window.innerWidth < 1024);
+    window.addEventListener("resize", h);
+    return () => window.removeEventListener("resize", h);
+  }, []);
 
   React.useEffect(() => {
     const id = setTimeout(() => setDebouncedSearch(search.trim()), 350);
@@ -110,6 +118,14 @@ const RoleManagement: React.FC = () => {
   const handleRefresh  = useCallback(() => { invalidatePrefix("roles"); pageRef.current = 1; setData([]); fetchPage(1, false); }, [fetchPage]);
 
   const handleEdit   = useCallback((row: RoleItem) => { setEditItem(row); setShowModal(true); }, []);
+
+  // Mobile FAB on /setting-config/role-management dispatches this event
+  React.useEffect(() => {
+    const handler = () => { setEditItem(null); setShowModal(true); };
+    window.addEventListener(OPEN_CREATE_ROLE_EVENT, handler);
+    return () => window.removeEventListener(OPEN_CREATE_ROLE_EVENT, handler);
+  }, []);
+
   const handleDelete = useCallback(async (row: RoleItem) => {
     await deleteData({ endpoint: `roles/${row._id}`, token: token, instance: "identity" });
     showToastnew.success("Role deleted successfully");
@@ -153,7 +169,7 @@ const RoleManagement: React.FC = () => {
 
         <div style={{ flex: 1 }} />
 
-        {perms.create && (
+        {!isMobile && perms.create && (
           <CleanButton
             variant="primary" size="sm"
             iconLeft={<Plus style={{ width: 13, height: 13 }} />}

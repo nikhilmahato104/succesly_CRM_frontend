@@ -110,6 +110,13 @@ button, nav, header, aside, label, [role="button"], [role="tab"] {
   --sb-text-active: #000000;
   --sb-border:      #b8b8b8;
 
+  /* ── Button height scale — single source of truth ───────────────────── */
+  /* Change here → all buttons + all form fields update everywhere         */
+  --btn-h-xs: 22px;
+  --btn-h-sm: 28px;
+  --btn-h-md: 32px;
+  --btn-h-lg: 36px;
+
   /* ── Form / Input atoms ─────────────────────────────────────────────── */
   --fi-bg:           #ffffff;
   --fi-bg-panel:     #ffffff;
@@ -119,8 +126,8 @@ button, nav, header, aside, label, [role="button"], [role="tab"] {
   --fi-text:         #0d0d0d;
   --fi-muted:        #9e9e9e;
   --fi-label:        #4b4b4b;
-  --fi-height:       32px;
-  --fi-radius:       7px;
+  --fi-height:       var(--btn-h-sm);   /* inputs match sm button height   */
+  --fi-radius:       6px;
   --fi-font-size:    13px;
   --fi-shadow-focus: 0 0 0 3px var(--primary-ring);
 
@@ -194,9 +201,8 @@ button, nav, header, aside, label, [role="button"], [role="tab"] {
   --fi-text:         #d4d4d4;
   --fi-muted:        #9d9d9d;
   --fi-label:        #cccccc;
-  --fi-height:       36px;
-  --fi-radius:       10px;
-  --fi-font-size:    14px;
+  --fi-radius:       8px;
+  --fi-font-size:    13px;
   --fi-shadow-focus: 0 0 0 3px var(--primary-ring);
 
   /* ── Button primary token ────────────────────────────────────────────── */

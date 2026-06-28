@@ -13,6 +13,7 @@ import ApiKeyForm, { KeyRevealBanner } from "./ApiKeyForm";
 import {
   CleanButton, CleanSearchBar, CleanSelect, CleanModal, type SelectOption,
 } from "../../atoms/my_clean_code_atoms";
+import { OPEN_CREATE_APIKEY_EVENT } from "../../organisms/MobileBottomBar";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -129,11 +130,18 @@ const ApiKeyManagement: React.FC = () => {
   const [showFilterPanel, setShowFilterPanel] = React.useState(false);
   const [formSubmitting,  setFormSubmitting]  = React.useState(false);
   const [revealedKey,     setRevealedKey]     = React.useState<string | null>(null);
+  const [isMobile,        setIsMobile]        = React.useState(() => window.innerWidth < 1024);
 
   const pageRef        = useRef(1);
   const filterPanelRef = useRef<HTMLDivElement>(null);
   const formResetRef   = useRef<(() => void) | null>(null);
   const APIKEY_FORM_ID = "apikey-mgmt-form";
+
+  React.useEffect(() => {
+    const h = () => setIsMobile(window.innerWidth < 1024);
+    window.addEventListener("resize", h);
+    return () => window.removeEventListener("resize", h);
+  }, []);
 
   React.useEffect(() => {
     const id = setTimeout(() => setDebouncedSearch(search.trim()), 350);
@@ -189,6 +197,14 @@ const ApiKeyManagement: React.FC = () => {
   const handleRefresh  = useCallback(() => { pageRef.current = 1; setData([]); fetchPage(1, false); }, [fetchPage]);
 
   const handleEdit   = useCallback((row: ApiKeyItem) => { scrollToTop(); setEditItem(row); setShowModal(true); }, []);
+
+  // Mobile FAB on /setting-config/api-key-management dispatches this event
+  React.useEffect(() => {
+    const handler = () => { setEditItem(null); setShowModal(true); };
+    window.addEventListener(OPEN_CREATE_APIKEY_EVENT, handler);
+    return () => window.removeEventListener(OPEN_CREATE_APIKEY_EVENT, handler);
+  }, []);
+
   const handleDelete = useCallback((row: ApiKeyItem) => {
     setDeleteModal({ isOpen: true, id: row._id, name: row.name });
   }, []);
@@ -296,7 +312,7 @@ const ApiKeyManagement: React.FC = () => {
 
         <div style={{ flex: 1 }} />
 
-        {perms.create && (
+        {!isMobile && perms.create && (
           <CleanButton
             variant="primary" size="sm"
             iconLeft={<Plus style={{ width: 13, height: 13 }} />}
