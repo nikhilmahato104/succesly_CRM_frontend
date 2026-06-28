@@ -84,6 +84,18 @@ export interface PaymentTerm {
   note?:         string | null;
 }
 
+export interface MaintenanceTerm {
+  term_number:   number;
+  amount:        number;
+  start_date?:   string | null;
+  end_date?:     string | null;
+  due_date?:     string | null;
+  paid_date?:    string | null;
+  payment_mode?: PaymentMode | null;
+  status:        PaymentTermStatus;
+  note?:         string | null;
+}
+
 export interface Project {
   _id:                         string;
   reference_id:                string;
@@ -110,6 +122,11 @@ export interface Project {
   payment_paid_amount:         number;
   payment_due_amount:          number;
   payment_terms:               PaymentTerm[];
+  maintenance_total_amount?:   number | null;
+  maintenance_paid_amount?:    number | null;
+  maintenance_due_amount?:     number | null;
+  maintenance_payment_status?: PaymentStatus | null;
+  maintenance_terms?:          MaintenanceTerm[];
   created_by:                  string;
   is_active:                   boolean;
   createdAt:                   string;
@@ -157,8 +174,10 @@ export interface CreateProjectPayload {
   is_maintenance_mode?:       boolean;
   maintenance_start_date?:    string | null;
   maintenance_end_date?:      string | null;
-  payment_total_amount:       number;
-  payment_terms?:             PaymentTermInput[];
+  payment_total_amount:        number;
+  payment_terms?:              PaymentTermInput[];
+  maintenance_total_amount?:   number;
+  maintenance_terms?:          MaintenanceTermInput[];
 }
 
 export interface PaymentTermInput {
@@ -166,6 +185,18 @@ export interface PaymentTermInput {
   amount:      number;
   due_date?:   string;
   note?:       string;
+}
+
+export interface MaintenanceTermInput {
+  term_number:   number;
+  amount:        number;
+  start_date?:   string;
+  end_date?:     string;
+  due_date?:     string;
+  paid_date?:    string;
+  payment_mode?: PaymentMode;
+  status?:       PaymentTermStatus;
+  note?:         string;
 }
 
 export interface AddTermPayload {

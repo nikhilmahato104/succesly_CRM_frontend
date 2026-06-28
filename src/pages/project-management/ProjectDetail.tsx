@@ -2,17 +2,18 @@ import React, { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { ArrowLeft, Pencil, Plus, ExternalLink, Github, Wrench } from "lucide-react";
-import { CleanButton } from "../../atoms/my_clean_code_atoms";
+import { CleanButton, CleanInput } from "../../atoms/my_clean_code_atoms";
 import { showToastnew } from "../../services/toastifynewService/toastifynewService";
 import { emitNavDone } from "../../atoms/NavigationProgress";
 import { selectAccessData } from "../../store/slices/accessSlice";
 import type { RootState } from "../../store";
-import { fetchProject, markTermPaid, addPaymentTerm } from "../../services/projectApi";
+import { fetchProject, markTermPaid, addPaymentTerm, updateProject } from "../../services/projectApi";
 import MarkPaidModal from "./MarkPaidModal";
 import AddTermModal from "./AddTermModal";
 import {
   type Project,
   type PaymentTerm,
+  type MaintenanceTerm,
   type PaymentMode,
   type AddTermPayload,
   PROJECT_STATUS_STYLE,
@@ -24,6 +25,7 @@ import {
   formatCurrency,
   labelFor,
   toISO,
+  fromISO,
   PROJECT_TYPE_OPTIONS,
   DEPLOYMENT_PLATFORM_OPTIONS,
 } from "./types";
@@ -81,7 +83,7 @@ const Grid: React.FC<{ cols?: number; children: React.ReactNode }> = ({ cols = 2
 
 // ── Payment progress bar ───────────────────────────────────────────────────────
 
-const PaymentProgressBar: React.FC<{ paid: number; total: number }> = ({ paid, total }) => {
+const PaymentProgressBar: React.FC<{ paid: number; total: number; color?: string }> = ({ paid, total, color }) => {
   const pct = total > 0 ? Math.min(100, Math.round((paid / total) * 100)) : 0;
   return (
     <div style={{ marginTop: 12 }}>
@@ -90,7 +92,7 @@ const PaymentProgressBar: React.FC<{ paid: number; total: number }> = ({ paid, t
         <span>Due: {100 - pct}%</span>
       </div>
       <div style={{ height: 8, borderRadius: 4, background: "var(--fi-border)", overflow: "hidden" }}>
-        <div style={{ height: "100%", width: `${pct}%`, background: "var(--badge-green-text)", borderRadius: 4, transition: "width 0.4s ease" }} />
+        <div style={{ height: "100%", width: `${pct}%`, background: color || "var(--badge-green-text)", borderRadius: 4, transition: "width 0.4s ease" }} />
       </div>
     </div>
   );
@@ -118,6 +120,14 @@ const ProjectDetail: React.FC = () => {
   const [addTerm,   setAddTerm]   = useState(false);
   const [saving,    setSaving]    = useState(false);
 
+  // ── Maintenance inline edit state ──────────────────────────────────────────
+  const [maintEditMode, setMaintEditMode] = useState(false);
+  const [maintDraft,    setMaintDraft]    = useState({ mode: false, start: "", end: "" });
+  const [maintSaving,   setMaintSaving]   = useState(false);
+
+  // ── Maintenance term mark-paid state ──────────────────────────────────────
+  const [markMaintPaid, setMarkMaintPaid] = useState<{ open: boolean; term: MaintenanceTerm | null }>({ open: false, term: null });
+
   const load = useCallback(async () => {
     if (!id) return;
     setLoading(true);
@@ -133,6 +143,16 @@ const ProjectDetail: React.FC = () => {
   }, [id]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Sync maintenance draft when project loads
+  useEffect(() => {
+    if (!project) return;
+    setMaintDraft({
+      mode:  project.is_maintenance_mode,
+      start: fromISO(project.maintenance_start_date),
+      end:   fromISO(project.maintenance_end_date),
+    });
+  }, [project]);
 
   const handleMarkPaid = useCallback(async (paidDate: string, paymentMode: PaymentMode | "") => {
     if (!id || !markPaid.term) return;
@@ -167,6 +187,53 @@ const ProjectDetail: React.FC = () => {
     }
   }, [id]);
 
+  // ── Save maintenance mode / dates ──────────────────────────────────────────
+  const handleMaintSave = useCallback(async () => {
+    if (!id || !project) return;
+    setMaintSaving(true);
+    try {
+      const res = await updateProject(id, {
+        is_maintenance_mode:   maintDraft.mode,
+        maintenance_start_date: maintDraft.start ? toISO(maintDraft.start) : null,
+        maintenance_end_date:   maintDraft.end   ? toISO(maintDraft.end)   : null,
+      } as any);
+      setProject(res.data);
+      setMaintEditMode(false);
+      showToastnew.success("Maintenance updated");
+    } catch {
+      showToastnew.error("Failed to update maintenance");
+    } finally {
+      setMaintSaving(false);
+    }
+  }, [id, project, maintDraft]);
+
+  // ── Mark maintenance term paid ─────────────────────────────────────────────
+  const handleMaintTermMarkPaid = useCallback(async (paidDate: string, paymentMode: PaymentMode | "") => {
+    if (!id || !project || !markMaintPaid.term) return;
+    setSaving(true);
+    try {
+      const term = markMaintPaid.term;
+      const updatedTerms = (project.maintenance_terms ?? []).map((t) =>
+        t.term_number === term.term_number
+          ? {
+              ...t,
+              status:       "paid" as const,
+              paid_date:    paidDate ? toISO(paidDate) ?? undefined : undefined,
+              payment_mode: (paymentMode || undefined) as PaymentMode | undefined,
+            }
+          : t,
+      );
+      const res = await updateProject(id, { maintenance_terms: updatedTerms } as any);
+      setProject(res.data);
+      setMarkMaintPaid({ open: false, term: null });
+      showToastnew.success("Maintenance term marked as paid");
+    } catch {
+      showToastnew.error("Failed to update maintenance term");
+    } finally {
+      setSaving(false);
+    }
+  }, [id, project, markMaintPaid.term]);
+
   if (loading) {
     return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "var(--fi-muted)", fontSize: 14 }}>
@@ -187,6 +254,8 @@ const ProjectDetail: React.FC = () => {
   const nextTermNumber = project.payment_terms.length > 0
     ? Math.max(...project.payment_terms.map((t) => t.term_number)) + 1
     : 1;
+
+  const hasMaintData = (project.maintenance_total_amount ?? 0) > 0 || (project.maintenance_terms?.length ?? 0) > 0;
 
   return (
     <div style={{ height: "100%", overflowY: "auto", background: "var(--sc-card)" }} className="sc-scrollbar">
@@ -312,26 +381,194 @@ const ProjectDetail: React.FC = () => {
 
         {/* ── Card 3: Maintenance ────────────────────────────────────────────── */}
         <div style={{ ...cardStyle, marginBottom: 16 }}>
-          <p style={cardTitleStyle}>Maintenance</p>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            {project.is_maintenance_mode
-              ? <span style={{ ...pillStyle, background: "var(--badge-amber-bg)", color: "var(--badge-amber-text)", gap: 5 }}>
-                  <Wrench style={{ width: 11, height: 11 }} /> Maintenance Active
-                </span>
-              : <span style={{ ...pillStyle, background: "var(--badge-gray-bg)", color: "var(--badge-gray-text)" }}>Inactive</span>
-            }
+          {/* Header row */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+            <p style={{ ...cardTitleStyle, marginBottom: 0 }}>Maintenance</p>
+            {perms.update !== false && !maintEditMode && (
+              <CleanButton
+                variant="outline"
+                size="xs"
+                iconLeft={<Pencil style={{ width: 11, height: 11 }} />}
+                onClick={() => {
+                  setMaintDraft({
+                    mode:  project.is_maintenance_mode,
+                    start: fromISO(project.maintenance_start_date),
+                    end:   fromISO(project.maintenance_end_date),
+                  });
+                  setMaintEditMode(true);
+                }}
+              >
+                Edit
+              </CleanButton>
+            )}
           </div>
-          {project.is_maintenance_mode && (project.maintenance_start_date || project.maintenance_end_date) && (
-            <Grid cols={2} >
-              <div style={{ marginTop: 12 }}>
-                <Field label="Start Date" value={formatDate(project.maintenance_start_date)} />
+
+          {/* View mode */}
+          {!maintEditMode ? (
+            <>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                {project.is_maintenance_mode
+                  ? <span style={{ ...pillStyle, background: "var(--badge-amber-bg)", color: "var(--badge-amber-text)", gap: 5 }}>
+                      <Wrench style={{ width: 11, height: 11 }} /> Active
+                    </span>
+                  : <span style={{ ...pillStyle, background: "var(--badge-gray-bg)", color: "var(--badge-gray-text)" }}>Inactive</span>
+                }
+                {(project.maintenance_start_date || project.maintenance_end_date) && (
+                  <span style={{ fontSize: 12, color: "var(--fi-muted)" }}>
+                    {formatDate(project.maintenance_start_date)} → {formatDate(project.maintenance_end_date)}
+                  </span>
+                )}
               </div>
-              <div style={{ marginTop: 12 }}>
-                <Field label="End Date" value={formatDate(project.maintenance_end_date)} />
+
+              {/* Maintenance payment summary */}
+              {hasMaintData && (
+                <>
+                  <div style={{ borderTop: "1px solid var(--fi-border)", margin: "14px 0 12px" }} />
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 8 }}>
+                    {[
+                      { label: "Total",  value: formatCurrency(project.maintenance_total_amount ?? 0) },
+                      { label: "Paid",   value: formatCurrency(project.maintenance_paid_amount  ?? 0), color: "var(--badge-green-text)" },
+                      { label: "Due",    value: formatCurrency(project.maintenance_due_amount   ?? 0), color: (project.maintenance_due_amount ?? 0) > 0 ? "#ef4444" : undefined },
+                      { label: "Status", value: project.maintenance_payment_status
+                          ? <span style={{ ...pillStyle, ...PAYMENT_STATUS_STYLE[project.maintenance_payment_status], fontSize: 11 }}>
+                              {PAYMENT_STATUS_LABEL[project.maintenance_payment_status]}
+                            </span>
+                          : "—"
+                      },
+                    ].map((s) => (
+                      <div key={s.label} style={{ background: "var(--dt-bg)", border: "1px solid var(--fi-border)", borderRadius: 8, padding: "8px 12px" }}>
+                        <p style={{ margin: 0, fontSize: 10, color: "var(--fi-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>{s.label}</p>
+                        <p style={{ margin: "3px 0 0", fontSize: 13, fontWeight: 700, color: (s.color as string) || "var(--fi-text)" }}>{s.value}</p>
+                      </div>
+                    ))}
+                  </div>
+                  {(project.maintenance_total_amount ?? 0) > 0 && (
+                    <PaymentProgressBar
+                      paid={project.maintenance_paid_amount ?? 0}
+                      total={project.maintenance_total_amount ?? 0}
+                      color="var(--badge-amber-text)"
+                    />
+                  )}
+                </>
+              )}
+            </>
+          ) : (
+            /* Edit mode */
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {/* Active / Inactive toggle */}
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 12, color: "var(--fi-label)", fontWeight: 500, minWidth: 60 }}>Status</span>
+                <div style={{ display: "flex", gap: 6 }}>
+                  <CleanButton
+                    size="xs"
+                    variant={maintDraft.mode ? "primary" : "outline"}
+                    onClick={() => setMaintDraft((d) => ({ ...d, mode: true }))}
+                  >
+                    Active
+                  </CleanButton>
+                  <CleanButton
+                    size="xs"
+                    variant={!maintDraft.mode ? "primary" : "outline"}
+                    onClick={() => setMaintDraft((d) => ({ ...d, mode: false }))}
+                  >
+                    Inactive
+                  </CleanButton>
+                </div>
               </div>
-            </Grid>
+
+              <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                <div style={{ flex: "1 1 160px" }}>
+                  <CleanInput
+                    type="date"
+                    label="Start Date"
+                    value={maintDraft.start}
+                    onChange={(e) => setMaintDraft((d) => ({ ...d, start: e.target.value }))}
+                  />
+                </div>
+                <div style={{ flex: "1 1 160px" }}>
+                  <CleanInput
+                    type="date"
+                    label="End Date"
+                    value={maintDraft.end}
+                    onChange={(e) => setMaintDraft((d) => ({ ...d, end: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: 8 }}>
+                <CleanButton variant="primary" size="sm" onClick={handleMaintSave} loading={maintSaving}>
+                  Save
+                </CleanButton>
+                <CleanButton variant="outline" size="sm" disabled={maintSaving}
+                  onClick={() => { setMaintEditMode(false); }}>
+                  Cancel
+                </CleanButton>
+              </div>
+            </div>
           )}
         </div>
+
+        {/* ── Card 3b: Maintenance Terms ─────────────────────────────────────── */}
+        {hasMaintData && (
+          <div style={{ ...cardStyle, marginBottom: 16 }}>
+            <p style={cardTitleStyle}>Maintenance Terms ({(project.maintenance_terms ?? []).length})</p>
+
+            {(project.maintenance_terms ?? []).length === 0 ? (
+              <p style={{ color: "var(--fi-muted)", fontSize: 13 }}>No maintenance terms defined. Add them via Edit Project.</p>
+            ) : (
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                  <thead>
+                    <tr style={{ borderBottom: "1px solid var(--fi-border)" }}>
+                      {["#", "Amount", "Period", "Due Date", "Paid Date", "Mode", "Note", "Status", "Action"].map((h) => (
+                        <th key={h} style={{ textAlign: "left", padding: "6px 10px", fontSize: 11, fontWeight: 600, color: "var(--fi-muted)", textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(project.maintenance_terms ?? []).map((term) => (
+                      <tr key={term.term_number} style={{ borderBottom: "1px solid var(--fi-border)" }}>
+                        <td style={{ padding: "8px 10px", color: "var(--dt-muted)", fontWeight: 600 }}>{term.term_number}</td>
+                        <td style={{ padding: "8px 10px", fontWeight: 600, color: "var(--fi-text)" }}>{formatCurrency(term.amount)}</td>
+                        <td style={{ padding: "8px 10px", color: "var(--dt-muted)", whiteSpace: "nowrap", fontSize: 11 }}>
+                          {term.start_date || term.end_date
+                            ? <>{formatDate(term.start_date)} → {formatDate(term.end_date)}</>
+                            : "—"}
+                        </td>
+                        <td style={{ padding: "8px 10px", color: "var(--dt-muted)" }}>{formatDate(term.due_date)}</td>
+                        <td style={{ padding: "8px 10px", color: "var(--dt-muted)" }}>{formatDate(term.paid_date)}</td>
+                        <td style={{ padding: "8px 10px", color: "var(--dt-muted)", textTransform: "capitalize" }}>
+                          {term.payment_mode?.replace("_", " ") || "—"}
+                        </td>
+                        <td style={{ padding: "8px 10px", color: "var(--dt-muted)", maxWidth: 130, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {term.note || "—"}
+                        </td>
+                        <td style={{ padding: "8px 10px" }}>
+                          <TermBadge status={term.status} />
+                        </td>
+                        <td style={{ padding: "8px 10px" }}>
+                          {term.status !== "paid" && perms.update !== false ? (
+                            <CleanButton
+                              variant="primary"
+                              size="xs"
+                              onClick={() => setMarkMaintPaid({ open: true, term })}
+                            >
+                              Mark Paid
+                            </CleanButton>
+                          ) : (
+                            <span style={{ color: "var(--dt-muted)", fontSize: 11 }}>—</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* ── Card 4: Payment Summary ────────────────────────────────────────── */}
         <div style={{ ...cardStyle, marginBottom: 16 }}>
@@ -433,6 +670,17 @@ const ProjectDetail: React.FC = () => {
           onConfirm={handleMarkPaid}
           termNumber={markPaid.term.term_number}
           amount={markPaid.term.amount}
+          loading={saving}
+        />
+      )}
+
+      {markMaintPaid.open && markMaintPaid.term && (
+        <MarkPaidModal
+          isOpen={markMaintPaid.open}
+          onClose={() => setMarkMaintPaid({ open: false, term: null })}
+          onConfirm={handleMaintTermMarkPaid}
+          termNumber={markMaintPaid.term.term_number}
+          amount={markMaintPaid.term.amount}
           loading={saving}
         />
       )}

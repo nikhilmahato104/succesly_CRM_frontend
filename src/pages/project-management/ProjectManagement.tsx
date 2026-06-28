@@ -150,6 +150,36 @@ const COLUMNS: GridColumn<Project>[] = [
         <span style={{ fontSize: 12, color: "var(--dt-muted)" }}>—</span>
       ),
   },
+  {
+    field: "maintenance_total_amount",
+    headerName: "Maint. Total",
+    minWidth: 110,
+    renderCell: ({ row }) => (row.maintenance_total_amount ?? 0) > 0 ? (
+      <span style={{ fontSize: 12, color: "var(--dt-text)", fontWeight: 500 }}>
+        {formatCurrency(row.maintenance_total_amount)}
+      </span>
+    ) : <span style={{ fontSize: 12, color: "var(--dt-muted)" }}>—</span>,
+  },
+  {
+    field: "maintenance_due_amount",
+    headerName: "Maint. Due",
+    minWidth: 110,
+    renderCell: ({ row }) => (row.maintenance_total_amount ?? 0) > 0 ? (
+      <span style={{ fontSize: 12, color: (row.maintenance_due_amount ?? 0) > 0 ? "#ef4444" : "var(--dt-muted)", fontWeight: (row.maintenance_due_amount ?? 0) > 0 ? 500 : 400 }}>
+        {formatCurrency(row.maintenance_due_amount ?? 0)}
+      </span>
+    ) : <span style={{ fontSize: 12, color: "var(--dt-muted)" }}>—</span>,
+  },
+  {
+    field: "maintenance_payment_status",
+    headerName: "Maint. Pay",
+    minWidth: 110,
+    renderCell: ({ row }) => row.maintenance_payment_status ? (
+      <span style={{ ...pillStyle, ...PAYMENT_STATUS_STYLE[row.maintenance_payment_status] }}>
+        {PAYMENT_STATUS_LABEL[row.maintenance_payment_status]}
+      </span>
+    ) : <span style={{ fontSize: 12, color: "var(--dt-muted)" }}>—</span>,
+  },
 ];
 
 // ── Filter content — shared between desktop dropdown & mobile modal ────────────

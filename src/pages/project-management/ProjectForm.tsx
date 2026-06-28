@@ -16,9 +16,13 @@ import {
   PROJECT_TYPE_OPTIONS,
   PROJECT_STATUS_OPTIONS,
   DEPLOYMENT_PLATFORM_OPTIONS,
+  PAYMENT_MODE_OPTIONS,
+  PAYMENT_TERM_STATUS_OPTIONS,
   type ProjectType,
   type ProjectStatus,
   type DeploymentPlatform,
+  type PaymentMode,
+  type PaymentTermStatus,
   type CreateProjectPayload,
   fromISO,
   toISO,
@@ -31,6 +35,19 @@ interface TermRow {
   term_number:  number;
   amount:       string;
   due_date:     string;
+  note:         string;
+}
+
+interface MaintTermRow {
+  id:           number;
+  term_number:  number;
+  amount:       string;
+  start_date:   string;
+  end_date:     string;
+  due_date:     string;
+  paid_date:    string;
+  payment_mode: PaymentMode | "";
+  status:       PaymentTermStatus | "";
   note:         string;
 }
 
@@ -55,6 +72,8 @@ interface FormState {
   maintenance_end_date:       string;
   payment_total_amount:       string;
   terms:                      TermRow[];
+  maintenance_total_amount:   string;
+  maint_terms:                MaintTermRow[];
 }
 
 type Errors = Partial<Record<string, string>>;
@@ -80,6 +99,8 @@ const EMPTY_FORM: FormState = {
   maintenance_end_date:      "",
   payment_total_amount:      "",
   terms:                     [],
+  maintenance_total_amount:  "",
+  maint_terms:               [],
 };
 
 // ── Shared styling ─────────────────────────────────────────────────────────────
@@ -149,6 +170,22 @@ function buildPayload(form: FormState): CreateProjectPayload {
       note:        t.note.trim() || undefined,
     }));
   }
+  if (form.maintenance_total_amount) {
+    payload.maintenance_total_amount = Number(form.maintenance_total_amount);
+  }
+  if (form.maint_terms.length > 0) {
+    payload.maintenance_terms = form.maint_terms.map((t) => ({
+      term_number:  t.term_number,
+      amount:       Number(t.amount),
+      start_date:   toISO(t.start_date)   ?? undefined,
+      end_date:     toISO(t.end_date)     ?? undefined,
+      due_date:     toISO(t.due_date)     ?? undefined,
+      paid_date:    toISO(t.paid_date)    ?? undefined,
+      payment_mode: (t.payment_mode || undefined) as PaymentMode | undefined,
+      status:       (t.status       || undefined) as PaymentTermStatus | undefined,
+      note:         t.note.trim()   || undefined,
+    }));
+  }
   return payload;
 }
 
@@ -165,6 +202,12 @@ function validate(form: FormState): Errors {
   form.terms.forEach((t, i) => {
     if (!t.amount || isNaN(Number(t.amount)) || Number(t.amount) <= 0)
       errs[`term_amount_${i}`] = "Required";
+  });
+  if (form.maintenance_total_amount && (isNaN(Number(form.maintenance_total_amount)) || Number(form.maintenance_total_amount) < 0))
+    errs.maintenance_total_amount = "Invalid amount";
+  form.maint_terms.forEach((t, i) => {
+    if (!t.amount || isNaN(Number(t.amount)) || Number(t.amount) <= 0)
+      errs[`maint_amount_${i}`] = "Required";
   });
   return errs;
 }
@@ -229,6 +272,19 @@ const ProjectForm: React.FC = () => {
             due_date:    fromISO(t.due_date),
             note:        t.note ?? "",
           })),
+          maintenance_total_amount: p.maintenance_total_amount ? String(p.maintenance_total_amount) : "",
+          maint_terms: (p.maintenance_terms ?? []).map((t, i) => ({
+            id:           i,
+            term_number:  t.term_number,
+            amount:       String(t.amount),
+            start_date:   fromISO(t.start_date),
+            end_date:     fromISO(t.end_date),
+            due_date:     fromISO(t.due_date),
+            paid_date:    fromISO(t.paid_date),
+            payment_mode: (t.payment_mode ?? "") as PaymentMode | "",
+            status:       (t.status ?? "")       as PaymentTermStatus | "",
+            note:         t.note ?? "",
+          })),
         });
         requestAnimationFrame(() => requestAnimationFrame(() => emitNavDone()));
       } catch {
@@ -261,6 +317,28 @@ const ProjectForm: React.FC = () => {
   const setTerm = (tid: number, field: keyof Omit<TermRow, "id" | "term_number">, val: string) =>
     setForm((f) => ({ ...f, terms: f.terms.map((t) => t.id === tid ? { ...t, [field]: val } : t) }));
 
+  const addMaintTerm = () => {
+    const nextNum = form.maint_terms.length > 0
+      ? Math.max(...form.maint_terms.map((t) => t.term_number)) + 1 : 1;
+    setForm((f) => ({
+      ...f,
+      maint_terms: [...f.maint_terms, {
+        id: Date.now(), term_number: nextNum,
+        amount: "", start_date: "", end_date: "", due_date: "",
+        paid_date: "", payment_mode: "", status: "", note: "",
+      }],
+    }));
+  };
+
+  const removeMaintTerm = (tid: number) =>
+    setForm((f) => ({
+      ...f,
+      maint_terms: f.maint_terms.filter((t) => t.id !== tid).map((t, i) => ({ ...t, term_number: i + 1 })),
+    }));
+
+  const setMaintTerm = (tid: number, field: keyof Omit<MaintTermRow, "id" | "term_number">, val: string) =>
+    setForm((f) => ({ ...f, maint_terms: f.maint_terms.map((t) => t.id === tid ? { ...t, [field]: val } : t) }));
+
   const handleSubmit = async () => {
     const errs = validate(form);
     setErrors(errs);
@@ -289,9 +367,13 @@ const ProjectForm: React.FC = () => {
     }
   };
 
-  const termsTotal    = form.terms.reduce((s, t) => s + (Number(t.amount) || 0), 0);
-  const projectTotal  = Number(form.payment_total_amount) || 0;
-  const totalMismatch = form.terms.length > 0 && termsTotal !== projectTotal;
+  const termsTotal       = form.terms.reduce((s, t) => s + (Number(t.amount) || 0), 0);
+  const projectTotal     = Number(form.payment_total_amount) || 0;
+  const totalMismatch    = form.terms.length > 0 && termsTotal !== projectTotal;
+
+  const maintTermsTotal  = form.maint_terms.reduce((s, t) => s + (Number(t.amount) || 0), 0);
+  const maintTotal       = Number(form.maintenance_total_amount) || 0;
+  const maintMismatch    = form.maint_terms.length > 0 && maintTotal > 0 && maintTermsTotal !== maintTotal;
 
   const goBack = () => navigate(isEdit && id ? `/projects/${id}` : "/projects");
 
@@ -498,6 +580,127 @@ const ProjectForm: React.FC = () => {
               </>
             )}
             </>}
+          </div>
+
+          {/* Section 5 — Maintenance Billing */}
+          <div style={sectionStyle}>
+            <button type="button" style={sectionHeaderStyle} onClick={() => toggleSection(5)}>
+              <span style={sectionTitleStyle}>5 — Maintenance Billing</span>
+              <ChevronDown style={{ width: 13, height: 13, color: "var(--fi-muted)", flexShrink: 0, transition: "transform 200ms", transform: collapsedSections.has(5) ? "rotate(-90deg)" : "rotate(0deg)" }} />
+            </button>
+            {!collapsedSections.has(5) && (
+              <>
+                <div className="pf-g4" style={{ marginBottom: 12 }}>
+                  <CleanInput
+                    label="Total Maintenance Amount (₹)"
+                    type="number"
+                    value={form.maintenance_total_amount}
+                    onChange={(e) => set("maintenance_total_amount", e.target.value)}
+                    placeholder="e.g. 10000"
+                    error={errors.maintenance_total_amount}
+                    min={0}
+                  />
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: "var(--fi-muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                    Maintenance Terms ({form.maint_terms.length})
+                  </span>
+                  <CleanButton variant="outline" size="xs" iconLeft={<Plus style={{ width: 11, height: 11 }} />} onClick={addMaintTerm}>
+                    Add Term
+                  </CleanButton>
+                </div>
+
+                {form.maint_terms.length === 0 ? (
+                  <p style={{ fontSize: 12, color: "var(--fi-muted)", margin: "4px 0 0" }}>
+                    No maintenance terms. Click "Add Term" to define installments.
+                  </p>
+                ) : (
+                  <>
+                    <div style={{ overflowX: "auto" }}>
+                      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                        <thead>
+                          <tr style={{ borderBottom: "1px solid var(--fi-border)" }}>
+                            {["#", "Amount (₹)", "Start", "End", "Due", "Paid Date", "Mode", "Status", "Note", ""].map((h) => (
+                              <th key={h} style={{ textAlign: "left", padding: "4px 6px", fontSize: 10, fontWeight: 600, color: "var(--fi-muted)", textTransform: "uppercase", whiteSpace: "nowrap" }}>
+                                {h}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {form.maint_terms.map((t, i) => (
+                            <tr key={t.id} style={{ borderBottom: "1px solid var(--fi-border)" }}>
+                              <td style={{ padding: "4px 6px", color: "var(--fi-muted)", fontWeight: 600, width: 28 }}>{t.term_number}</td>
+                              <td style={{ padding: "4px 6px", width: 120 }}>
+                                <CleanInput type="number" value={t.amount}
+                                  onChange={(e) => setMaintTerm(t.id, "amount", e.target.value)}
+                                  placeholder="2000" error={errors[`maint_amount_${i}`]} min={1} />
+                              </td>
+                              <td style={{ padding: "4px 6px", width: 140 }}>
+                                <CleanInput type="date" value={t.start_date}
+                                  onChange={(e) => setMaintTerm(t.id, "start_date", e.target.value)} />
+                              </td>
+                              <td style={{ padding: "4px 6px", width: 140 }}>
+                                <CleanInput type="date" value={t.end_date}
+                                  onChange={(e) => setMaintTerm(t.id, "end_date", e.target.value)} />
+                              </td>
+                              <td style={{ padding: "4px 6px", width: 140 }}>
+                                <CleanInput type="date" value={t.due_date}
+                                  onChange={(e) => setMaintTerm(t.id, "due_date", e.target.value)} />
+                              </td>
+                              <td style={{ padding: "4px 6px", width: 140 }}>
+                                <CleanInput type="date" value={t.paid_date}
+                                  onChange={(e) => setMaintTerm(t.id, "paid_date", e.target.value)} />
+                              </td>
+                              <td style={{ padding: "4px 6px", width: 130 }}>
+                                <CleanSelect
+                                  value={t.payment_mode}
+                                  onChange={(e) => setMaintTerm(t.id, "payment_mode", e.target.value)}
+                                  options={PAYMENT_MODE_OPTIONS as unknown as { value: string; label: string }[]}
+                                  placeholder="Mode" />
+                              </td>
+                              <td style={{ padding: "4px 6px", width: 120 }}>
+                                <CleanSelect
+                                  value={t.status}
+                                  onChange={(e) => setMaintTerm(t.id, "status", e.target.value)}
+                                  options={PAYMENT_TERM_STATUS_OPTIONS as unknown as { value: string; label: string }[]}
+                                  placeholder="Status" />
+                              </td>
+                              <td style={{ padding: "4px 6px" }}>
+                                <CleanInput type="text" value={t.note}
+                                  onChange={(e) => setMaintTerm(t.id, "note", e.target.value)}
+                                  placeholder="e.g. Q1 2026" />
+                              </td>
+                              <td style={{ padding: "4px 6px", width: 32 }}>
+                                <CleanButton variant="danger" size="xs"
+                                  icon={<Trash2 style={{ width: 15, height: 15 }} />}
+                                  onClick={() => removeMaintTerm(t.id)} title="Remove"
+                                  style={{ height: "var(--fi-height)", width: "var(--fi-height)" }} />
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {form.maint_terms.length > 0 && (
+                      <div style={{
+                        marginTop: 10, padding: "6px 10px", borderRadius: 6,
+                        background: maintMismatch ? "rgba(239,68,68,0.07)" : "var(--sc-surface)",
+                        border: `1px solid ${maintMismatch ? "rgba(239,68,68,0.3)" : "var(--fi-border)"}`,
+                      }}>
+                        <span style={{ fontSize: 12, color: maintMismatch ? "#ef4444" : "#ffffff" }}>
+                          Terms: <strong>₹{maintTermsTotal.toLocaleString("en-IN")}</strong>
+                          {maintTotal > 0 && <>{" / "}Total: <strong>₹{maintTotal.toLocaleString("en-IN")}</strong></>}
+                          {maintMismatch && "  ⚠ Totals don't match"}
+                        </span>
+                      </div>
+                    )}
+                  </>
+                )}
+              </>
+            )}
           </div>
 
         </div>
