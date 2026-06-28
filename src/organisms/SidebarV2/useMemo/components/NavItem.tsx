@@ -29,7 +29,7 @@ const itemStyle = (isActive: boolean, level: number): React.CSSProperties => ({
   gap: 8,
   borderRadius: 8,
   fontSize: 13,
-  fontWeight: isActive ? 500 : 400,
+  fontWeight: 400,
   cursor: "pointer",
   transition: "background 120ms ease, color 120ms ease",
   background: isActive ? "var(--sb-active)" : "transparent",

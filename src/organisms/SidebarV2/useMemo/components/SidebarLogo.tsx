@@ -1,5 +1,6 @@
 import React from "react";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import logoImg from "../../../../assets/images/logo.png";
 
 interface SidebarLogoProps {
   isCollapsed: boolean;
@@ -7,22 +8,6 @@ interface SidebarLogoProps {
   onCollapse: () => void;
   onExpand: () => void;
 }
-
-const logoBox: React.CSSProperties = {
-  width: 30,
-  height: 30,
-  borderRadius: 8,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  background: "var(--sb-text-active)",
-  color: "var(--sb-bg)",
-  fontWeight: 800,
-  fontSize: 15,
-  userSelect: "none",
-  flexShrink: 0,
-  letterSpacing: "-0.02em",
-};
 
 const collapseBtn: React.CSSProperties = {
   display: "flex",
@@ -42,7 +27,7 @@ const collapseBtn: React.CSSProperties = {
 const SidebarLogo: React.FC<SidebarLogoProps> = ({ isCollapsed, isHovered, onCollapse, onExpand }) => {
   if (isCollapsed) {
     return (
-      <div style={{ padding: "12px 0 10px", display: "flex", justifyContent: "center", borderBottom: "1px solid var(--sb-border)" }}>
+      <div style={{ height: 42, display: "flex", alignItems: "center", justifyContent: "center", borderBottom: "1px solid var(--sb-border)", boxSizing: "border-box", flexShrink: 0 }}>
         <button
           onClick={onExpand}
           aria-label="Expand sidebar"
@@ -52,7 +37,7 @@ const SidebarLogo: React.FC<SidebarLogoProps> = ({ isCollapsed, isHovered, onCol
         >
           {isHovered
             ? <PanelLeftOpen style={{ width: 17, height: 17 }} />
-            : <span style={logoBox}>N</span>
+            : <img src={logoImg} alt="logo" style={{ width: 26, height: 26, objectFit: "contain" }} />
           }
         </button>
       </div>
@@ -72,9 +57,9 @@ const SidebarLogo: React.FC<SidebarLogoProps> = ({ isCollapsed, isHovered, onCol
         flexShrink: 0,
       }}
     >
-      {/* Logo mark + brand name */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, overflow: "hidden", minWidth: 0 }}>
-        <span style={logoBox}>N</span>
+      {/* Logo + brand name */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, overflow: "hidden", minWidth: 0 }}>
+        <img src={logoImg} alt="logo" style={{ width: 28, height: 28, objectFit: "contain", flexShrink: 0 }} />
         <span
           style={{
             fontSize: 15,

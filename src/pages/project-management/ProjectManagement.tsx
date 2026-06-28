@@ -301,10 +301,10 @@ const ProjectManagement: React.FC = () => {
         alignItems:   "center",
         gap:          6,
         padding:      "7px 12px",
-        borderBottom: "1px solid var(--fi-border)",
+        borderBottom: "1px solid var(--dt-border)",
         flexShrink:   0,
         flexWrap:     "wrap",
-        background:   "var(--fi-bg)",
+        background:   "var(--dt-header)",
       }}>
 
         <CleanSearchBar

@@ -1,18 +1,15 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { useDispatch } from "react-redux";
-import { Navbar } from "../organisms/Navbar";
 import Sidebar from "@/organisms/SidebarV2";
 import { TopBar } from "../organisms/TopBar/TopBar";
+import MobileBottomBar from "../organisms/MobileBottomBar";
 import { useDarkMode } from "../hooks/useDarkMode";
 import { useIOSViewport } from "../hooks/useIOSViewport";
 import { useLayoutMode } from "../hooks/useLayoutMode";
 import { setPageTitle, clearPageTitle } from "../store/slices/pageTitleSlice";
 
 // ── Route → TopBar title map ──────────────────────────────────────────────────
-// Checked in order; first match wins. null title → clear (show brand logo).
-// ProjectForm pages are included here too — ProjectForm's own useEffect runs
-// after and overrides with its dynamic "Edit Project" / "New Project" titles.
 const ROUTE_MAP: Array<{ re: RegExp; title: string | null; back: ((m: RegExpMatchArray) => string) | string | null }> = [
   { re: /^\/projects\/([^/]+)\/edit$/,             title: "Edit Project",        back: (m) => `/projects/${m[1]}` },
   { re: /^\/projects\/new$/,                       title: "New Project",         back: "/projects" },
@@ -46,7 +43,7 @@ const RoutePageTitleSync: React.FC = () => {
         return;
       }
     }
-    dispatch(clearPageTitle()); // unknown route → show brand
+    dispatch(clearPageTitle());
   }, [pathname, dispatch]);
 
   return null;
@@ -75,140 +72,133 @@ interface DashboardLayoutProps {
 }
 
 export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
-  useDarkMode();      // applies/removes .dark on <html> — all var(--*) tokens flip automatically
-  useIOSViewport();   // sets --vh, handles keyboard resize on iOS
+  useDarkMode();
+  useIOSViewport();
   const isMobileOrTablet = useIsMobileOrTablet();
   const [layoutMode] = useLayoutMode();
   const isCompact = layoutMode === "compact";
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
-    try {
-      return localStorage.getItem(STORAGE_KEY) === "true";
-    } catch {
-      return false;
-    }
+    try { return localStorage.getItem(STORAGE_KEY) === "true"; } catch { return false; }
   });
 
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, String(sidebarCollapsed));
-    } catch { /* ignore */ }
+    try { localStorage.setItem(STORAGE_KEY, String(sidebarCollapsed)); } catch { /* ignore */ }
   }, [sidebarCollapsed]);
 
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
-      if (e.key === STORAGE_KEY && e.newValue !== null) {
+      if (e.key === STORAGE_KEY && e.newValue !== null)
         setSidebarCollapsed(e.newValue === "true");
-      }
     };
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
   }, []);
 
-  const spacerWidth = isMobileOrTablet
-    ? 0
-    : sidebarCollapsed
-    ? SIDEBAR_COLLAPSED_WIDTH
-    : SIDEBAR_WIDTH;
-
-  void spacerWidth; // used by layout calculation above, suppress unused warning
+  // Bottom bar "Menu" tap → open mobile sidebar drawer
+  const openMobileSidebar = useCallback(() => {
+    try {
+      window.dispatchEvent(new CustomEvent("uttm-toggle-sidebar", { detail: { ts: Date.now() } }));
+    } catch { /* ignore */ }
+  }, []);
 
   return (
     <>
-    <RoutePageTitleSync />
-    <div
-      className="dashboard-shell"
-      style={{
-        width:              "100%",
-        overflow:           "hidden",
-        overscrollBehavior: "none",
-        backgroundColor:    "var(--sc-shell)",
-        display:            "flex",
-        gap:                isMobileOrTablet || isCompact ? 0 : "6px",
-        boxSizing:          "border-box",
-        // compact overrides the CSS safe-area padding to 0
-        ...(isCompact && !isMobileOrTablet ? { padding: 0 } : {}),
-      }}
-    >
-      {/* ── Sidebar card ─────────────────────────────────────────────────── */}
-      {!isMobileOrTablet && (
-        <div
-          style={{
-            flexShrink:      0,
-            width:           sidebarCollapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH,
-            overflow:        "hidden",
-            borderRadius:    isCompact ? 0 : "8px",
-            borderTop:       isCompact ? "none" : "1px solid var(--sb-border)",
-            borderLeft:      isCompact ? "none" : "1px solid var(--sb-border)",
-            borderBottom:    isCompact ? "none" : "1px solid var(--sb-border)",
-            borderRight:     "1px solid var(--sb-border)",
-            backgroundColor: "var(--sb-bg)",
-            transition:      `width ${DURATION} ${EASE}`,
-            willChange:      "width",
-            transform:       "translateZ(0)",
-          }}
-        >
-          <Sidebar
-            collapsed={sidebarCollapsed}
-            onCollapsedChange={setSidebarCollapsed}
-          />
-        </div>
-      )}
-
-      {isMobileOrTablet && (
-        <Sidebar
-          collapsed={sidebarCollapsed}
-          onCollapsedChange={setSidebarCollapsed}
-        />
-      )}
-
-      {/* ── Right panel shell ────────────────────────────────────────────── */}
+      <RoutePageTitleSync />
       <div
+        className="dashboard-shell"
         style={{
-          flex:          1,
-          minWidth:      0,
-          display:       "flex",
-          flexDirection: "column",
-          height:        "100%",
-          overflow:      "auto",
+          width:              "100%",
+          overflow:           "hidden",
+          overscrollBehavior: "none",
+          backgroundColor:    "var(--sc-shell)",
+          display:            "flex",
+          gap:                isMobileOrTablet || isCompact ? 0 : "6px",
+          boxSizing:          "border-box",
+          ...(isCompact && !isMobileOrTablet ? { padding: 0 } : {}),
         }}
       >
-        {isMobileOrTablet && <Navbar />}
-
-        {/* ── Content card ─────────────────────────────────────────────── */}
-        <div
-          className="content-card"
-          style={{
-            flex:            1,
-            display:         "flex",
-            flexDirection:   "column",
-            overflow:        "hidden",
-            borderRadius:    isCompact ? 0 : "8px",
-            backgroundColor: "var(--sc-card)",
-            border:          isCompact ? "none" : "1px solid var(--sc-border)",
-          }}
-        >
-          {/* ── Top bar: workspace name | global search | profile ─────── */}
-          <TopBar />
-
-          {/* ── Scrollable content ───────────────────────────────────── */}
-          <main
-            className="sc-scrollbar"
+        {/* ── Desktop sidebar ────────────────────────────────────────────── */}
+        {!isMobileOrTablet && (
+          <div
             style={{
-              flex:          1,
-              overflowY:     "auto",
-              overflowX:     "hidden",
-              display:       "flex",
-              flexDirection: "column",
+              flexShrink:      0,
+              width:           sidebarCollapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH,
+              overflow:        "hidden",
+              borderRadius:    isCompact ? 0 : "8px",
+              borderTop:       isCompact ? "none" : "1px solid var(--sb-border)",
+              borderLeft:      isCompact ? "none" : "1px solid var(--sb-border)",
+              borderBottom:    isCompact ? "none" : "1px solid var(--sb-border)",
+              borderRight:     "1px solid var(--sb-border)",
+              backgroundColor: "var(--sb-bg)",
+              transition:      `width ${DURATION} ${EASE}`,
+              willChange:      "width",
+              transform:       "translateZ(0)",
             }}
           >
-            <div style={{ flex: 1, minHeight: "100%", boxSizing: "border-box" }}>
-              {children}
-            </div>
-          </main>
+            <Sidebar collapsed={sidebarCollapsed} onCollapsedChange={setSidebarCollapsed} />
+          </div>
+        )}
+
+        {/* ── Mobile sidebar drawer (overlay, no width reserved) ─────────── */}
+        {isMobileOrTablet && (
+          <Sidebar collapsed={sidebarCollapsed} onCollapsedChange={setSidebarCollapsed} />
+        )}
+
+        {/* ── Right panel ─────────────────────────────────────────────────── */}
+        <div
+          style={{
+            flex:          1,
+            minWidth:      0,
+            display:       "flex",
+            flexDirection: "column",
+            height:        "100%",
+            overflow:      "auto",
+          }}
+        >
+          {/* ── Content card ──────────────────────────────────────────────── */}
+          <div
+            className="content-card"
+            style={{
+              flex:            1,
+              display:         "flex",
+              flexDirection:   "column",
+              overflow:        "hidden",
+              borderRadius:    isCompact ? 0 : (isMobileOrTablet ? 0 : "8px"),
+              backgroundColor: "var(--sc-card)",
+              border:          isCompact || isMobileOrTablet ? "none" : "1px solid var(--sc-border)",
+            }}
+          >
+            <TopBar />
+
+            <main
+              className="sc-scrollbar"
+              style={{
+                flex:                    1,
+                overflowY:               "auto",
+                overflowX:               "hidden",
+                display:                 "flex",
+                flexDirection:           "column",
+                WebkitOverflowScrolling: "touch" as any,
+              }}
+            >
+              <div style={{ flex: 1, boxSizing: "border-box" }}>
+                {children}
+              </div>
+              {/* Spacer so last content clears the fixed bottom bar on mobile */}
+              {isMobileOrTablet && (
+                <div
+                  aria-hidden
+                  style={{ flexShrink: 0, height: "calc(80px + env(safe-area-inset-bottom, 16px))" }}
+                />
+              )}
+            </main>
+          </div>
         </div>
       </div>
-    </div>
+
+      {/* ── Mobile bottom navigation bar (fixed, outside flex flow) ────────── */}
+      {isMobileOrTablet && <MobileBottomBar onMenuOpen={openMobileSidebar} />}
     </>
   );
 };

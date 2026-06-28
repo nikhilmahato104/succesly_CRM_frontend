@@ -83,12 +83,20 @@ button, nav, header, aside, label, [role="button"], [role="tab"] {
    ═══════════════════════════════════════════════════════════════════════════ */
 
 :root {
+  /* ── Brand / primary accent — purple ────────────────────────────────── */
+  --primary:          #7c3aed;   /* violet-600 */
+  --primary-hover:    #6d28d9;   /* violet-700 */
+  --primary-light:    #ede9fe;   /* violet-100 tint */
+  --primary-text:     #ffffff;
+  --primary-ring:     rgba(124,58,237,0.20);
+
   /* ── Modal background ────────────────────────────────────────────────── */
   --modal-bg: #ffffff;
 
   /* ── Shell — DashboardLayout outer container ─────────────────────────── */
   --sc-shell:      #ffffff;    /* light gray gutter between panels            */
   --sc-card:       #ffffff;    /* main content panel — pure white             */
+  --bottom-bar-bg: rgba(255,255,255,0.80); /* light frosted glass bottom bar  */
   --sc-surface:    #f5f5f5;    /* recessed surfaces, toolbar bg               */
   --sc-border:     #e5e5e5;    /* card outlines, dividers                     */
 
@@ -106,7 +114,7 @@ button, nav, header, aside, label, [role="button"], [role="tab"] {
   --fi-bg:           #ffffff;
   --fi-bg-panel:     #ffffff;
   --fi-border:       #e5e5e5;
-  --fi-border-focus: #0d0d0d;
+  --fi-border-focus: var(--primary);
   --fi-border-error: #ef4444;
   --fi-text:         #0d0d0d;
   --fi-muted:        #9e9e9e;
@@ -114,12 +122,12 @@ button, nav, header, aside, label, [role="button"], [role="tab"] {
   --fi-height:       32px;
   --fi-radius:       7px;
   --fi-font-size:    13px;
-  --fi-shadow-focus: 0 0 0 2px rgba(13,13,13,0.10);
+  --fi-shadow-focus: 0 0 0 3px var(--primary-ring);
 
   /* ── Button primary token ────────────────────────────────────────────── */
-  --btn-primary-bg:   #111111;
-  --btn-primary-text: #ffffff;
-  --btn-primary-hover:#2a2a2a;
+  --btn-primary-bg:    var(--primary);
+  --btn-primary-text:  #ffffff;
+  --btn-primary-hover: var(--primary-hover);
 
   /* ── Badge color tokens ─────────────────────────────────────────────── */
   --badge-purple-bg:    #ede9fe;   --badge-purple-text:  #4c1d95;
@@ -148,74 +156,84 @@ button, nav, header, aside, label, [role="button"], [role="tab"] {
 }
 
 /* Dark mode ──────────────────────────────────────────────────────────────── */
+/* VS Code-inspired zone hierarchy:
+   shell #0d0d0d → sidebar #171717 → card #1e1e1e → header/toolbar #252526
+   → input #2d2d30 → elevated panel #323232                                   */
 .dark {
+  /* ── Brand primary — same hue, slightly brighter for dark bg ─────────── */
+  --primary:       #8b5cf6;   /* violet-500 — pops on dark without burning   */
+  --primary-hover: #7c3aed;   /* violet-600 on hover                         */
+  --primary-light: rgba(139,92,246,0.15);
+  --primary-ring:  rgba(139,92,246,0.30);
   /* ── Modal background ────────────────────────────────────────────────── */
-  --modal-bg: #000000;
+  --modal-bg: #252526;
 
-  /* ── Shell — pure black surfaces ─────────────────────────────────────── */
-  --sc-shell:   #000000;
-  --sc-card:    #000000;
-  --sc-surface: #0a0a0a;
-  --sc-border:  #2a2a2a;
+  /* ── Shell + Content card ───────────────────────────────────────────── */
+  --sc-shell:   #0d0d0d;     /* outermost gap — nearly black                 */
+  --sc-card:    #1e1e1e;     /* VS Code editor — main page background        */
+  --bottom-bar-bg: rgba(30,30,30,0.72); /* dark frosted glass bottom bar      */
+  --sc-surface: #252526;     /* elevated surfaces (VS Code sidebar tone)     */
+  --sc-border:  #3e3e42;     /* VS Code-style visible border                 */
 
   /* ── Sidebar ─────────────────────────────────────────────────────────── */
   --sb-bg:          #171717;
   --sb-elevated:    #1e1e1e;
-  --sb-hover:       #212121;
-  --sb-active:      #2a2a2a;
-  --sb-text:        #ffffff;
-  --sb-text-dim:    #8a8a9a;
+  --sb-hover:       #2a2d2e;
+  --sb-active:      #2a2d2e;
+  --sb-text:        #cccccc;
+  --sb-text-dim:    #858585;
   --sb-text-active: #ffffff;
-  --sb-border:      #2e2e2e;
+  --sb-border:      #303030;
 
-  /* ── Form / Input atoms — pure white text, black bg, dark inputs ─────── */
-  --fi-bg:           #1a1a1a;
-  --fi-bg-panel:     #000000;
-  --fi-border:       #333333;
-  --fi-border-focus: #555555;
+  /* ── Form / Input atoms ─────────────────────────────────────────────── */
+  --fi-bg:           #2d2d30;
+  --fi-bg-panel:     #252526;
+  --fi-border:       #3e3e42;
+  --fi-border-focus: var(--primary);
   --fi-border-error: #f87171;
-  --fi-text:         #ffffff;
-  --fi-muted:        #c8c8c8;
-  --fi-label:        #ffffff;
+  --fi-text:         #d4d4d4;
+  --fi-muted:        #9d9d9d;
+  --fi-label:        #cccccc;
   --fi-height:       36px;
   --fi-radius:       10px;
   --fi-font-size:    14px;
-  --fi-shadow-focus: 0 0 0 0 transparent;
+  --fi-shadow-focus: 0 0 0 3px var(--primary-ring);
 
   /* ── Button primary token ────────────────────────────────────────────── */
-  --btn-primary-bg:    #ffffff;
-  --btn-primary-text:  #000000;
-  --btn-primary-hover: #e5e5e5;
+  --btn-primary-bg:    var(--primary);
+  --btn-primary-text:  #ffffff;
+  --btn-primary-hover: var(--primary-hover);
 
   /* ── Badge color tokens ──────────────────────────────────────────────── */
-  --badge-purple-bg:    rgba(167,139,250,0.15);  --badge-purple-text:  #c4b5fd;
-  --badge-green-bg:     rgba(34,197,94,0.12);    --badge-green-text:   #86efac;
-  --badge-gray-bg:      rgba(255,255,255,0.08);  --badge-gray-text:    #ffffff;
-  --badge-amber-bg:     rgba(245,158,11,0.15);   --badge-amber-text:   #fcd34d;
-  --badge-orange-bg:    rgba(249,115,22,0.15);   --badge-orange-text:  #fdba74;
-  --badge-red-bg:       rgba(239,68,68,0.15);    --badge-red-text:     #fca5a5;
-  --badge-blue-bg:      rgba(59,130,246,0.15);   --badge-blue-text:    #93c5fd;
+  --badge-purple-bg:    rgba(167,139,250,0.18);  --badge-purple-text:  #c4b5fd;
+  --badge-green-bg:     rgba(34,197,94,0.15);    --badge-green-text:   #86efac;
+  --badge-gray-bg:      rgba(255,255,255,0.08);  --badge-gray-text:    #cccccc;
+  --badge-amber-bg:     rgba(245,158,11,0.18);   --badge-amber-text:   #fcd34d;
+  --badge-orange-bg:    rgba(249,115,22,0.18);   --badge-orange-text:  #fdba74;
+  --badge-red-bg:       rgba(239,68,68,0.18);    --badge-red-text:     #fca5a5;
+  --badge-blue-bg:      rgba(59,130,246,0.18);   --badge-blue-text:    #93c5fd;
 
-  /* ── DataTable ───────────────────────────────────────────────────────── */
-  --dt-bg:              #000000;
-  --dt-header:          #0a0a0a;
-  --dt-hover:           #111111;
-  --dt-header-hover:    #141414;
-  --dt-border:          #2a2a2a;
-  --dt-border-strong:   #3a3a3a;
-  --dt-text:            #ffffff;
-  --dt-dim:             #ffffff;
-  --dt-muted:           #ffffff;
-  --dt-accent:          #ffffff;
-  --dt-scrollbar:       rgba(255,255,255,0.12);
-  --dt-scrollbar-hover: rgba(255,255,255,0.22);
-  --dt-skeleton-from:   #111111;
-  --dt-skeleton-to:     #1e1e1e;
+  /* ── DataTable — zone-separated like VS Code panels ─────────────────── */
+  --dt-bg:              #1e1e1e;  /* row area — VS Code editor tone           */
+  --dt-header:          #252526;  /* column header — VS Code sidebar tone     */
+  --dt-hover:           #2a2d2e;  /* row hover — VS Code line highlight       */
+  --dt-header-hover:    #2d2d30;
+  --dt-border:          #3e3e42;  /* VS Code visible separator                */
+  --dt-border-strong:   #505050;
+  --dt-text:            #d4d4d4;  /* VS Code editor text — easy on eyes       */
+  --dt-dim:             #a0a0a0;  /* secondary data (entity, description)     */
+  --dt-muted:           #858585;  /* timestamps, meta — VS Code comment tone  */
+  --dt-accent:          #9cdcfe;  /* VS Code variable blue for highlights     */
+  --dt-scrollbar:       rgba(255,255,255,0.10);
+  --dt-scrollbar-hover: rgba(255,255,255,0.18);
+  --dt-skeleton-from:   #252526;
+  --dt-skeleton-to:     #2d2d30;
 }
 
 /* Dark mode: body matches shell */
 .dark body {
-  background-color: #000000;
+  background-color: var(--sc-shell);
+  color: #d4d4d4;
 }
 
 /* ── Dark mode input/textarea/select polish ─────────────────────────────────
@@ -224,7 +242,7 @@ button, nav, header, aside, label, [role="button"], [role="tab"] {
    ──────────────────────────────────────────────────────────────────────────── */
 .dark input::placeholder,
 .dark textarea::placeholder {
-  color: #c8c8c8;
+  color: var(--fi-muted);
   opacity: 1;
 }
 
@@ -260,10 +278,10 @@ button, nav, header, aside, label, [role="button"], [role="tab"] {
            max(6px, calc(env(safe-area-inset-left)   + 2px));
 }
 
-/* Mobile: go edge-to-edge horizontally, keep vertical safe areas */
+/* Mobile: edge-to-edge, no bottom shell padding (bottom bar is fixed overlay) */
 @media (max-width: 1023px) {
   .dashboard-shell {
-    padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom) 0;
+    padding: env(safe-area-inset-top) 0 0 0;
   }
 }
 
@@ -273,7 +291,15 @@ button, nav, header, aside, label, [role="button"], [role="tab"] {
     border-radius: 0 !important;
     border-left:   none !important;
     border-right:  none !important;
+    border-top:    none !important;
+    border-bottom: none !important;
   }
+}
+
+/* ── Mobile bottom navigation bar ──────────────────────────────────────────── */
+.mobile-bottom-bar {
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+          backdrop-filter: blur(20px) saturate(180%);
 }
 
 /* ── Project form responsive grids ─────────────────────────────────────────

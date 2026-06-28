@@ -189,7 +189,7 @@ const ProjectDetail: React.FC = () => {
     : 1;
 
   return (
-    <div style={{ height: "100%", overflowY: "auto", background: "var(--sc-shell)" }} className="sc-scrollbar">
+    <div style={{ height: "100%", overflowY: "auto", background: "var(--sc-card)" }} className="sc-scrollbar">
       <div style={{ maxWidth: 900, margin: "0 auto", padding: "20px 16px 40px" }}>
 
         {/* ── Header ─────────────────────────────────────────────────────────── */}

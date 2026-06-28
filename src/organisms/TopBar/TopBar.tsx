@@ -8,6 +8,17 @@ import { useDarkMode } from "../../hooks/useDarkMode";
 import { useLayoutMode, type LayoutMode } from "../../hooks/useLayoutMode";
 import { useAuth } from "../SidebarV2/hooks/useAuth";
 import WarningModal from "../../atoms/WarningModal";
+import logoImg from "../../assets/images/logo.png";
+
+const useIsMobile = () => {
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 1024);
+  useEffect(() => {
+    const h = () => setIsMobile(window.innerWidth < 1024);
+    window.addEventListener("resize", h);
+    return () => window.removeEventListener("resize", h);
+  }, []);
+  return isMobile;
+};
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -255,6 +266,7 @@ export const TopBar: React.FC = () => {
   const [layoutOpen,  setLayoutOpen]      = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
   const layoutRef  = useRef<HTMLDivElement>(null);
+  const isMobile   = useIsMobile();
 
   const userName        = userData?.user_name        || "User";
   const userEmail       = userData?.user_email       || "";
@@ -325,38 +337,21 @@ export const TopBar: React.FC = () => {
           </span>
         </button>
       ) : (
-        /* Brand mode: N My Learning ▼ */
+        /* Brand mode: logo + My Learning */
         <div style={{ display: "flex", alignItems: "center", gap: 7, flexShrink: 0 }}>
-          <div
-            style={{
-              width:          24,
-              height:         24,
-              borderRadius:   6,
-              display:        "flex",
-              alignItems:     "center",
-              justifyContent: "center",
-              background:     "var(--sb-text-active)",
-              color:          "var(--sb-bg)",
-              fontSize:       13,
-              fontWeight:     800,
-              userSelect:     "none",
-              letterSpacing:  "-0.02em",
-            }}
-          >
-            N
-          </div>
+          <img src={logoImg} alt="logo" style={{ width: 24, height: 24, objectFit: "contain", flexShrink: 0 }} />
           <span style={{ fontSize: 13, fontWeight: 600, color: "var(--sb-text-active)", whiteSpace: "nowrap", letterSpacing: "-0.01em" }}>
             My Learning
           </span>
-          <ChevronDown style={{ width: 13, height: 13, color: "var(--sb-text-dim)" }} />
+          {!isMobile && <ChevronDown style={{ width: 13, height: 13, color: "var(--sb-text-dim)" }} />}
         </div>
       )}
 
-      {/* ── Separator ──────────────────────────────────────────────────────── */}
-      <div style={{ width: 1, height: 18, background: "var(--sc-border)", flexShrink: 0 }} />
+      {/* ── Separator — desktop only ───────────────────────────────────────── */}
+      {!isMobile && <div style={{ width: 1, height: 18, background: "var(--sc-border)", flexShrink: 0 }} />}
 
-      {/* ── Center: global search ──────────────────────────────────────────── */}
-      <div style={{ flex: 1, display: "flex", justifyContent: "center" }}>
+      {/* ── Center: global search — desktop only ──────────────────────────── */}
+      {!isMobile && <div style={{ flex: 1, display: "flex", justifyContent: "center" }}>
         <button
           type="button"
           onClick={handleSearchClick}
@@ -407,7 +402,10 @@ export const TopBar: React.FC = () => {
             ⌘K
           </kbd>
         </button>
-      </div>
+      </div>}
+
+      {/* Mobile: flex spacer pushes right icons to the end */}
+      {isMobile && <div style={{ flex: 1 }} />}
 
       {/* ── Right: actions + profile ───────────────────────────────────────── */}
       <div style={{ display: "flex", alignItems: "center", gap: 3, flexShrink: 0 }}>
@@ -416,8 +414,8 @@ export const TopBar: React.FC = () => {
           <Bell style={{ width: 15, height: 15 }} />
         </IconBtn>
 
-        {/* Layout picker */}
-        <div style={{ position: "relative" }} ref={layoutRef}>
+        {/* Layout picker — desktop only */}
+        {!isMobile && <div style={{ position: "relative" }} ref={layoutRef}>
           <IconBtn title={`Layout: ${layoutMode}`} onClick={() => setLayoutOpen((o) => !o)}>
             {layoutMode === "compact"
               ? <Maximize2 style={{ width: 14, height: 14 }} />
@@ -430,11 +428,14 @@ export const TopBar: React.FC = () => {
               onSelect={(m) => { setLayoutMode(m); setLayoutOpen(false); }}
             />
           )}
-        </div>
+        </div>}
 
-        <IconBtn title="Settings" onClick={() => navigate("/settings")}>
-          <Settings style={{ width: 15, height: 15 }} />
-        </IconBtn>
+        {/* Settings — desktop only */}
+        {!isMobile && (
+          <IconBtn title="Settings" onClick={() => navigate("/settings")}>
+            <Settings style={{ width: 15, height: 15 }} />
+          </IconBtn>
+        )}
 
         {/* Divider */}
         <div style={{ width: 1, height: 18, background: "var(--sc-border)", margin: "0 3px", flexShrink: 0 }} />
@@ -460,15 +461,17 @@ export const TopBar: React.FC = () => {
             onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = profileOpen ? "var(--sb-hover)" : "transparent"; }}
           >
             <Avatar name={userName} url={profileImageUrl} size={26} />
-            <ChevronDown
-              style={{
-                width:     11,
-                height:    11,
-                color:     "var(--sb-text-dim)",
-                transition: "transform 200ms ease",
-                transform:  profileOpen ? "rotate(180deg)" : "rotate(0deg)",
-              }}
-            />
+            {!isMobile && (
+              <ChevronDown
+                style={{
+                  width:     11,
+                  height:    11,
+                  color:     "var(--sb-text-dim)",
+                  transition: "transform 200ms ease",
+                  transform:  profileOpen ? "rotate(180deg)" : "rotate(0deg)",
+                }}
+              />
+            )}
           </button>
 
           {profileOpen && (

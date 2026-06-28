@@ -1,6 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom";
 import { X } from "lucide-react";
+import logoImg from "../../../../assets/images/logo.png";
 import { Z_INDEX, TRANSITIONS } from "../../constants";
 import { UserProfileProps } from "../../types";
 import UserProfile from "./UserProfile";
@@ -15,7 +16,7 @@ interface MobilePanelProps extends Omit<UserProfileProps, "isCollapsed"> {
 const MobilePanelHeader: React.FC<{ onClose: () => void }> = ({ onClose }) => (
   <div style={{ padding: "12px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid var(--sb-border)" }}>
     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-      <div style={{ width: 30, height: 30, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--sb-text-active)", color: "var(--sb-bg)", fontWeight: 800, fontSize: 15, flexShrink: 0 }}>N</div>
+      <img src={logoImg} alt="logo" style={{ width: 28, height: 28, objectFit: "contain", flexShrink: 0 }} />
       <span style={{ fontSize: 15, fontWeight: 700, color: "var(--sb-text-active)", letterSpacing: "-0.02em" }}>My Learning</span>
     </div>
     <button

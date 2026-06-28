@@ -69,7 +69,7 @@ const NavList: React.FC<NavListProps> = ({
               <ul
                 style={{
                   listStyle: "none",
-                  margin: "2px 0 2px 12px",
+                  margin: "2px 0 2px 40px",
                   padding: 0,
                   display: "flex",
                   flexDirection: "column",
