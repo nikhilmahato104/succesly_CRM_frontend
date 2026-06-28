@@ -174,6 +174,10 @@ const SCROLL_CSS = `
   .cdg-scroll::-webkit-scrollbar-thumb  { background: var(--dt-scrollbar); border-radius: 3px }
   .cdg-scroll::-webkit-scrollbar-thumb:hover { background: var(--dt-scrollbar-hover) }
   .cdg-scroll::-webkit-scrollbar-corner { background: transparent }
+  @keyframes cdg-shimmer {
+    0%   { background-position: 200% 0 }
+    100% { background-position: -200% 0 }
+  }
 `
 
 // ─── CheckboxCell ─────────────────────────────────────────────────────────────
@@ -1553,14 +1557,37 @@ export function CustomDatagrid<T extends Record<string, unknown>>({
               })
             }
 
-            {/* Spinner row while loading more */}
+            {/* Loading-more indicator: shimmer rows on mobile, spinner on desktop */}
             {loadingMore && (
-              <tr>
-                <td colSpan={totalColSpan} className="text-center py-3 text-xs" style={{ color: 'var(--dt-muted)' }}>
-                  <RefreshCw size={14} className="inline animate-spin mr-1" />
-                  Loading more…
-                </td>
-              </tr>
+              isMobile ? (
+                <>
+                  {[0, 1, 2].map((n) => (
+                    <tr key={`shimmer-${n}`}>
+                      {Array.from({ length: Math.min(totalColSpan, 3) }).map((_, ci) => (
+                        <td key={ci} style={{ padding: '10px 12px', borderBottom: '1px solid var(--dt-border)' }}>
+                          <span style={{
+                            display: 'block',
+                            height: 12,
+                            borderRadius: 4,
+                            width: ci === 0 ? '60%' : ci === 1 ? '80%' : '50%',
+                            background: 'linear-gradient(90deg, var(--dt-skeleton-from) 25%, var(--dt-skeleton-to) 50%, var(--dt-skeleton-from) 75%)',
+                            backgroundSize: '200% 100%',
+                            animation: 'cdg-shimmer 1.4s ease-in-out infinite',
+                            animationDelay: `${n * 0.12}s`,
+                          }} />
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </>
+              ) : (
+                <tr>
+                  <td colSpan={totalColSpan} className="text-center py-3 text-xs" style={{ color: 'var(--dt-muted)' }}>
+                    <RefreshCw size={14} className="inline animate-spin mr-1" />
+                    Loading more…
+                  </td>
+                </tr>
+              )
             )}
           </tbody>
         </table>
@@ -1611,7 +1638,7 @@ export function CustomDatagrid<T extends Record<string, unknown>>({
 
       {/* ── Footer ──────────────────────────────────────────────────────── */}
       {onScrollPagination ? (
-        <ScrollCounter count={rows.length} total={totalCount} onRefresh={onRefresh} />
+        !isMobile && <ScrollCounter count={rows.length} total={totalCount} onRefresh={onRefresh} />
       ) : (
         <TablePagination
           currentPage={currentPage}

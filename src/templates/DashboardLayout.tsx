@@ -185,13 +185,6 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
               <div style={{ flex: 1, boxSizing: "border-box", display: "flex", flexDirection: "column", minHeight: 0 }}>
                 {children}
               </div>
-              {/* Spacer so last content clears the fixed bottom bar on mobile */}
-              {isMobileOrTablet && (
-                <div
-                  aria-hidden
-                  style={{ flexShrink: 0, height: "calc(80px + env(safe-area-inset-bottom, 16px))" }}
-                />
-              )}
             </main>
           </div>
         </div>

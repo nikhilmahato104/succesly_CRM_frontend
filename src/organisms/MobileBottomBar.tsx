@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { LayoutDashboard, BookOpen, Plus, FolderKanban, Menu } from "lucide-react";
 
@@ -24,6 +24,34 @@ const NAV = [
 const MobileBottomBar: React.FC<Props> = ({ onMenuOpen }) => {
   const navigate     = useNavigate();
   const { pathname } = useLocation();
+
+  // ── Scroll-aware hide/show (YouTube style) ────────────────────────────────
+  const [barHidden, setBarHidden] = useState(false);
+  const lastScrollYRef = useRef(0);
+  const rafRef        = useRef(0);
+
+  useEffect(() => {
+    const THRESHOLD = 6;
+
+    const handler = (e: Event) => {
+      const el = e.target as Element;
+      const scrollY = (el as HTMLElement).scrollTop ?? 0;
+
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = requestAnimationFrame(() => {
+        const delta = scrollY - lastScrollYRef.current;
+        if (Math.abs(delta) < THRESHOLD) return;
+        setBarHidden(delta > 0);
+        lastScrollYRef.current = scrollY;
+      });
+    };
+
+    document.addEventListener("scroll", handler, { capture: true, passive: true });
+    return () => {
+      document.removeEventListener("scroll", handler, { capture: true } as EventListenerOptions);
+      cancelAnimationFrame(rafRef.current);
+    };
+  }, []);
 
   const isActive = (href: string | null) =>
     href ? (href === "/" ? pathname === "/" : pathname.startsWith(href)) : false;
@@ -97,6 +125,9 @@ const MobileBottomBar: React.FC<Props> = ({ onMenuOpen }) => {
           paddingLeft:     "env(safe-area-inset-left, 0px)",
           paddingRight:    "env(safe-area-inset-right, 0px)",
           WebkitTapHighlightColor: "transparent",
+          transform:       barHidden ? "translateY(100%)" : "translateY(0)",
+          transition:      "transform 300ms cubic-bezier(0.4,0,0.2,1)",
+          willChange:      "transform",
         }}
       >
         {NAV.map((item, i) => {
