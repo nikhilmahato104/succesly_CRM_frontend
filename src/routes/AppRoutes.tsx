@@ -28,6 +28,7 @@ const BoardPage          = lazy(() => import("../pages/Board/BoardPage"));
 const BoardsPage         = lazy(() => import("../pages/Boards/BoardsPage"));
 const HelpChatPage       = lazy(() => import("../pages/help-chat/HelpChatPage"));
 const DocListPage        = lazy(() => import("../pages/DocListPage"));
+const DeviceInfoPage     = lazy(() => import("../pages/device-info"));
 const ProjectPage        = lazy(() => import("../pages/project-management"));
 const ProjectDetailPage  = lazy(() => import("../pages/project-management/ProjectDetail"));
 const ProjectFormPage    = lazy(() => import("../pages/project-management/ProjectForm"));
@@ -339,6 +340,17 @@ export const AppRoutes: React.FC = () => {
           element={
             <ProtectedRoute moduleId="booking_management">
               <InLayout><BookingPage /></InLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* ── DEVICE INFO ─────────────────────────────────────────────────────
+            OPEN WHEN: accessSlice["device_info"].view === true                */}
+        <Route
+          path="/device-info"
+          element={
+            <ProtectedRoute moduleId="device_info">
+              <InLayout><DeviceInfoPage /></InLayout>
             </ProtectedRoute>
           }
         />
