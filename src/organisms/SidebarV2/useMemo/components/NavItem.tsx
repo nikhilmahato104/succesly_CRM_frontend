@@ -13,7 +13,7 @@ const NavIcon: React.FC<{ Icon: React.ComponentType<{ className?: string }>; isA
       alignItems: "center",
       justifyContent: "center",
       flexShrink: 0,
-      color: isActive ? "var(--sb-text-active)" : "var(--sb-text)",
+      color: isActive ? "var(--sb-accent)" : "var(--sb-text)",
       transition: "color 140ms ease",
     }}
   >
@@ -33,7 +33,7 @@ const itemStyle = (isActive: boolean, level: number): React.CSSProperties => ({
   cursor: "pointer",
   transition: "background 120ms ease, color 120ms ease",
   background: isActive ? "var(--sb-active)" : "transparent",
-  color: isActive ? "var(--sb-text-active)" : "var(--sb-text)",
+  color: isActive ? "var(--sb-accent)" : "var(--sb-text)",
   border: "none",
   textDecoration: "none",
   boxSizing: "border-box",

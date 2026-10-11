@@ -172,8 +172,8 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ open, onClose, access }) => {
             border-b border-gray-100 dark:border-gray-800"
         >
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-indigo-50 dark:bg-indigo-900/40 flex items-center justify-center flex-shrink-0">
-              <ShieldCheck className="w-5 h-5 text-indigo-500" />
+            <div className="w-10 h-10 rounded-full bg-[var(--primary-light)] flex items-center justify-center flex-shrink-0">
+              <ShieldCheck className="w-5 h-5 text-[var(--primary)]" />
             </div>
             <div>
               <Drawer.Title
@@ -230,10 +230,8 @@ export const ActionSetBadge: React.FC<ActionSetBadgeProps> = ({ access }) => {
         onClick={() => setSheetOpen(true)}
         className="inline-flex items-center gap-1.5 select-none
           rounded-full border px-2.5 py-1 text-xs font-medium
-          bg-indigo-50 border-indigo-200 text-indigo-700
-          dark:bg-indigo-950/50 dark:border-indigo-800 dark:text-indigo-300
-          hover:bg-indigo-100 hover:border-indigo-300
-          dark:hover:bg-indigo-900/60 dark:hover:border-indigo-700
+          bg-[var(--primary-light)] border-[var(--primary-ring)] text-[var(--primary)]
+          hover:border-[var(--primary)]
           active:scale-95 transition-all duration-150"
       >
         <ShieldCheck className="w-3 h-3 flex-shrink-0" />

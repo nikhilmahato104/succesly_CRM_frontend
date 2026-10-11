@@ -10,7 +10,7 @@ import { selectApiKey, openApiKeyModal } from "../../store/slices/apiKeySlice";
 import { selectAccessData } from "../../store/slices/accessSlice";
 import type { RootState } from "../../store";
 import ModuleForm from "./ModuleForm";
-import { CleanButton, CleanSearchBar, CleanModal } from "../../atoms/my_clean_code_atoms";
+import { CleanButton, CleanResponsiveSearch, CleanModal } from "../../atoms/my_clean_code_atoms";
 import { OPEN_CREATE_MODULE_EVENT } from "../../organisms/MobileBottomBar";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -199,31 +199,30 @@ const ModuleManagement: React.FC = () => {
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden", background: "var(--dt-bg)" }}>
 
-      {/* ── Toolbar ──────────────────────────────────────────────────────────── */}
-      <div style={{
-        display: "flex", alignItems: "center", gap: 6,
-        padding: "7px 12px", borderBottom: "1px solid var(--fi-border)",
-        flexShrink: 0, flexWrap: "wrap", background: "var(--fi-bg)",
-      }}>
-        <CleanSearchBar
-          value={search}
-          onChange={(v) => setSearch(v)}
-          placeholder="Search by module name or ID"
-          width={260}
-        />
+      {/* ── Toolbar — on mobile only the floating search remains ─────────────── */}
+      {isMobile ? (
+        <CleanResponsiveSearch value={search} onChange={setSearch} placeholder="Search by module name or ID" />
+      ) : (
+        <div style={{
+          display: "flex", alignItems: "center", gap: 6,
+          padding: "7px 12px", borderBottom: "1px solid var(--fi-border)",
+          flexShrink: 0, flexWrap: "wrap", background: "var(--fi-bg)",
+        }}>
+          <CleanResponsiveSearch value={search} onChange={setSearch} placeholder="Search by module name or ID" />
 
-        <div style={{ flex: 1 }} />
+          <div style={{ flex: 1 }} />
 
-        {!isMobile && perms.create && (
-          <CleanButton
-            variant="primary" size="sm"
-            iconLeft={<Plus style={{ width: 13, height: 13 }} />}
-            onClick={() => { setEditItem(null); setShowModal(true); }}
-          >
-            Create Module
-          </CleanButton>
-        )}
-      </div>
+          {perms.create && (
+            <CleanButton
+              variant="primary" size="sm"
+              iconLeft={<Plus style={{ width: 13, height: 13 }} />}
+              onClick={() => { setEditItem(null); setShowModal(true); }}
+            >
+              Create Module
+            </CleanButton>
+          )}
+        </div>
+      )}
 
       {/* ── Table ─────────────────────────────────────────────────────────────── */}
       <div style={{ flex: 1, minHeight: 0 }}>

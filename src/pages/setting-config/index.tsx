@@ -21,6 +21,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { Settings } from "lucide-react";
 import { useSelector } from "react-redux";
 import { selectAccessData } from "../../store/slices/accessSlice";
+import { useDevice } from "../../hooks/useDevice";
 import UserManagementList from "../user-management/UserManagementList";
 import RoleManagement     from "../user-management/RoleManagement";
 import ModuleManagement   from "./ModuleManagement";
@@ -28,9 +29,9 @@ import ModuleManagement   from "./ModuleManagement";
 // ── Tabs config ────────────────────────────────────────────────────────────────
 
 const TABS = [
-  { label: "User Management",   path: "/setting-config/user-management",   moduleKey: "user_management"   },
-  { label: "Role Management",   path: "/setting-config/role-management",   moduleKey: "role_management"   },
-  { label: "Module Management", path: "/setting-config/module-management", moduleKey: "module_management" },
+  { label: "User Management",   shortLabel: "Users",   path: "/setting-config/user-management",   moduleKey: "user_management"   },
+  { label: "Role Management",   shortLabel: "Roles",   path: "/setting-config/role-management",   moduleKey: "role_management"   },
+  { label: "Module Management", shortLabel: "Modules", path: "/setting-config/module-management", moduleKey: "module_management" },
 ] as const;
 
 type TabLabel = typeof TABS[number]["label"];
@@ -67,6 +68,7 @@ const SettingConfig: React.FC = () => {
   const navigate     = useNavigate();
   const { pathname } = useLocation();
   const access       = useSelector(selectAccessData) as Record<string, { view?: boolean; edit?: boolean }> | null;
+  const { isMobile } = useDevice();
 
   const activeLabel = getActiveLabel(pathname);
 
@@ -77,35 +79,38 @@ const SettingConfig: React.FC = () => {
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden", background: "var(--dt-bg)" }}>
 
-      {/* ── Header ──────────────────────────────────────────────────────── */}
-      <div style={{
-        display: "flex", alignItems: "center",
-        gap: 10, padding: "8px 14px", borderBottom: "1px solid var(--sc-border)",
-        flexShrink: 0, background: "var(--sc-card)", flexWrap: "wrap",
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div style={{
-            width: 30, height: 30, borderRadius: 7,
-            background: "rgba(99,102,241,0.12)",
-            display: "flex", alignItems: "center", justifyContent: "center", color: "#6366f1",
-          }}>
-            <Settings size={15} />
-          </div>
-          <div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: "var(--dt-text)", lineHeight: 1.2 }}>
-              {activeLabel}
+      {/* ── Header — on mobile the TopBar already shows the page title ───── */}
+      {!isMobile && (
+        <div style={{
+          display: "flex", alignItems: "center",
+          gap: 10, padding: "8px 14px", borderBottom: "1px solid var(--sc-border)",
+          flexShrink: 0, background: "var(--sc-card)", flexWrap: "wrap",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{
+              width: 30, height: 30, borderRadius: 7,
+              background: "rgba(99,102,241,0.12)",
+              display: "flex", alignItems: "center", justifyContent: "center", color: "#6366f1",
+            }}>
+              <Settings size={15} />
             </div>
-            <div style={{ fontSize: 11, color: "var(--dt-muted)" }}>
-              Manage {activeLabel.toLowerCase()} and configurations
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: "var(--dt-text)", lineHeight: 1.2 }}>
+                {activeLabel}
+              </div>
+              <div style={{ fontSize: 11, color: "var(--dt-muted)" }}>
+                Manage {activeLabel.toLowerCase()} and configurations
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* ── Tab bar ─────────────────────────────────────────────────────── */}
+      {/* Mobile: equal-width segments with short labels — never wraps */}
       <div style={{
-        display: "flex", flexWrap: "wrap", gap: 2,
-        padding: "0 14px", borderBottom: "1px solid var(--sc-border)",
+        display: "flex", flexWrap: isMobile ? "nowrap" : "wrap", gap: 2,
+        padding: isMobile ? 0 : "0 14px", borderBottom: "1px solid var(--sc-border)",
         background: "var(--sc-card)", flexShrink: 0,
       }}>
         {visibleTabs.map((tab) => {
@@ -115,7 +120,8 @@ const SettingConfig: React.FC = () => {
               key={tab.label}
               onClick={() => navigate(tab.path)}
               style={{
-                padding: "8px 14px", fontSize: 13, fontWeight: isActive ? 600 : 400,
+                flex: isMobile ? 1 : undefined, minWidth: 0,
+                padding: isMobile ? "12px 8px" : "8px 14px", fontSize: isMobile ? 14 : 13, fontWeight: isActive ? 600 : 400,
                 background: "transparent", border: "none", cursor: "pointer",
                 borderBottom: isActive ? "2px solid var(--btn-primary-bg)" : "2px solid transparent",
                 color: isActive ? "var(--btn-primary-bg)" : "var(--dt-muted)",
@@ -123,7 +129,7 @@ const SettingConfig: React.FC = () => {
                 whiteSpace: "nowrap",
               }}
             >
-              {tab.label}
+              {isMobile ? tab.shortLabel : tab.label}
             </button>
           );
         })}

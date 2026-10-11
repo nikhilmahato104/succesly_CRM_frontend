@@ -6,7 +6,7 @@ import { Plus, SlidersHorizontal, BarChart3, Pause, Play } from "lucide-react";
 import { CustomDatagrid, type GridColumn } from "../../atoms/CustomDatagrid";
 import {
   CleanButton,
-  CleanSearchBar,
+  CleanResponsiveSearch,
   CleanModal,
   CleanDropdown,
   CleanInput,
@@ -18,6 +18,7 @@ import { openApiKeyModal, selectApiKey } from "../../store/slices/apiKeySlice";
 import type { RootState } from "../../store";
 import { fetchCampaigns, fetchIndustryTypes, archiveCampaign, updateCampaign } from "../../services/campaignApi";
 import { CopyButton } from "./ShortLinkCard";
+import { CampaignViewSheet } from "./CampaignViewSheet";
 import { useIsMobile } from "./useIsMobile";
 import {
   type Campaign,
@@ -139,6 +140,11 @@ const CampaignManagement: React.FC = () => {
   const [industries,  setIndustries]  = useState<Option[]>([]);
   const [togglingId,  setTogglingId]  = useState<string | null>(null);
 
+  // Row tap → quick view sheet. The id stays set while the sheet animates closed.
+  const [viewId,   setViewId]   = useState<string | null>(null);
+  const [viewOpen, setViewOpen] = useState(false);
+  const viewRow = useMemo(() => data.find(c => c._id === viewId) ?? null, [data, viewId]);
+
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [filterModalOpen, setFilterModalOpen] = useState(false);
   const filterPanelRef = useRef<HTMLDivElement>(null);
@@ -239,6 +245,7 @@ const CampaignManagement: React.FC = () => {
   const handleRefresh  = useCallback(() => { pageRef.current = 1; setData([]); fetchPage(1, false); }, [fetchPage]);
 
   const handleView = useCallback((row: Campaign) => navigate(`/campaigns/${row._id}`), [navigate]);
+  const openQuickView = useCallback((row: Campaign) => { setViewId(row._id); setViewOpen(true); }, []);
   const handleEdit = useCallback((row: Campaign) => {
     if (!row.is_active) { showToastnew.error("Archived campaigns cannot be edited"); return; }
     navigate(`/campaigns/${row._id}/edit`);
@@ -448,10 +455,11 @@ const CampaignManagement: React.FC = () => {
         flexShrink:   0,
         background:   "var(--dt-header)",
       }}>
-        <CleanSearchBar
+        <CleanResponsiveSearch
           value={filters.search}
           onChange={v => setFilter("search", v)}
           placeholder="Search campaigns…"
+          mobileFilter={{ activeCount: activeFilterCount, onClick: () => setFilterModalOpen(true) }}
           width={isMobile ? "100%" : 300}
           style={{
             flex:         isMobile ? 1 : "0 1 300px",
@@ -469,26 +477,28 @@ const CampaignManagement: React.FC = () => {
         )}
         <div style={{ flex: 1 }} />
 
-        <div style={{ position: "relative", flexShrink: 0 }} ref={filterPanelRef}>
-          <CleanButton
-            variant="outline"
-            size="sm"
-            active={showFilterPanel}
-            icon={isMobile ? <SlidersHorizontal style={{ width: 15, height: 15 }} /> : undefined}
-            iconLeft={!isMobile ? <SlidersHorizontal style={{ width: 13, height: 13 }} /> : undefined}
-            badge={activeFilterCount > 0 ? activeFilterCount : undefined}
-            onClick={() => (isMobile ? setFilterModalOpen(true) : setShowFilterPanel(v => !v))}
-            style={{ height: "var(--fi-height)" }}
-          >
-            {isMobile ? undefined : "Filter"}
-          </CleanButton>
+        {/* Filter — on mobile it floats above the search button instead */}
+        {!isMobile && (
+          <div style={{ position: "relative", flexShrink: 0 }} ref={filterPanelRef}>
+            <CleanButton
+              variant="outline"
+              size="sm"
+              active={showFilterPanel}
+              iconLeft={<SlidersHorizontal style={{ width: 13, height: 13 }} />}
+              badge={activeFilterCount > 0 ? activeFilterCount : undefined}
+              onClick={() => setShowFilterPanel(v => !v)}
+              style={{ height: "var(--fi-height)" }}
+            >
+              Filter
+            </CleanButton>
 
-          {!isMobile && showFilterPanel && (
-            <div style={dropdownPanelStyle}>
-              <FilterContent {...filterProps} />
-            </div>
-          )}
-        </div>
+            {showFilterPanel && (
+              <div style={dropdownPanelStyle}>
+                <FilterContent {...filterProps} />
+              </div>
+            )}
+          </div>
+        )}
 
         <CleanButton
           variant="outline"
@@ -545,6 +555,19 @@ const CampaignManagement: React.FC = () => {
         <FilterContent {...filterProps} />
       </CleanModal>
 
+      {/* ── Campaign quick view (bottom sheet on mobile) ───────────────────── */}
+      <CampaignViewSheet
+        campaign={viewRow}
+        isOpen={viewOpen && !!viewRow}
+        onClose={() => setViewOpen(false)}
+        industries={industries}
+        canEdit={canEdit}
+        toggling={togglingId === viewId}
+        onAnalytics={handleView}
+        onEdit={handleEdit}
+        onToggleStatus={handleToggleStatus}
+      />
+
       {/* ── Table ────────────────────────────────────────────────────────── */}
       <div style={{ flex: 1, minHeight: 0 }}>
         <CustomDatagrid<Campaign>
@@ -564,6 +587,7 @@ const CampaignManagement: React.FC = () => {
           selectable={canDelete && !archivedView}
           onBulkDelete={canDelete && !archivedView ? handleBulkArchive : undefined}
           bulkDeleteLabel="Archive selected campaigns — their short links stop working, click history is kept"
+          onRowClick={openQuickView}
           onView={handleView}
           onEdit={canEdit && !archivedView ? handleEdit : undefined}
           onDelete={canDelete && !archivedView ? handleArchive : undefined}

@@ -9,11 +9,13 @@ import { selectAccessToken } from "../../store/slices/authSlice";
 import type { RootState } from "../../store";
 import {
   CleanButton,
-  CleanSearchBar,
+  CleanResponsiveSearch,
   CleanInput,
   CleanSelect,
+  CleanModal,
   type SelectOption,
 } from "../../atoms/my_clean_code_atoms";
+import { useDevice } from "../../hooks/useDevice";
 import {
   fetchActivityLogs,
   type ActivityLogItem,
@@ -239,6 +241,8 @@ const ActivityLogs: React.FC = () => {
 
   const [showDatePanel,   setShowDatePanel]   = React.useState(false);
   const [showFilterPanel, setShowFilterPanel] = React.useState(false);
+  const [filterSheetOpen, setFilterSheetOpen] = React.useState(false);
+  const { isMobile } = useDevice();
   const datePanelRef   = useRef<HTMLDivElement>(null);
   const filterPanelRef = useRef<HTMLDivElement>(null);
 
@@ -337,88 +341,130 @@ const ActivityLogs: React.FC = () => {
   return (
     <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, overflow: "hidden", background: "var(--dt-bg)" }}>
 
-      {/* ── Toolbar ────────────────────────────────────────────────────────────── */}
-      <div style={{
-        display: "flex", alignItems: "center", gap: 6,
-        padding: "7px 12px", borderBottom: "1px solid var(--dt-border)",
-        flexShrink: 0, flexWrap: "wrap", background: "var(--dt-header)",
-      }}>
-
-        {/* Search */}
-        <CleanSearchBar
+      {/* ── Toolbar — on mobile only the floating filter + search buttons remain ── */}
+      {isMobile ? (
+        <CleanResponsiveSearch
           value={filters.search}
           onChange={(v) => setFilter("search", v)}
           placeholder="Search description, user, entity…"
-          width={240}
+          mobileFilter={{ activeCount: activeFilterCount, onClick: () => setFilterSheetOpen(true) }}
         />
+      ) : (
+        <div style={{
+          display: "flex", alignItems: "center", gap: 6,
+          padding: "7px 12px", borderBottom: "1px solid var(--dt-border)",
+          flexShrink: 0, flexWrap: "wrap", background: "var(--dt-header)",
+        }}>
 
-        {/* Date range */}
-        <div style={{ position: "relative" }} ref={datePanelRef}>
-          <CleanButton
-            variant="outline" size="sm"
-            iconLeft={<CalendarRange style={{ width: 13, height: 13 }} />}
-            iconRight={hasDates ? undefined : <ChevronDown style={{ width: 11, height: 11 }} />}
-            onClick={() => setShowDatePanel((v) => !v)}
-            style={hasDates ? { borderColor: "var(--fi-border-focus)" } : undefined}
-          >
-            {hasDates ? (
-              <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                {dateLabel}
-                <span onClick={(e) => { e.stopPropagation(); setFilter("date_from", ""); setFilter("date_to", ""); }}
-                  style={{ display: "flex", cursor: "pointer", color: "var(--fi-muted)" }}>
-                  <X style={{ width: 11, height: 11 }} />
+          {/* Search */}
+          <CleanResponsiveSearch
+            value={filters.search}
+            onChange={(v) => setFilter("search", v)}
+            placeholder="Search description, user, entity…"
+            width={240}
+          />
+
+          {/* Date range */}
+          <div style={{ position: "relative" }} ref={datePanelRef}>
+            <CleanButton
+              variant="outline" size="sm"
+              iconLeft={<CalendarRange style={{ width: 13, height: 13 }} />}
+              iconRight={hasDates ? undefined : <ChevronDown style={{ width: 11, height: 11 }} />}
+              onClick={() => setShowDatePanel((v) => !v)}
+              style={hasDates ? { borderColor: "var(--fi-border-focus)" } : undefined}
+            >
+              {hasDates ? (
+                <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  {dateLabel}
+                  <span onClick={(e) => { e.stopPropagation(); setFilter("date_from", ""); setFilter("date_to", ""); }}
+                    style={{ display: "flex", cursor: "pointer", color: "var(--fi-muted)" }}>
+                    <X style={{ width: 11, height: 11 }} />
+                  </span>
                 </span>
-              </span>
-            ) : dateLabel}
-          </CleanButton>
-          {showDatePanel && (
-            <div style={{ ...panelStyle, display: "flex", alignItems: "center", gap: 8, whiteSpace: "nowrap" }}>
-              <CleanInput type="date" value={filters.date_from} onChange={(e) => setFilter("date_from", e.target.value)} style={{ width: 148 }} />
-              <span style={{ fontSize: 12, color: "var(--fi-muted)" }}>–</span>
-              <CleanInput type="date" value={filters.date_to} onChange={(e) => setFilter("date_to", e.target.value)} style={{ width: 148 }} />
-              <CleanButton variant="primary" size="sm" onClick={() => setShowDatePanel(false)}>Done</CleanButton>
-            </div>
-          )}
+              ) : dateLabel}
+            </CleanButton>
+            {showDatePanel && (
+              <div style={{ ...panelStyle, display: "flex", alignItems: "center", gap: 8, whiteSpace: "nowrap" }}>
+                <CleanInput type="date" value={filters.date_from} onChange={(e) => setFilter("date_from", e.target.value)} style={{ width: 148 }} />
+                <span style={{ fontSize: 12, color: "var(--fi-muted)" }}>–</span>
+                <CleanInput type="date" value={filters.date_to} onChange={(e) => setFilter("date_to", e.target.value)} style={{ width: 148 }} />
+                <CleanButton variant="primary" size="sm" onClick={() => setShowDatePanel(false)}>Done</CleanButton>
+              </div>
+            )}
+          </div>
+
+          {/* Filter panel */}
+          <div style={{ position: "relative" }} ref={filterPanelRef}>
+            <CleanButton
+              variant="outline" size="sm"
+              iconLeft={<ListFilter style={{ width: 13, height: 13 }} />}
+              badge={activeFilterCount > 0 ? activeFilterCount : undefined}
+              onClick={() => setShowFilterPanel((v) => !v)}
+              style={activeFilterCount > 0 ? { borderColor: "var(--fi-border-focus)" } : undefined}
+            >
+              Filter
+            </CleanButton>
+
+            {showFilterPanel && (
+              <div style={{ ...panelStyle, minWidth: 260, display: "flex", flexDirection: "column", gap: 10 }}>
+                <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--fi-muted)" }}>
+                  Filters
+                </span>
+                <CleanSelect label="Module"     value={filters.module}     onChange={(e) => setFilter("module",     e.target.value)} options={MODULE_OPTIONS}  placeholder="All modules"  />
+                <CleanSelect label="Action"     value={filters.action}     onChange={(e) => setFilter("action",     e.target.value)} options={ACTION_OPTIONS}  placeholder="All actions"  />
+                <CleanSelect label="Method"     value={filters.method}     onChange={(e) => setFilter("method",     e.target.value)} options={METHOD_OPTIONS}  placeholder="All methods"  />
+                <CleanSelect label="Result"     value={filters.is_success} onChange={(e) => setFilter("is_success", e.target.value)} options={SUCCESS_OPTIONS} placeholder="All results"  />
+                <CleanInput  label="User email" value={filters.user_email} onChange={(e) => setFilter("user_email", e.target.value)} placeholder="nikhil@…" type="text" />
+                {activeFilterCount > 0 && (
+                  <CleanButton variant="danger" size="xs" onClick={clearAllFilters} style={{ width: "100%" }}>
+                    Clear all filters
+                  </CleanButton>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div style={{ flex: 1 }} />
+
+          {/* Total count */}
+          <span style={{ fontSize: 11, color: "var(--fi-muted)", whiteSpace: "nowrap" }}>
+            {total.toLocaleString()} log{total !== 1 ? "s" : ""}
+          </span>
         </div>
+      )}
 
-        {/* Filter panel */}
-        <div style={{ position: "relative" }} ref={filterPanelRef}>
-          <CleanButton
-            variant="outline" size="sm"
-            iconLeft={<ListFilter style={{ width: 13, height: 13 }} />}
-            badge={activeFilterCount > 0 ? activeFilterCount : undefined}
-            onClick={() => setShowFilterPanel((v) => !v)}
-            style={activeFilterCount > 0 ? { borderColor: "var(--fi-border-focus)" } : undefined}
-          >
-            Filter
-          </CleanButton>
-
-          {showFilterPanel && (
-            <div style={{ ...panelStyle, minWidth: 260, display: "flex", flexDirection: "column", gap: 10 }}>
-              <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--fi-muted)" }}>
-                Filters
-              </span>
-              <CleanSelect label="Module"     value={filters.module}     onChange={(e) => setFilter("module",     e.target.value)} options={MODULE_OPTIONS}  placeholder="All modules"  />
-              <CleanSelect label="Action"     value={filters.action}     onChange={(e) => setFilter("action",     e.target.value)} options={ACTION_OPTIONS}  placeholder="All actions"  />
-              <CleanSelect label="Method"     value={filters.method}     onChange={(e) => setFilter("method",     e.target.value)} options={METHOD_OPTIONS}  placeholder="All methods"  />
-              <CleanSelect label="Result"     value={filters.is_success} onChange={(e) => setFilter("is_success", e.target.value)} options={SUCCESS_OPTIONS} placeholder="All results"  />
-              <CleanInput  label="User email" value={filters.user_email} onChange={(e) => setFilter("user_email", e.target.value)} placeholder="nikhil@…" type="text" />
-              {activeFilterCount > 0 && (
-                <CleanButton variant="danger" size="xs" onClick={clearAllFilters} style={{ width: "100%" }}>
-                  Clear all filters
-                </CleanButton>
-              )}
-            </div>
-          )}
+      {/* ── Mobile filter sheet — date range + filters ────────────────────────── */}
+      <CleanModal
+        isOpen={filterSheetOpen}
+        onClose={() => setFilterSheetOpen(false)}
+        title="Filters"
+        subtitle={`${total.toLocaleString()} log${total !== 1 ? "s" : ""}`}
+        mode="sheet"
+        footer={
+          <div style={{ display: "flex", gap: 8, width: "100%" }}>
+            {activeFilterCount > 0 && (
+              <CleanButton variant="danger" size="sm" onClick={() => { clearAllFilters(); setFilterSheetOpen(false); }} style={{ flex: 1 }}>
+                Clear all
+              </CleanButton>
+            )}
+            <CleanButton variant="primary" size="sm" onClick={() => setFilterSheetOpen(false)} style={{ flex: 1 }}>
+              Apply
+            </CleanButton>
+          </div>
+        }
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <CleanInput label="From" type="date" value={filters.date_from} onChange={(e) => setFilter("date_from", e.target.value)} />
+            <CleanInput label="To"   type="date" value={filters.date_to}   onChange={(e) => setFilter("date_to",   e.target.value)} />
+          </div>
+          <CleanSelect label="Module"     value={filters.module}     onChange={(e) => setFilter("module",     e.target.value)} options={MODULE_OPTIONS}  placeholder="All modules"  />
+          <CleanSelect label="Action"     value={filters.action}     onChange={(e) => setFilter("action",     e.target.value)} options={ACTION_OPTIONS}  placeholder="All actions"  />
+          <CleanSelect label="Method"     value={filters.method}     onChange={(e) => setFilter("method",     e.target.value)} options={METHOD_OPTIONS}  placeholder="All methods"  />
+          <CleanSelect label="Result"     value={filters.is_success} onChange={(e) => setFilter("is_success", e.target.value)} options={SUCCESS_OPTIONS} placeholder="All results"  />
+          <CleanInput  label="User email" value={filters.user_email} onChange={(e) => setFilter("user_email", e.target.value)} placeholder="nikhil@…" type="text" />
         </div>
-
-        <div style={{ flex: 1 }} />
-
-        {/* Total count */}
-        <span style={{ fontSize: 11, color: "var(--fi-muted)", whiteSpace: "nowrap" }}>
-          {total.toLocaleString()} log{total !== 1 ? "s" : ""}
-        </span>
-      </div>
+      </CleanModal>
 
       {/* ── Table ──────────────────────────────────────────────────────────────── */}
       <div style={{ flex: 1, minHeight: 0 }}>

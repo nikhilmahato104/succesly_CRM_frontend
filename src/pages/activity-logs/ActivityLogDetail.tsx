@@ -71,10 +71,10 @@ const ActivityLogDetail: React.FC<Props> = ({ log, onClose }) => {
 
   return (
     <>
-      {/* Backdrop */}
+      {/* Backdrop — above the mobile bottom bar (700) and floating search (650) */}
       <div
         onClick={onClose}
-        style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.30)", zIndex: 100 }}
+        style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.30)", zIndex: 800 }}
       />
 
       {/* Panel */}
@@ -88,7 +88,7 @@ const ActivityLogDetail: React.FC<Props> = ({ log, onClose }) => {
           background:     "var(--sc-card)",
           borderLeft:     "1px solid var(--fi-border)",
           boxShadow:      "-4px 0 24px rgba(0,0,0,0.15)",
-          zIndex:         101,
+          zIndex:         801,
           display:        "flex",
           flexDirection:  "column",
           overflow:       "hidden",

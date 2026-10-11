@@ -11,7 +11,7 @@ import { selectAccessData } from "../../store/slices/accessSlice";
 import type { RootState } from "../../store";
 import RoleForm from "./RoleForm";
 import { ActionSetBadge } from "./Permissionsbottomsheet";
-import { CleanButton, CleanSearchBar, CleanModal } from "../../atoms/my_clean_code_atoms";
+import { CleanButton, CleanResponsiveSearch, CleanModal } from "../../atoms/my_clean_code_atoms";
 import { OPEN_CREATE_ROLE_EVENT } from "../../organisms/MobileBottomBar";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -154,31 +154,30 @@ const RoleManagement: React.FC = () => {
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden", background: "var(--dt-bg)" }}>
 
-      {/* ── Toolbar ──────────────────────────────────────────────────────────── */}
-      <div style={{
-        display: "flex", alignItems: "center", gap: 6,
-        padding: "7px 12px", borderBottom: "1px solid var(--fi-border)",
-        flexShrink: 0, flexWrap: "wrap", background: "var(--fi-bg)",
-      }}>
-        <CleanSearchBar
-          value={search}
-          onChange={(v) => setSearch(v)}
-          placeholder="Search by role name"
-          width={260}
-        />
+      {/* ── Toolbar — on mobile only the floating search remains ─────────────── */}
+      {isMobile ? (
+        <CleanResponsiveSearch value={search} onChange={setSearch} placeholder="Search by role name" />
+      ) : (
+        <div style={{
+          display: "flex", alignItems: "center", gap: 6,
+          padding: "7px 12px", borderBottom: "1px solid var(--fi-border)",
+          flexShrink: 0, flexWrap: "wrap", background: "var(--fi-bg)",
+        }}>
+          <CleanResponsiveSearch value={search} onChange={setSearch} placeholder="Search by role name" />
 
-        <div style={{ flex: 1 }} />
+          <div style={{ flex: 1 }} />
 
-        {!isMobile && perms.create && (
-          <CleanButton
-            variant="primary" size="sm"
-            iconLeft={<Plus style={{ width: 13, height: 13 }} />}
-            onClick={() => { setEditItem(null); setShowModal(true); }}
-          >
-            Create Role
-          </CleanButton>
-        )}
-      </div>
+          {perms.create && (
+            <CleanButton
+              variant="primary" size="sm"
+              iconLeft={<Plus style={{ width: 13, height: 13 }} />}
+              onClick={() => { setEditItem(null); setShowModal(true); }}
+            >
+              Create Role
+            </CleanButton>
+          )}
+        </div>
+      )}
 
       {/* ── Table ─────────────────────────────────────────────────────────────── */}
       <div style={{ flex: 1, minHeight: 0 }}>

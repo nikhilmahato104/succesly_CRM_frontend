@@ -14,7 +14,7 @@ const useIsMobile = () => {
 import { CustomDatagrid, type GridColumn } from "../../atoms/CustomDatagrid";
 import {
   CleanButton,
-  CleanSearchBar,
+  CleanResponsiveSearch,
   CleanModal,
   CleanDateRangePicker,
 } from "../../atoms/my_clean_code_atoms";
@@ -335,54 +335,56 @@ const DeviceInfoPage: React.FC = () => {
   return (
     <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, overflow: "hidden", background: "var(--dt-bg)" }}>
 
-      {/* ── Toolbar ───────────────────────────────────────────────────────── */}
-      <div style={{
-        display:      "flex",
-        alignItems:   "center",
-        gap:          8,
-        padding:      "8px 12px",
-        borderBottom: "1px solid var(--dt-border)",
-        flexShrink:   0,
-        background:   "var(--dt-header)",
-      }}>
-
-        {/* Search */}
-        <CleanSearchBar
+      {/* ── Toolbar — on mobile only the floating filter + search buttons remain ── */}
+      {isMobile ? (
+        <CleanResponsiveSearch
           value={filters.search}
           onChange={v => setFilter("search", v)}
-          placeholder={isMobile ? "Search devices…" : "Search by device, website, IP, country…"}
-          style={{ flex: 1, minWidth: 0, height: "var(--fi-height)" }}
+          placeholder="Search devices…"
+          mobileFilter={{ activeCount: activeFilterCount, onClick: () => setFilterModalOpen(true) }}
         />
+      ) : (
+        <div style={{
+          display:      "flex",
+          alignItems:   "center",
+          gap:          8,
+          padding:      "8px 12px",
+          borderBottom: "1px solid var(--dt-border)",
+          flexShrink:   0,
+          background:   "var(--dt-header)",
+        }}>
 
-        {/* Combined filter button */}
-        <div style={{ position: "relative", flexShrink: 0 }} ref={filterPanelRef}>
-          <CleanButton
-            variant="outline"
-            size="sm"
-            active={showFilterPanel}
-            icon={isMobile ? <SlidersHorizontal style={{ width: 15, height: 15 }} /> : undefined}
-            iconLeft={!isMobile ? <SlidersHorizontal style={{ width: 13, height: 13 }} /> : undefined}
-            badge={activeFilterCount > 0 ? activeFilterCount : undefined}
-            onClick={() => {
-              if (isMobile) {
-                setFilterModalOpen(true);
-              } else {
-                setShowFilterPanel(v => !v);
-              }
-            }}
-            style={{ height: "var(--fi-height)" }}
-          >
-            {isMobile ? undefined : "Filter"}
-          </CleanButton>
+          {/* Search */}
+          <CleanResponsiveSearch
+            value={filters.search}
+            onChange={v => setFilter("search", v)}
+            placeholder="Search by device, website, IP, country…"
+            style={{ flex: 1, minWidth: 0, height: "var(--fi-height)" }}
+          />
 
-          {/* Desktop dropdown panel */}
-          {!isMobile && showFilterPanel && (
-            <div style={dropdownPanelStyle}>
-              <FilterContent {...filterProps} />
-            </div>
-          )}
+          {/* Combined filter button */}
+          <div style={{ position: "relative", flexShrink: 0 }} ref={filterPanelRef}>
+            <CleanButton
+              variant="outline"
+              size="sm"
+              active={showFilterPanel}
+              iconLeft={<SlidersHorizontal style={{ width: 13, height: 13 }} />}
+              badge={activeFilterCount > 0 ? activeFilterCount : undefined}
+              onClick={() => setShowFilterPanel(v => !v)}
+              style={{ height: "var(--fi-height)" }}
+            >
+              Filter
+            </CleanButton>
+
+            {/* Desktop dropdown panel */}
+            {showFilterPanel && (
+              <div style={dropdownPanelStyle}>
+                <FilterContent {...filterProps} />
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* ── Mobile filter modal (bottom sheet) ───────────────────────────── */}
       <CleanModal

@@ -15,7 +15,7 @@ const useIsMobile = () => {
 import { CustomDatagrid, type GridColumn } from "../../atoms/CustomDatagrid";
 import {
   CleanButton,
-  CleanSearchBar,
+  CleanResponsiveSearch,
   CleanModal,
   CleanDropdown,
   CleanDateRangePicker,
@@ -147,323 +147,325 @@ const COLUMNS: GridColumn<Project>[] = [
           🔧 Active
         </span>
       ) : (
-        <span style={{ fontSize: 12, color: "var(--dt-muted)" }}>—</span>
-      ),
-  },
-  {
-    field: "maintenance_total_amount",
-    headerName: "Maint. Total",
-    minWidth: 110,
-    renderCell: ({ row }) => (row.maintenance_total_amount ?? 0) > 0 ? (
-      <span style={{ fontSize: 12, color: "var(--dt-text)", fontWeight: 500 }}>
-        {formatCurrency(row.maintenance_total_amount)}
-      </span>
-    ) : <span style={{ fontSize: 12, color: "var(--dt-muted)" }}>—</span>,
-  },
-  {
-    field: "maintenance_due_amount",
-    headerName: "Maint. Due",
-    minWidth: 110,
-    renderCell: ({ row }) => (row.maintenance_total_amount ?? 0) > 0 ? (
-      <span style={{ fontSize: 12, color: (row.maintenance_due_amount ?? 0) > 0 ? "#ef4444" : "var(--dt-muted)", fontWeight: (row.maintenance_due_amount ?? 0) > 0 ? 500 : 400 }}>
-        {formatCurrency(row.maintenance_due_amount ?? 0)}
-      </span>
-    ) : <span style={{ fontSize: 12, color: "var(--dt-muted)" }}>—</span>,
-  },
-  {
-    field: "maintenance_payment_status",
-    headerName: "Maint. Pay",
-    minWidth: 110,
-    renderCell: ({ row }) => row.maintenance_payment_status ? (
-      <span style={{ ...pillStyle, ...PAYMENT_STATUS_STYLE[row.maintenance_payment_status] }}>
-        {PAYMENT_STATUS_LABEL[row.maintenance_payment_status]}
-      </span>
-    ) : <span style={{ fontSize: 12, color: "var(--dt-muted)" }}>—</span>,
-  },
-];
-
-// ── Filter content — shared between desktop dropdown & mobile modal ────────────
-
-interface FilterContentProps {
-  filters:          ProjectFilters;
-  setFilter:        <K extends keyof ProjectFilters>(key: K, val: string) => void;
-  clearAllFilters:  () => void;
-  activeFilterCount: number;
-}
-
-const FilterContent: React.FC<FilterContentProps> = ({
-  filters, setFilter, clearAllFilters, activeFilterCount,
-}) => (
-  <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-
-    {/* Date range */}
-    <CleanDateRangePicker
-      label="Date Range"
-      fromValue={filters.date_from}
-      toValue={filters.date_to}
-      onFromChange={v => setFilter("date_from", v)}
-      onToChange={v => setFilter("date_to", v)}
-      clearable
-      onClear={() => { setFilter("date_from", ""); setFilter("date_to", ""); }}
-      stacked
-    />
-
-    {/* Divider */}
-    <div style={{ height: 1, background: "var(--fi-border)", margin: "0 -2px" }} />
-
-    {/* Status / type / payment dropdowns */}
-    <CleanDropdown
-      label="Project Status"
-      value={filters.project_status}
-      options={PROJECT_STATUS_OPTIONS as unknown as { value: string; label: string }[]}
-      onChange={v => setFilter("project_status", v)}
-      placeholder="All statuses"
-      clearable
-    />
-    <CleanDropdown
-      label="Project Type"
-      value={filters.project_type}
-      options={PROJECT_TYPE_OPTIONS as unknown as { value: string; label: string }[]}
-      onChange={v => setFilter("project_type", v)}
-      placeholder="All types"
-      clearable
-    />
-    <CleanDropdown
-      label="Payment Status"
-      value={filters.payment_status}
-      options={PAYMENT_STATUS_OPTIONS as unknown as { value: string; label: string }[]}
-      onChange={v => setFilter("payment_status", v)}
-      placeholder="All payments"
-      clearable
-    />
-
-    {/* Clear all */}
-    {activeFilterCount > 0 && (
-      <CleanButton variant="danger" size="xs" onClick={clearAllFilters} style={{ width: "100%" }}>
-        Clear all filters
-      </CleanButton>
-    )}
-  </div>
-);
-
-// ── Desktop dropdown panel style ───────────────────────────────────────────────
-
-const dropdownPanelStyle: React.CSSProperties = {
-  position:     "absolute",
-  top:          "calc(100% + 4px)",
-  right:        0,
-  zIndex:       50,
-  background:   "var(--fi-bg-panel)",
-  border:       "1px solid var(--fi-border)",
-  borderRadius: "var(--fi-radius)",
-  boxShadow:    "0 4px 20px rgba(0,0,0,0.10)",
-  padding:      14,
-  minWidth:     260,
-};
-
-// ── Component ──────────────────────────────────────────────────────────────────
-
-const ProjectManagement: React.FC = () => {
-  const navigate = useNavigate();
-  const isMobile = useIsMobile();
-  const dispatch = useDispatch();
-  const apiKey   = useSelector((s: RootState) => selectApiKey(s));
-  const access   = useSelector((s: RootState) => selectAccessData(s));
-  const perms    = (access?.["project_management"] ?? {}) as Record<string, boolean>;
-
-  const [data,        setData]        = useState<Project[]>([]);
-  const [filters,     setFilters]     = useState<ProjectFilters>(EMPTY_FILTERS);
-  const [debouncedQ,  setDebouncedQ]  = useState("");
-  const [total,       setTotal]       = useState(0);
-  const [loading,     setLoading]     = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [hasMore,     setHasMore]     = useState(false);
-
-  // Desktop: inline dropdown panel; Mobile: CleanModal
-  const [showFilterPanel,  setShowFilterPanel]  = useState(false);
-  const [filterModalOpen,  setFilterModalOpen]  = useState(false);
-  const filterPanelRef = useRef<HTMLDivElement>(null);
-
-  const pageRef  = useRef(1);
-  const abortRef = useRef<AbortController | null>(null);
-  const PER_PAGE = 25;
-
-  // Close desktop panel on outside click.
-  // Ignore clicks on CleanDropdown portal lists (data-clean-dropdown-portal)
-  // since those elements render at document.body but logically belong to the panel.
-  useEffect(() => {
-    const h = (e: MouseEvent) => {
-      const target = e.target as Element;
-      const insidePanel   = filterPanelRef.current?.contains(target);
-      const insidePortal  = !!target?.closest?.("[data-portal-popup]");
-      if (!insidePanel && !insidePortal) setShowFilterPanel(false);
-    };
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
-  }, []);
-
-  // Debounce search
-  useEffect(() => {
-    const id = setTimeout(() => setDebouncedQ(filters.search.trim()), 500);
-    return () => clearTimeout(id);
-  }, [filters.search]);
-
-  const setFilter = <K extends keyof ProjectFilters>(key: K, val: string) =>
-    setFilters(f => ({ ...f, [key]: val }));
-
-  const clearAllFilters = () => setFilters(EMPTY_FILTERS);
-
-  const activeFilterCount = [
-    filters.project_status, filters.project_type,
-    filters.payment_status, filters.date_from, filters.date_to,
-  ].filter(Boolean).length;
-
-  const buildParams = useCallback(
-    (page: number) => ({
-      page,
-      limit:          PER_PAGE,
-      search:         debouncedQ || undefined,
-      project_status: filters.project_status || undefined,
-      project_type:   filters.project_type   || undefined,
-      payment_status: filters.payment_status || undefined,
-      date_from:      filters.date_from      || undefined,
-      date_to:        filters.date_to        || undefined,
-    }),
-    [debouncedQ, filters],
-  );
-
-  const fetchPage = useCallback(
-    async (page: number, append: boolean) => {
-      if (!apiKey) { dispatch(openApiKeyModal(false)); return; }
-
-      let signal: AbortSignal | undefined;
-      if (!append) {
-        abortRef.current?.abort();
-        abortRef.current = new AbortController();
-        signal = abortRef.current.signal;
-      }
-
-      append ? setLoadingMore(true) : setLoading(true);
-      try {
-        const res   = await fetchProjects({ ...buildParams(page) });
-        const items = res.data.data;
-        setData(prev => append ? [...prev, ...items] : items);
-        setTotal(res.data.total);
-        setHasMore(page < res.data.totalPages);
-        pageRef.current = page;
-      } catch (err: unknown) {
-        const name = (err as any)?.name ?? (err as any)?.code;
-        if (name === "AbortError" || name === "CanceledError" || (err as any)?.message === "canceled") return;
-        showToastnew.error("Failed to fetch projects");
-      } finally {
-        if (!signal?.aborted) {
-          append ? setLoadingMore(false) : setLoading(false);
-          if (!append) requestAnimationFrame(() => requestAnimationFrame(() => emitNavDone()));
-        }
-      }
+          <span style={{ fontSize: 12, color: "var(--dt-muted)" }}>—</span>
+        ),
     },
-    [apiKey, buildParams, dispatch],
+    {
+      field: "maintenance_total_amount",
+      headerName: "Maint. Total",
+      minWidth: 110,
+      renderCell: ({ row }) => (row.maintenance_total_amount ?? 0) > 0 ? (
+        <span style={{ fontSize: 12, color: "var(--dt-text)", fontWeight: 500 }}>
+          {formatCurrency(row.maintenance_total_amount)}
+        </span>
+      ) : <span style={{ fontSize: 12, color: "var(--dt-muted)" }}>—</span>,
+    },
+    {
+      field: "maintenance_due_amount",
+      headerName: "Maint. Due",
+      minWidth: 110,
+      renderCell: ({ row }) => (row.maintenance_total_amount ?? 0) > 0 ? (
+        <span style={{ fontSize: 12, color: (row.maintenance_due_amount ?? 0) > 0 ? "#ef4444" : "var(--dt-muted)", fontWeight: (row.maintenance_due_amount ?? 0) > 0 ? 500 : 400 }}>
+          {formatCurrency(row.maintenance_due_amount ?? 0)}
+        </span>
+      ) : <span style={{ fontSize: 12, color: "var(--dt-muted)" }}>—</span>,
+    },
+    {
+      field: "maintenance_payment_status",
+      headerName: "Maint. Pay",
+      minWidth: 110,
+      renderCell: ({ row }) => row.maintenance_payment_status ? (
+        <span style={{ ...pillStyle, ...PAYMENT_STATUS_STYLE[row.maintenance_payment_status] }}>
+          {PAYMENT_STATUS_LABEL[row.maintenance_payment_status]}
+        </span>
+      ) : <span style={{ fontSize: 12, color: "var(--dt-muted)" }}>—</span>,
+    },
+  ];
+
+  // ── Filter content — shared between desktop dropdown & mobile modal ────────────
+
+  interface FilterContentProps {
+    filters:          ProjectFilters;
+    setFilter:        <K extends keyof ProjectFilters>(key: K, val: string) => void;
+    clearAllFilters:  () => void;
+    activeFilterCount: number;
+  }
+
+  const FilterContent: React.FC<FilterContentProps> = ({
+    filters, setFilter, clearAllFilters, activeFilterCount,
+  }) => (
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+
+      {/* Date range */}
+      <CleanDateRangePicker
+        label="Date Range"
+        fromValue={filters.date_from}
+        toValue={filters.date_to}
+        onFromChange={v => setFilter("date_from", v)}
+        onToChange={v => setFilter("date_to", v)}
+        clearable
+        onClear={() => { setFilter("date_from", ""); setFilter("date_to", ""); }}
+        stacked
+      />
+
+      {/* Divider */}
+      <div style={{ height: 1, background: "var(--fi-border)", margin: "0 -2px" }} />
+
+      {/* Status / type / payment dropdowns */}
+      <CleanDropdown
+        label="Project Status"
+        value={filters.project_status}
+        options={PROJECT_STATUS_OPTIONS as unknown as { value: string; label: string }[]}
+        onChange={v => setFilter("project_status", v)}
+        placeholder="All statuses"
+        clearable
+      />
+      <CleanDropdown
+        label="Project Type"
+        value={filters.project_type}
+        options={PROJECT_TYPE_OPTIONS as unknown as { value: string; label: string }[]}
+        onChange={v => setFilter("project_type", v)}
+        placeholder="All types"
+        clearable
+      />
+      <CleanDropdown
+        label="Payment Status"
+        value={filters.payment_status}
+        options={PAYMENT_STATUS_OPTIONS as unknown as { value: string; label: string }[]}
+        onChange={v => setFilter("payment_status", v)}
+        placeholder="All payments"
+        clearable
+      />
+
+      {/* Clear all */}
+      {activeFilterCount > 0 && (
+        <CleanButton variant="danger" size="xs" onClick={clearAllFilters} style={{ width: "100%" }}>
+          Clear all filters
+        </CleanButton>
+      )}
+    </div>
   );
 
-  useEffect(() => {
-    pageRef.current = 1;
-    setData([]);
-    fetchPage(1, false);
-  }, [fetchPage]);
+  // ── Desktop dropdown panel style ───────────────────────────────────────────────
 
-  const handleLoadMore = useCallback(() => fetchPage(pageRef.current + 1, true), [fetchPage]);
-  const handleRefresh  = useCallback(() => { pageRef.current = 1; setData([]); fetchPage(1, false); }, [fetchPage]);
-
-  const handleView   = useCallback((row: Project) => navigate(`/projects/${row._id}`), [navigate]);
-  const handleEdit   = useCallback((row: Project) => navigate(`/projects/${row._id}/edit`), [navigate]);
-  const handleDelete = useCallback(async (row: Project) => {
-    try {
-      await deleteProject(row._id);
-      showToastnew.success("Project deleted");
-      handleRefresh();
-    } catch {
-      showToastnew.error("Failed to delete project");
-    }
-  }, [handleRefresh]);
-
-  const handleBulkDelete = useCallback(async (ids: (string | number)[]) => {
-    try {
-      await Promise.all(ids.map(id => deleteProject(String(id))));
-      showToastnew.success(`${ids.length} project${ids.length > 1 ? "s" : ""} deleted`);
-      handleRefresh();
-    } catch {
-      showToastnew.error("Failed to delete selected projects");
-    }
-  }, [handleRefresh]);
-
-  const filterProps: FilterContentProps = {
-    filters, setFilter, clearAllFilters, activeFilterCount,
+  const dropdownPanelStyle: React.CSSProperties = {
+    position:     "absolute",
+    top:          "calc(100% + 4px)",
+    right:        0,
+    zIndex:       50,
+    background:   "var(--fi-bg-panel)",
+    border:       "1px solid var(--fi-border)",
+    borderRadius: "var(--fi-radius)",
+    boxShadow:    "0 4px 20px rgba(0,0,0,0.10)",
+    padding:      14,
+    minWidth:     260,
   };
 
-  return (
-    <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, overflow: "hidden", background: "var(--dt-bg)" }}>
+  // ── Component ──────────────────────────────────────────────────────────────────
 
-      {/* ── Toolbar ───────────────────────────────────────────────────────── */}
-      <div style={{
-        display:      "flex",
-        alignItems:   "center",
-        gap:          8,
-        padding:      "8px 12px",
-        borderBottom: "1px solid var(--dt-border)",
-        flexShrink:   0,
-        background:   "var(--dt-header)",
-      }}>
+  const ProjectManagement: React.FC = () => {
+    const navigate = useNavigate();
+    const isMobile = useIsMobile();
+    const dispatch = useDispatch();
+    const apiKey   = useSelector((s: RootState) => selectApiKey(s));
+    const access   = useSelector((s: RootState) => selectAccessData(s));
+    const perms    = (access?.["project_management"] ?? {}) as Record<string, boolean>;
 
-        {/* Search */}
-        <CleanSearchBar
-          value={filters.search}
-          onChange={v => setFilter("search", v)}
-          placeholder={isMobile ? "Search projects…" : "Search name, mobile, email, project…"}
-          style={{ flex: 1, minWidth: 0, height: "var(--fi-height)" }}
-        />
+    const [data,        setData]        = useState<Project[]>([]);
+    const [filters,     setFilters]     = useState<ProjectFilters>(EMPTY_FILTERS);
+    const [debouncedQ,  setDebouncedQ]  = useState("");
+    const [total,       setTotal]       = useState(0);
+    const [loading,     setLoading]     = useState(false);
+    const [loadingMore, setLoadingMore] = useState(false);
+    const [hasMore,     setHasMore]     = useState(false);
 
-        {/* Combined filter button */}
-        <div style={{ position: "relative", flexShrink: 0 }} ref={filterPanelRef}>
-          <CleanButton
-            variant="outline"
-            size="sm"
-            active={showFilterPanel}
-            icon={isMobile ? <SlidersHorizontal style={{ width: 15, height: 15 }} /> : undefined}
-            iconLeft={!isMobile ? <SlidersHorizontal style={{ width: 13, height: 13 }} /> : undefined}
-            badge={activeFilterCount > 0 ? activeFilterCount : undefined}
-            onClick={() => {
-              if (isMobile) {
-                setFilterModalOpen(true);
-              } else {
-                setShowFilterPanel(v => !v);
-              }
-            }}
-            style={{ height: "var(--fi-height)" }}
-          >
-            {isMobile ? undefined : "Filter"}
-          </CleanButton>
+    // Desktop: inline dropdown panel; Mobile: CleanModal
+    const [showFilterPanel,  setShowFilterPanel]  = useState(false);
+    const [filterModalOpen,  setFilterModalOpen]  = useState(false);
+    const filterPanelRef = useRef<HTMLDivElement>(null);
 
-          {/* Desktop dropdown panel */}
-          {!isMobile && showFilterPanel && (
-            <div style={dropdownPanelStyle}>
-              <FilterContent {...filterProps} />
-            </div>
+    const pageRef  = useRef(1);
+    const abortRef = useRef<AbortController | null>(null);
+    const PER_PAGE = 25;
+
+    // Close desktop panel on outside click.
+    // Ignore clicks on CleanDropdown portal lists (data-clean-dropdown-portal)
+    // since those elements render at document.body but logically belong to the panel.
+    useEffect(() => {
+      const h = (e: MouseEvent) => {
+        const target = e.target as Element;
+        const insidePanel   = filterPanelRef.current?.contains(target);
+        const insidePortal  = !!target?.closest?.("[data-portal-popup]");
+        if (!insidePanel && !insidePortal) setShowFilterPanel(false);
+      };
+      document.addEventListener("mousedown", h);
+      return () => document.removeEventListener("mousedown", h);
+    }, []);
+
+    // Debounce search
+    useEffect(() => {
+      const id = setTimeout(() => setDebouncedQ(filters.search.trim()), 500);
+      return () => clearTimeout(id);
+    }, [filters.search]);
+
+    const setFilter = <K extends keyof ProjectFilters>(key: K, val: string) =>
+      setFilters(f => ({ ...f, [key]: val }));
+
+    const clearAllFilters = () => setFilters(EMPTY_FILTERS);
+
+    const activeFilterCount = [
+      filters.project_status, filters.project_type,
+      filters.payment_status, filters.date_from, filters.date_to,
+    ].filter(Boolean).length;
+
+    const buildParams = useCallback(
+      (page: number) => ({
+        page,
+        limit:          PER_PAGE,
+        search:         debouncedQ || undefined,
+        project_status: filters.project_status || undefined,
+        project_type:   filters.project_type   || undefined,
+        payment_status: filters.payment_status || undefined,
+        date_from:      filters.date_from      || undefined,
+        date_to:        filters.date_to        || undefined,
+      }),
+      [debouncedQ, filters],
+    );
+
+    const fetchPage = useCallback(
+      async (page: number, append: boolean) => {
+        if (!apiKey) { dispatch(openApiKeyModal(false)); return; }
+
+        let signal: AbortSignal | undefined;
+        if (!append) {
+          abortRef.current?.abort();
+          abortRef.current = new AbortController();
+          signal = abortRef.current.signal;
+        }
+
+        append ? setLoadingMore(true) : setLoading(true);
+        try {
+          const res   = await fetchProjects({ ...buildParams(page) });
+          const items = res.data.data;
+          setData(prev => append ? [...prev, ...items] : items);
+          setTotal(res.data.total);
+          setHasMore(page < res.data.totalPages);
+          pageRef.current = page;
+        } catch (err: unknown) {
+          const name = (err as any)?.name ?? (err as any)?.code;
+          if (name === "AbortError" || name === "CanceledError" || (err as any)?.message === "canceled") return;
+          showToastnew.error("Failed to fetch projects");
+        } finally {
+          if (!signal?.aborted) {
+            append ? setLoadingMore(false) : setLoading(false);
+            if (!append) requestAnimationFrame(() => requestAnimationFrame(() => emitNavDone()));
+          }
+        }
+      },
+      [apiKey, buildParams, dispatch],
+    );
+
+    useEffect(() => {
+      pageRef.current = 1;
+      setData([]);
+      fetchPage(1, false);
+    }, [fetchPage]);
+
+    const handleLoadMore = useCallback(() => fetchPage(pageRef.current + 1, true), [fetchPage]);
+    const handleRefresh  = useCallback(() => { pageRef.current = 1; setData([]); fetchPage(1, false); }, [fetchPage]);
+
+    const handleView   = useCallback((row: Project) => navigate(`/projects/${row._id}`), [navigate]);
+    const handleEdit   = useCallback((row: Project) => navigate(`/projects/${row._id}/edit`), [navigate]);
+    const handleDelete = useCallback(async (row: Project) => {
+      try {
+        await deleteProject(row._id);
+        showToastnew.success("Project deleted");
+        handleRefresh();
+      } catch {
+        showToastnew.error("Failed to delete project");
+      }
+    }, [handleRefresh]);
+
+    const handleBulkDelete = useCallback(async (ids: (string | number)[]) => {
+      try {
+        await Promise.all(ids.map(id => deleteProject(String(id))));
+        showToastnew.success(`${ids.length} project${ids.length > 1 ? "s" : ""} deleted`);
+        handleRefresh();
+      } catch {
+        showToastnew.error("Failed to delete selected projects");
+      }
+    }, [handleRefresh]);
+
+    const filterProps: FilterContentProps = {
+      filters, setFilter, clearAllFilters, activeFilterCount,
+    };
+
+    return (
+      <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, overflow: "hidden", background: "var(--dt-bg)" }}>
+
+        {/* ── Toolbar — on mobile only the floating filter + search buttons remain ── */}
+        {isMobile ? (
+          <CleanResponsiveSearch
+            value={filters.search}
+            onChange={v => setFilter("search", v)}
+            placeholder="Search projects…"
+            mobileFilter={{ activeCount: activeFilterCount, onClick: () => setFilterModalOpen(true) }}
+          />
+        ) : (
+        <div style={{
+          display:      "flex",
+          alignItems:   "center",
+          gap:          8,
+          padding:      "8px 12px",
+          borderBottom: "1px solid var(--dt-border)",
+          flexShrink:   0,
+          background:   "var(--dt-header)",
+        }}>
+
+          {/* Search */}
+          <CleanResponsiveSearch
+            value={filters.search}
+            onChange={v => setFilter("search", v)}
+            placeholder="Search name, mobile, email, project…"
+            style={{ flex: 1, minWidth: 0, height: "var(--fi-height)" }}
+          />
+
+          {/* Combined filter button */}
+          <div style={{ position: "relative", flexShrink: 0 }} ref={filterPanelRef}>
+            <CleanButton
+              variant="outline"
+              size="sm"
+              active={showFilterPanel}
+              iconLeft={<SlidersHorizontal style={{ width: 13, height: 13 }} />}
+              badge={activeFilterCount > 0 ? activeFilterCount : undefined}
+              onClick={() => setShowFilterPanel(v => !v)}
+              style={{ height: "var(--fi-height)" }}
+            >
+              Filter
+            </CleanButton>
+
+            {/* Desktop dropdown panel */}
+            {showFilterPanel && (
+              <div style={dropdownPanelStyle}>
+                <FilterContent {...filterProps} />
+              </div>
+            )}
+          </div>
+
+          {/* New Project — desktop only (mobile uses the bottom bar +) */}
+          {perms.create !== false && (
+            <CleanButton
+              variant="primary"
+              size="sm"
+              iconLeft={<Plus style={{ width: 13, height: 13 }} />}
+              onClick={() => navigate("/projects/new")}
+              style={{ height: "var(--fi-height)", flexShrink: 0 }}
+            >
+              New Project
+            </CleanButton>
           )}
         </div>
-
-        {/* New Project — desktop only */}
-        {!isMobile && perms.create !== false && (
-          <CleanButton
-            variant="primary"
-            size="sm"
-            iconLeft={<Plus style={{ width: 13, height: 13 }} />}
-            onClick={() => navigate("/projects/new")}
-            style={{ height: "var(--fi-height)", flexShrink: 0 }}
-          >
-            New Project
-          </CleanButton>
-        )}
-      </div>
+      )}
 
       {/* ── Mobile filter modal (bottom sheet) ───────────────────────────── */}
       <CleanModal

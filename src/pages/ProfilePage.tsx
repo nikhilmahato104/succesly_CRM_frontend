@@ -237,7 +237,7 @@ export const ProfilePage: React.FC = () => {
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
             <div className="flex items-center space-x-6">
               <div className="relative">
-                <div className="w-24 h-24 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center border border-purple-200 dark:border-purple-700 text-white text-2xl font-bold">
+                <div className="w-24 h-24 bg-[var(--primary)] rounded-2xl flex items-center justify-center border border-[var(--primary)] text-[var(--primary-text)] text-2xl font-bold">
                   {getInitials(formData.name)}
                 </div>
                 <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-green-500 rounded-full border-4 border-white dark:border-gray-800 flex items-center justify-center">
@@ -263,7 +263,7 @@ export const ProfilePage: React.FC = () => {
                   <MyButton
                     onClick={() => setIsEditing(true)}
                     leftIcon={<Edit className="h-5 w-5" />}
-                    className="bg-purple-600 hover:bg-purple-700 text-white border-purple-600"
+                    className="bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-[var(--primary-text)] border-[var(--primary)]"
                   >
                     Edit Profile
                   </MyButton>
@@ -282,7 +282,7 @@ export const ProfilePage: React.FC = () => {
                       onClick={handleSave}
                       isLoading={isLoading}
                       leftIcon={<Save className="h-5 w-5" />}
-                      className="bg-purple-600 hover:bg-purple-700 text-white border-purple-600"
+                      className="bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-[var(--primary-text)] border-[var(--primary)]"
                     >
                       Save Changes
                     </MyButton>
@@ -333,7 +333,7 @@ export const ProfilePage: React.FC = () => {
                   onClick={() => setActiveTab(tab.id)}
                   className={`flex items-center space-x-3 w-full px-6 py-4 text-left transition-all duration-200 ${
                     activeTab === tab.id
-                      ? 'bg-purple-50 dark:bg-purple-900/20 border-r-2 border-purple-500 text-purple-600 dark:text-purple-400'
+                      ? 'bg-[var(--primary-light)] border-r-2 border-[var(--primary)] text-[var(--primary)]'
                       : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
                   }`}
                 >
@@ -425,7 +425,7 @@ export const ProfilePage: React.FC = () => {
                       <MyButton
                         onClick={() => setShowPasswordForm(true)}
                         leftIcon={<Lock className="h-4 w-4" />}
-                        className="bg-purple-600 hover:bg-purple-700 text-white border-purple-600"
+                        className="bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-[var(--primary-text)] border-[var(--primary)]"
                       >
                         Change Password
                       </MyButton>
@@ -493,7 +493,7 @@ export const ProfilePage: React.FC = () => {
                             type="submit"
                             isLoading={isPasswordLoading}
                             leftIcon={<Save className="h-5 w-5" />}
-                            // className="bg-purple-600 hover:bg-purple-700 text-white border-purple-600"
+                            // className="bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-[var(--primary-text)] border-[var(--primary)]"
                           >
                             Save Password
                           </MyButton>

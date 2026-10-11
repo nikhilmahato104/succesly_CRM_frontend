@@ -11,7 +11,7 @@ export const Loader: React.FC<LoaderProps> = ({ size = 'md', className }) => {
     <div
      style={{ borderTopColor: COLORS.primary.DEFAULT }}
       className={clsx(
-        'animate-spin rounded-full border-2 border-gray-300 border-t-purple-500',
+        'animate-spin rounded-full border-2 border-gray-300 border-t-[var(--primary)]',
         {
           'h-4 w-4': size === 'sm',
           'h-6 w-6': size === 'md',

@@ -689,7 +689,7 @@ export const AdvancedTable: React.FC<AdvancedTableProps> = ({
                     className={clsx(
                       "min-w-[2rem] h-8 px-2 text-sm font-medium rounded-full transition-colors",
                       isActive
-                        ? "bg-[var(--primary)] text-white border border-[var(--primary)]"
+                        ? "bg-[var(--primary)] text-[var(--primary-text)] border border-[var(--primary)]"
                         : loading
                           ? "border-gray-300 dark:border-gray-600 text-gray-400 cursor-not-allowed"
                           : "border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-[#1a1a1a]"

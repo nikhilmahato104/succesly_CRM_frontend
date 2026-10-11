@@ -75,8 +75,8 @@ const ApiKeyModal: React.FC = () => {
             <Dialog.Panel className="w-full max-w-md rounded-xl bg-white dark:bg-gray-800 p-6 shadow-2xl transition-all">
               {/* Header */}
               <div className="flex items-center gap-3 mb-3">
-                <div className="p-2 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg">
-                  <Key className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                <div className="p-2 bg-[var(--primary-light)] rounded-lg">
+                  <Key className="h-5 w-5 text-[var(--primary)]" />
                 </div>
                 <Dialog.Title className="text-lg font-semibold text-gray-900 dark:text-white">
                   API Key Required
@@ -118,7 +118,7 @@ const ApiKeyModal: React.FC = () => {
                 onChange={handleChange}
                 onKeyDown={handleKeyDown}
                 placeholder="Paste your x-api-key here"
-                className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
                 autoFocus
               />
 

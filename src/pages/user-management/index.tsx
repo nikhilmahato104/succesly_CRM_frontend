@@ -46,8 +46,8 @@ const UserManagement: React.FC = () => {
   return (
     <div className="globalPadding">
       <div className="flex items-center gap-4 mb-4">
-        <div className="p-2 rounded-lg bg-indigo-50 dark:bg-indigo-900/20">
-          <ClipboardCheck className="h-5 w-5 text-indigo-600 dark:text-indigo-300" />
+        <div className="p-2 rounded-lg bg-[var(--primary-light)]">
+          <ClipboardCheck className="h-5 w-5 text-[var(--primary)]" />
         </div>
         <div>
           <h1 className="text-xl font-semibold text-gray-900 dark:text-white">

@@ -13,7 +13,7 @@ import type { RootState } from "../../store";
 import UserForm from "./UserForm";
 import UserProfileCard, { type CardUser } from "../../atoms/UserProfileCard";
 import {
-  CleanButton, CleanSearchBar, CleanSelect, CleanModal, type SelectOption,
+  CleanButton, CleanResponsiveSearch, CleanSelect, CleanModal, type SelectOption,
 } from "../../atoms/my_clean_code_atoms";
 import { OPEN_CREATE_USER_EVENT } from "../../organisms/MobileBottomBar";
 
@@ -269,6 +269,7 @@ const UserManagementList: React.FC = () => {
   }, []);
 
   const activeFilterCount = statusFilter ? 1 : 0;
+  const [filterSheetOpen, setFilterSheetOpen] = React.useState(false);
 
   const handleAvatarClick = useCallback((e: React.MouseEvent<HTMLDivElement>, row: UserItem) => {
     setProfileCard({
@@ -311,63 +312,98 @@ const UserManagementList: React.FC = () => {
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden", background: "var(--dt-bg)" }}>
 
-      {/* ── Toolbar ──────────────────────────────────────────────────────────── */}
-      <div style={{
-        display: "flex", alignItems: "center", gap: 6,
-        padding: "7px 12px", borderBottom: "1px solid var(--fi-border)",
-        flexShrink: 0, flexWrap: "wrap", background: "var(--fi-bg)",
-      }}>
-        <CleanSearchBar
+      {/* ── Toolbar — on mobile only the floating filter + search buttons remain ── */}
+      {isMobile ? (
+        <CleanResponsiveSearch
           value={search}
-          onChange={(v) => setSearch(v)}
+          onChange={setSearch}
           placeholder="Search by name or email"
-          width={260}
+          mobileFilter={{ activeCount: activeFilterCount, onClick: () => setFilterSheetOpen(true) }}
         />
+      ) : (
+        <div style={{
+          display: "flex", alignItems: "center", gap: 6,
+          padding: "7px 12px", borderBottom: "1px solid var(--fi-border)",
+          flexShrink: 0, flexWrap: "wrap", background: "var(--fi-bg)",
+        }}>
+          <CleanResponsiveSearch value={search} onChange={setSearch} placeholder="Search by name or email" />
 
-        <div style={{ position: "relative" }} ref={filterPanelRef}>
-          <CleanButton
-            variant="outline" size="sm"
-            iconLeft={<ListFilter style={{ width: 13, height: 13 }} />}
-            badge={activeFilterCount > 0 ? activeFilterCount : undefined}
-            onClick={() => setShowFilterPanel((v) => !v)}
-            style={activeFilterCount > 0 ? { borderColor: "var(--fi-border-focus)" } : undefined}
-          >
-            Filter
-          </CleanButton>
+          <div style={{ position: "relative" }} ref={filterPanelRef}>
+            <CleanButton
+              variant="outline" size="sm"
+              iconLeft={<ListFilter style={{ width: 13, height: 13 }} />}
+              badge={activeFilterCount > 0 ? activeFilterCount : undefined}
+              onClick={() => setShowFilterPanel((v) => !v)}
+              style={activeFilterCount > 0 ? { borderColor: "var(--fi-border-focus)" } : undefined}
+            >
+              Filter
+            </CleanButton>
 
-          {showFilterPanel && (
-            <div style={{ ...panelStyle, minWidth: 220, display: "flex", flexDirection: "column", gap: 10 }}>
-              <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--fi-muted)" }}>
-                Filters
-              </span>
-              <CleanSelect
-                label="Status"
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                options={STATUS_OPTIONS}
-                placeholder="All statuses"
-              />
-              {activeFilterCount > 0 && (
-                <CleanButton variant="danger" size="xs" onClick={() => setStatusFilter("")} style={{ width: "100%" }}>
-                  Clear filters
-                </CleanButton>
-              )}
-            </div>
+            {showFilterPanel && (
+              <div style={{ ...panelStyle, minWidth: 220, display: "flex", flexDirection: "column", gap: 10 }}>
+                <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--fi-muted)" }}>
+                  Filters
+                </span>
+                <CleanSelect
+                  label="Status"
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  options={STATUS_OPTIONS}
+                  placeholder="All statuses"
+                />
+                {activeFilterCount > 0 && (
+                  <CleanButton variant="danger" size="xs" onClick={() => setStatusFilter("")} style={{ width: "100%" }}>
+                    Clear filters
+                  </CleanButton>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div style={{ flex: 1 }} />
+
+          {perms.create && (
+            <CleanButton
+              variant="primary" size="sm"
+              iconLeft={<Plus style={{ width: 13, height: 13 }} />}
+              onClick={() => { setEditItem(null); setShowModal(true); }}
+            >
+              Create User
+            </CleanButton>
           )}
         </div>
+      )}
 
-        <div style={{ flex: 1 }} />
-
-        {!isMobile && perms.create && (
-          <CleanButton
-            variant="primary" size="sm"
-            iconLeft={<Plus style={{ width: 13, height: 13 }} />}
-            onClick={() => { setEditItem(null); setShowModal(true); }}
-          >
-            Create User
-          </CleanButton>
-        )}
-      </div>
+      {/* ── Mobile filter sheet ───────────────────────────────────────────────── */}
+      <CleanModal
+        isOpen={filterSheetOpen}
+        onClose={() => setFilterSheetOpen(false)}
+        title="Filters"
+        subtitle={activeFilterCount > 0 ? `${activeFilterCount} active filter` : undefined}
+        mode="sheet"
+        expandable={false}
+        closeOnBackdrop
+        footer={
+          <div style={{ display: "flex", gap: 8, width: "100%" }}>
+            {activeFilterCount > 0 && (
+              <CleanButton variant="danger" size="sm" onClick={() => { setStatusFilter(""); setFilterSheetOpen(false); }} style={{ flex: 1 }}>
+                Clear all
+              </CleanButton>
+            )}
+            <CleanButton variant="primary" size="sm" onClick={() => setFilterSheetOpen(false)} style={{ flex: 1 }}>
+              Apply
+            </CleanButton>
+          </div>
+        }
+      >
+        <CleanSelect
+          label="Status"
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          options={STATUS_OPTIONS}
+          placeholder="All statuses"
+        />
+      </CleanModal>
 
       {/* ── Table ─────────────────────────────────────────────────────────────── */}
       <div style={{ flex: 1, minHeight: 0 }}>

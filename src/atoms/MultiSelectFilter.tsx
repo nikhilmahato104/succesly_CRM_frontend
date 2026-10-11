@@ -44,8 +44,8 @@ export const MultiSelectFilter: React.FC<MultiSelectFilterProps> = ({
             className={[
               "px-3 py-1.5 rounded-full text-sm font-medium border transition-colors",
               active
-                ? "bg-indigo-600 text-white border-indigo-600"
-                : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-indigo-400",
+                ? "bg-[var(--primary)] text-[var(--primary-text)] border-[var(--primary)]"
+                : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-[var(--primary)]",
             ].join(" ")}
           >
             {opt.label}
