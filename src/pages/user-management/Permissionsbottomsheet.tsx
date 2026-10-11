@@ -1,7 +1,8 @@
 //V5
 import React from "react";
-import ReactDOM from "react-dom";
+import { Drawer } from "vaul";
 import { ShieldCheck, X } from "lucide-react";
+import { AnimatedContent } from "../../atoms/reactbits";
 
 type RoleAccess = {
   module_id: string;
@@ -42,9 +43,9 @@ const PERM_KEYS: (keyof RoleAccess)[] = [
 ];
 const PERM_LABELS = ["Create", "Edit", "View", "Delete", "Transfer", "Export"];
 
-const ANIM_MS = 340;
-const MAX_BLUR = 6; // px — full blur when sheet is fully open
-const SHEET_HEIGHT_ESTIMATE = 500; // px — used to normalise drag ratio
+const PARTIAL_SNAP = 0.68; // ≈ 65dvh of the sheet visible
+const FULL_SNAP    = 1;
+const SNAP_POINTS  = [PARTIAL_SNAP, FULL_SNAP];
 
 // ─── Permissions Table ─────────────────────────────────────────────────────
 const PermissionsTable: React.FC<{ access: RoleAccess[] }> = ({ access }) => (
@@ -115,237 +116,72 @@ const PermissionsTable: React.FC<{ access: RoleAccess[] }> = ({ access }) => (
   </div>
 );
 
-// ─── Bottom Sheet ──────────────────────────────────────────────────────────
+// ─── Bottom Sheet (vaul) ───────────────────────────────────────────────────
+// Opens at ~65% height; swipe up → full height, swipe down → dismiss.
 interface BottomSheetProps {
   open: boolean;
   onClose: () => void;
   access: RoleAccess[];
 }
 
-type Phase = "idle" | "entering" | "open" | "leaving";
-
 const BottomSheet: React.FC<BottomSheetProps> = ({ open, onClose, access }) => {
-  const [phase, setPhase] = React.useState<Phase>("idle");
-  const timers = React.useRef<ReturnType<typeof setTimeout>[]>([]);
+  const [snap, setSnap] = React.useState<number | string | null>(PARTIAL_SNAP);
 
-  // ── Single numeric "progress" value drives EVERYTHING visual ─────────
-  // 0 = fully hidden (sheet at bottom, backdrop transparent, blur 0)
-  // 1 = fully open   (sheet at top,   backdrop opaque,      blur MAX)
-  // During CSS-animated open/close this is set to 1 or 0 and the CSS
-  // transition handles the interpolation.
-  // During drag this is computed directly from dragOffset so blur/opacity
-  // track the finger in real time with NO transition lag.
-  const [progress, setProgress] = React.useState(0);
+  React.useEffect(() => { if (open) setSnap(PARTIAL_SNAP); }, [open]);
 
-  // Raw pixel offset from drag — kept separate so we can do math on it
-  const dragOffset = React.useRef(0);
-  const [dragOffsetState, setDragOffsetState] = React.useState(0); // for sheet transform
-  const isDragging = React.useRef(false);
-  const dragStartY = React.useRef(0);
-  const sheetRef = React.useRef<HTMLDivElement>(null);
-  const CLOSE_THRESHOLD = 120;
+  const atPartial = snap !== FULL_SNAP;
 
-  const clearAllTimers = () => {
-    timers.current.forEach(clearTimeout);
-    timers.current = [];
-  };
-  const after = (ms: number, fn: () => void) => {
-    const id = setTimeout(fn, ms);
-    timers.current.push(id);
-  };
-
-  // ── Phase machine (same as before) ───────────────────────────────────
-  React.useEffect(() => {
-    clearAllTimers();
-    if (open) {
-      if (phase === "idle") {
-        setProgress(0);
-        setPhase("entering");
-        after(20, () => {
-          setPhase("open");
-          setProgress(1); // triggers CSS transition from 0→1
-        });
-      } else if (phase === "leaving") {
-        setPhase("open");
-        setProgress(1);
-      }
-      document.body.style.overflow = "hidden";
-    } else {
-      if (phase === "open" || phase === "entering") {
-        setProgress(0); // triggers CSS transition from 1→0
-        setPhase("leaving");
-        after(ANIM_MS + 20, () => setPhase("idle"));
-      }
-      document.body.style.overflow = "";
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
-
-  React.useEffect(
-    () => () => { clearAllTimers(); document.body.style.overflow = ""; },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    []
-  );
-
-  // ── Derived backdrop values from progress + drag ──────────────────────
-  // When dragging: progress is OVERRIDDEN by live drag ratio so blur/opacity
-  // reduce exactly as the sheet moves down — pixel-perfect sync.
-  const getSheetHeight = () =>
-    sheetRef.current?.offsetHeight ?? SHEET_HEIGHT_ESTIMATE;
-
-  const liveProgress = isDragging.current
-    ? Math.max(0, 1 - dragOffset.current / getSheetHeight())
-    : progress;
-
-  // Clamp to [0,1]
-  const p = Math.min(1, Math.max(0, liveProgress));
-
-  const backdropOpacity = p * 0.52;
-  const backdropBlur    = p * MAX_BLUR;
-
-  // ── Touch drag ────────────────────────────────────────────────────────
-  const onTouchStart = (e: React.TouchEvent) => {
-    dragStartY.current = e.touches[0].clientY;
-    dragOffset.current = 0;
-    isDragging.current = true;
-  };
-
-  const onTouchMove = (e: React.TouchEvent) => {
-    if (!isDragging.current) return;
-    const d = e.touches[0].clientY - dragStartY.current;
-    if (d > 0) {
-      dragOffset.current = d;
-      setDragOffsetState(d);
-      // Force re-render so liveProgress recalculates and backdrop updates
-      setProgress((prev) => prev); // tiny no-op state poke
-    }
-  };
-
-  const onTouchEnd = () => {
-    isDragging.current = false;
-    const offset = dragOffset.current;
-    dragOffset.current = 0;
-    setDragOffsetState(0);
-    if (offset > CLOSE_THRESHOLD) {
-      onClose();
-    }
-    // progress snaps back to 1 (sheet is open), CSS transition handles it
-  };
-
-  // ── Mouse drag ────────────────────────────────────────────────────────
-  const onMouseDown = (e: React.MouseEvent) => {
-    dragStartY.current = e.clientY;
-    dragOffset.current = 0;
-    isDragging.current = true;
-
-    const onMove = (ev: MouseEvent) => {
-      if (!isDragging.current) return;
-      const d = ev.clientY - dragStartY.current;
-      if (d > 0) {
-        dragOffset.current = d;
-        setDragOffsetState(d);
-        setProgress((prev) => prev);
-      }
-    };
-
-    const onUp = () => {
-      isDragging.current = false;
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
-      const offset = dragOffset.current;
-      dragOffset.current = 0;
-      setDragOffsetState(0);
-      if (offset > CLOSE_THRESHOLD) {
-        onClose();
-      }
-    };
-
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
-  };
-
-  if (phase === "idle") return null;
-
-  const isOpen = phase === "open";
-
-  return ReactDOM.createPortal(
-    <>
-      {/* ── Backdrop — blur & opacity track sheet position in real time ── */}
-      <div
-        onClick={phase === "open" ? onClose : undefined}
-        style={{
-          position: "fixed",
-          inset: 0,
-          zIndex: 9998,
-          background: "rgba(0,0,0,1)",
-          // During drag: NO transition — follows finger instantly
-          // During CSS anim: transition handles interpolation
-          opacity: backdropOpacity,
-          backdropFilter: `blur(${backdropBlur}px)`,
-          WebkitBackdropFilter: `blur(${backdropBlur}px)`,
-          transition: isDragging.current
-            ? "none"
-            : `opacity ${ANIM_MS}ms ease, backdrop-filter ${ANIM_MS}ms ease, -webkit-backdrop-filter ${ANIM_MS}ms ease`,
-          pointerEvents: phase === "open" ? "auto" : "none",
-        }}
-      />
-
-      {/* ── Sheet ── */}
-      <div
-        ref={sheetRef}
-        style={{
-          position: "fixed",
-          bottom: 0,
-          left: 0,
-          right: 0,
-          zIndex: 9999,
-          transform: isOpen
-            ? `translateY(${dragOffsetState}px)`
-            : "translateY(100%)",
-          transition: isDragging.current
-            ? "none"
-            : `transform ${ANIM_MS}ms cubic-bezier(0.32, 0.72, 0, 1)`,
-          maxHeight: "82dvh",
-          minHeight: "40vh",
-          borderRadius: "20px 20px 0 0",
-          display: "flex",
-          flexDirection: "column",
-          userSelect: "none",
-          willChange: "transform",
-        }}
-        className="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 shadow-2xl"
-      >
-        {/* Drag Handle */}
-        <div
-          className="flex flex-col items-center pt-3 pb-2 cursor-grab active:cursor-grabbing flex-shrink-0"
-          onTouchStart={onTouchStart}
-          onTouchMove={onTouchMove}
-          onTouchEnd={onTouchEnd}
-          onMouseDown={onMouseDown}
+  return (
+    <Drawer.Root
+      open={open}
+      onOpenChange={(o) => { if (!o) onClose(); }}
+      snapPoints={SNAP_POINTS}
+      activeSnapPoint={snap}
+      setActiveSnapPoint={setSnap}
+      fadeFromIndex={0}
+    >
+      <Drawer.Portal>
+        <Drawer.Overlay
+          className="fixed inset-0 bg-black/50"
+          style={{ zIndex: 9998, backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)" }}
+        />
+        <Drawer.Content
+          aria-describedby={undefined}
+          style={{
+            position: "fixed",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            zIndex: 9999,
+            height: "97dvh",
+            borderRadius: "20px 20px 0 0",
+            display: "flex",
+            flexDirection: "column",
+            outline: "none",
+          }}
+          className="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 shadow-2xl"
         >
-          <div className="w-10 h-1 rounded-full bg-gray-300 dark:bg-gray-600" />
+        {/* Drag Handle — tap to toggle partial ↔ full */}
+        <div className="pt-3 pb-2 flex-shrink-0">
+          <Drawer.Handle className="!w-10 !h-1 !bg-gray-300 dark:!bg-gray-600" />
         </div>
 
         {/* Header */}
         <div
           className="flex items-center justify-between px-5 pb-4 flex-shrink-0
             border-b border-gray-100 dark:border-gray-800"
-          onTouchStart={onTouchStart}
-          onTouchMove={onTouchMove}
-          onTouchEnd={onTouchEnd}
-          onMouseDown={onMouseDown}
         >
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-indigo-50 dark:bg-indigo-900/40 flex items-center justify-center flex-shrink-0">
               <ShieldCheck className="w-5 h-5 text-indigo-500" />
             </div>
             <div>
-              <p
+              <Drawer.Title
                 className="font-semibold text-gray-900 dark:text-white leading-tight"
                 style={{ fontSize: "clamp(1.2rem, 3vw, 1.4rem)" }}
               >
                 Permissions Overview
-              </p>
+              </Drawer.Title>
               <p
                 className="text-gray-400 dark:text-gray-500 leading-tight mt-0.5"
                 style={{ fontSize: "clamp(1rem, 2.2vw, 1.1rem)" }}
@@ -366,14 +202,17 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ open, onClose, access }) => {
           </button>
         </div>
 
-        {/* Scrollable content */}
-        <div className="flex-1 overflow-auto overscroll-contain">
-          <PermissionsTable access={access} />
-          <div className="h-6" />
+        {/* Scrollable content — at the partial snap the lower part of the
+            sheet is off-screen, so pad the end to keep the last rows reachable */}
+        <div className="flex-1 min-h-0 overflow-auto overscroll-contain">
+          <AnimatedContent distance={18} delay={0.08}>
+            <PermissionsTable access={access} />
+          </AnimatedContent>
+          <div style={{ height: atPartial ? `calc(24px + ${(1 - PARTIAL_SNAP) * 100}dvh)` : 24 }} />
         </div>
-      </div>
-    </>,
-    document.body
+        </Drawer.Content>
+      </Drawer.Portal>
+    </Drawer.Root>
   );
 };
 

@@ -1,10 +1,11 @@
 import React from "react";
-import ReactDOM from "react-dom";
+import { Drawer } from "vaul";
 import { X } from "lucide-react";
 import logoImg from "../../../../assets/images/logo.png";
-import { Z_INDEX, TRANSITIONS } from "../../constants";
+import { Z_INDEX } from "../../constants";
 import { UserProfileProps } from "../../types";
 import UserProfile from "./UserProfile";
+import { ShinyText } from "../../../../atoms/reactbits";
 
 interface MobilePanelProps extends Omit<UserProfileProps, "isCollapsed"> {
   expanded: boolean;
@@ -17,7 +18,9 @@ const MobilePanelHeader: React.FC<{ onClose: () => void }> = ({ onClose }) => (
   <div style={{ padding: "12px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid var(--sb-border)" }}>
     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
       <img src={logoImg} alt="logo" style={{ width: 28, height: 28, objectFit: "contain", flexShrink: 0 }} />
-      <span style={{ fontSize: 15, fontWeight: 700, color: "var(--sb-text-active)", letterSpacing: "-0.02em" }}>My Learning</span>
+      <Drawer.Title style={{ margin: 0, fontSize: 15, fontWeight: 700, letterSpacing: "-0.02em" }}>
+        <ShinyText text="My Learning" speed={3.5} />
+      </Drawer.Title>
     </div>
     <button
       onClick={onClose}
@@ -32,65 +35,63 @@ const MobilePanelHeader: React.FC<{ onClose: () => void }> = ({ onClose }) => (
 );
 
 // ── MobilePanel ────────────────────────────────────────────────────────────
+// vaul left drawer: swipe left (or tap the backdrop) to close, with
+// velocity-aware release like native app drawers.
 const MobilePanel: React.FC<MobilePanelProps> = ({
   expanded,
   onClose,
   children,
   ...profileProps
-}) => {
-  if (typeof document === "undefined") return null;
-
-  const panel = (
-    <>
-      {/* Backdrop */}
-      <div
-        onClick={onClose}
-        aria-hidden="true"
+}) => (
+  <Drawer.Root
+    open={expanded}
+    onOpenChange={(o) => { if (!o) onClose(); }}
+    direction="left"
+  >
+    <Drawer.Portal>
+      <Drawer.Overlay
         style={{
           position: "fixed",
           inset: 0,
           background: "rgba(0,0,0,0.4)",
+          backdropFilter: "blur(2px)",
+          WebkitBackdropFilter: "blur(2px)",
           zIndex: Z_INDEX.BACKDROP,
-          opacity: expanded ? 1 : 0,
-          pointerEvents: expanded ? "auto" : "none",
-          transition: TRANSITIONS.OPACITY,
-          
         }}
       />
-
-      {/* Slide panel */}
-      <div
+      <Drawer.Content
+        aria-describedby={undefined}
+        // Logout confirm / profile card are portaled outside the drawer
+        onInteractOutside={e => {
+          if (e.target instanceof Element && e.target.closest("[data-portal-popup]")) e.preventDefault();
+        }}
         style={{
           position: "fixed",
           top: 0,
           left: 0,
-          height: "100%",
-          minHeight: "100dvh",
+          bottom: 0,
           width: 280,
+          maxWidth: "85vw",
           background: "var(--sb-bg)",
           borderRight: "1px solid var(--sb-border)",
           zIndex: Z_INDEX.SIDEBAR,
-          transform: expanded ? "translateX(0)" : "translateX(-100%)",
-          transition: TRANSITIONS.MOBILE,
-          willChange: "transform",
           display: "flex",
           flexDirection: "column",
+          outline: "none",
         }}
       >
         <MobilePanelHeader onClose={onClose} />
 
         <nav style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "8px 8px 16px" }} className="sc-scrollbar">
-          <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 2 }}>
+          <ul className="rb-stagger-list" style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 2 }}>
             {children}
           </ul>
         </nav>
 
         <UserProfile isCollapsed={false} {...profileProps} />
-      </div>
-    </>
-  );
-
-  return ReactDOM.createPortal(panel, document.body);
-};
+      </Drawer.Content>
+    </Drawer.Portal>
+  </Drawer.Root>
+);
 
 export default MobilePanel;

@@ -6,7 +6,6 @@ import { getData, postData, patchData } from "../../services/crmServices";
 import {
   CleanInput, CleanSelect, type SelectOption,
 } from "../../atoms/my_clean_code_atoms";
-import ImageUploadAvatar from "../../atoms/ImageUploadAvatar";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -149,16 +148,6 @@ const UserForm: React.FC<UserFormProps> = ({
         onResetReady?.(resetForm);
         return (
           <Form id={formId} noValidate>
-            {/* Avatar upload — centred above the form */}
-            <div style={{ display: "flex", justifyContent: "center", paddingBottom: 16 }}>
-              <ImageUploadAvatar
-                url={values.profile_image_url || null}
-                name={values.name}
-                size={80}
-                onUpload={(url) => setFieldValue("profile_image_url", url)}
-              />
-            </div>
-
             <div className="form-grid">
               <CleanInput
                 label="Name" required placeholder="Full name"

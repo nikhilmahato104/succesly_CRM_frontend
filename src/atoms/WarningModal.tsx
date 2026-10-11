@@ -26,7 +26,7 @@ const WarningModal: React.FC<WarningModalProps> = ({
 
   // Create portal to render modal at the root level to avoid z-index issues
   return ReactDOM.createPortal(
-    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4" data-portal-popup="true">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/40 backdrop-blur-sm"

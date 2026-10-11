@@ -4,12 +4,10 @@ import {
   Settings,
   Users,
   Key,
-  BookOpen,
-  MessageSquare,
-  PenTool,
   FolderKanban,
   Activity,
   Smartphone,
+  Link2,
 } from "lucide-react";
 
 import { NavItemType } from "../types";
@@ -61,27 +59,18 @@ export const useNavigation = (
     const dashboards: NavItemType[] = [...legacyDashboards, ...dashboardItems(roleName)];
 
     const operations: NavItemType[] = [
-      ...(hasAccess("booking_management")
-        ? [{ name: "Booking Management", href: "/booking-management", icon: BookOpen }]
-        : []),
       ...(hasAccess("device_info")
         ? [{ name: "Device Info", href: "/device-info", icon: Smartphone }]
         : []),
       ...(hasAccess("project_management")
         ? [{ name: "Project Management", href: "/projects", icon: FolderKanban }]
         : []),
+      ...(hasAccess("campaign_and_short_url_management")
+        ? [{ name: "Campaigns & Short Links", href: "/campaigns", icon: Link2 }]
+        : []),
       ...(hasAccess("activity_log")
         ? [{ name: "Activity Logs", href: "/activity-logs", icon: Activity }]
         : []),
-    ];
-
-    // Board is always visible — no auth check (public route)
-    const tools: NavItemType[] = [
-      { name: "Project Board", href: "/boards", icon: PenTool },
-    ];
-
-    const support: NavItemType[] = [
-      { name: "Help Chat", href: "/help-chat", icon: MessageSquare },
     ];
 
     const config: NavItemType[] = [
@@ -93,8 +82,6 @@ export const useNavigation = (
     return [
       ...dashboards,
       ...(operations.length > 0 ? [group("Operations"),    ...operations] : []),
-      group("Tools"),           ...tools,
-      ...(support.length    > 0 ? [group("Support"),       ...support]    : []),
       ...(config.length     > 0 ? [group("Configuration"), ...config]     : []),
     ];
   }, [accessData, roleName]);

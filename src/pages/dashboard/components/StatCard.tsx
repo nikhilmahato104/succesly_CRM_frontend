@@ -2,7 +2,7 @@ import React from "react";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 
 export interface StatCardProps {
-  title:      string;
+  title:      React.ReactNode;
   value:      string;
   icon:       React.ReactNode;
   iconBg?:    string;

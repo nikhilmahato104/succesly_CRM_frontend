@@ -1,13 +1,12 @@
 import React, { useMemo, useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { LayoutDashboard, BookOpen, Plus, FolderKanban, Menu } from "lucide-react";
+import { LayoutDashboard, Plus, FolderKanban, Menu } from "lucide-react";
 
 interface Props {
   onMenuOpen: () => void;
 }
 
 // Custom events — each page listens for its own event to open the create modal
-export const OPEN_CREATE_BOOKING_EVENT  = "uttm-open-create-booking";
 export const OPEN_CREATE_USER_EVENT     = "uttm-open-create-user";
 export const OPEN_CREATE_ROLE_EVENT     = "uttm-open-create-role";
 export const OPEN_CREATE_APIKEY_EVENT   = "uttm-open-create-api-key";
@@ -15,7 +14,6 @@ export const OPEN_CREATE_MODULE_EVENT   = "uttm-open-create-module";
 
 const NAV = [
   { icon: LayoutDashboard, label: "Dashboard",  href: "/" },
-  { icon: BookOpen,        label: "Bookings",   href: "/booking-management" },
   null, // FAB slot
   { icon: FolderKanban,   label: "Projects",   href: "/projects" },
   { icon: Menu,           label: "Menu",       href: null },
@@ -58,12 +56,6 @@ const MobileBottomBar: React.FC<Props> = ({ onMenuOpen }) => {
 
   // Route-aware FAB — null means hidden (no FAB rendered for that route)
   const fab = useMemo<{ label: string; action: () => void } | null>(() => {
-    if (pathname === "/booking-management") {
-      return {
-        label:  "New Booking",
-        action: () => window.dispatchEvent(new CustomEvent(OPEN_CREATE_BOOKING_EVENT)),
-      };
-    }
     if (pathname.startsWith("/projects")) {
       return {
         label:  "New Project",

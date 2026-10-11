@@ -6,83 +6,6 @@ import http from 'http';
 import { URL } from 'url';
 import type { IncomingMessage, ServerResponse } from 'http';
 
-// ── ImageKit signature proxy ───────────────────────────────────────────────
-// imagekit.io's signature endpoint rejects any origin that isn't
-// https://imagekit.io. The browser cannot fake the Origin header, so we
-// proxy through the Vite dev-server (Node.js) which can set any header.
-//
-// Frontend sends:  POST /ik-signature
-//   Headers: csrf-token, x-ik-cookie (full imagekit.io cookie string)
-//   Body:    same JSON that goes to imagekit.io
-//
-// Proxy rewrites origin + referer → imagekit.io values and forwards.
-function ikSignatureProxyPlugin(): Plugin {
-  return {
-    name: 'ik-signature-proxy',
-    configureServer(server) {
-      server.middlewares.use((req: IncomingMessage, res: ServerResponse, next: () => void) => {
-        // Handle CORS preflight
-        if (req.url === '/ik-signature' && req.method === 'OPTIONS') {
-          res.writeHead(204, {
-            'access-control-allow-origin': '*',
-            'access-control-allow-methods': 'POST, OPTIONS',
-            'access-control-allow-headers': 'content-type, csrf-token, x-ik-cookie',
-          });
-          res.end();
-          return;
-        }
-
-        if (req.url !== '/ik-signature' || req.method !== 'POST') return next();
-
-        let body = '';
-        req.setEncoding('utf8');
-        req.on('data', (chunk: string) => { body += chunk; });
-        req.on('end', () => {
-          const csrfToken = (req.headers['csrf-token'] as string) || '';
-          const ikCookie  = (req.headers['x-ik-cookie']  as string) || '';
-          const bodyBuf   = Buffer.from(body, 'utf8');
-
-          const proxyReq = https.request({
-            hostname: 'imagekit.io',
-            port: 443,
-            path: '/api/clients/54DZYShIdN/upload/signature/v2',
-            method: 'POST',
-            headers: {
-              'content-type':   'application/json',
-              'content-length': bodyBuf.byteLength,
-              'origin':         'https://imagekit.io',
-              'referer':        'https://imagekit.io/dashboard/media-library',
-              'csrf-token':     csrfToken,
-              'cookie':         ikCookie,
-              'user-agent':     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36',
-              'accept':         'application/json',
-            },
-          }, (proxyRes) => {
-            let responseBody = '';
-            proxyRes.setEncoding('utf8');
-            proxyRes.on('data', (chunk: string) => { responseBody += chunk; });
-            proxyRes.on('end', () => {
-              res.writeHead(proxyRes.statusCode || 500, {
-                'content-type': 'application/json',
-                'access-control-allow-origin': '*',
-              });
-              res.end(responseBody);
-            });
-          });
-
-          proxyReq.on('error', (err: Error) => {
-            res.writeHead(502, { 'content-type': 'application/json' });
-            res.end(JSON.stringify({ error: `Proxy error: ${err.message}` }));
-          });
-
-          proxyReq.write(bodyBuf);
-          proxyReq.end();
-        });
-      });
-    },
-  };
-}
-
 // ── iframe proxy ──────────────────────────────────────────────────────────
 function iframeProxyPlugin(): Plugin {
   return {
@@ -179,7 +102,7 @@ function iframeProxyPlugin(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [react(), ikSignatureProxyPlugin(), iframeProxyPlugin()],
+  plugins: [react(), iframeProxyPlugin()],
 
   resolve: {
     alias: {

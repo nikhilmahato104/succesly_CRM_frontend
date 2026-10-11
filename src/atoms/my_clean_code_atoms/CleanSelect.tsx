@@ -7,7 +7,7 @@ export interface SelectOption {
 }
 
 export interface CleanSelectProps {
-  label?:        string;
+  label?:        React.ReactNode;
   value?:        string;
   defaultValue?: string;
   onChange?:     (e: React.ChangeEvent<HTMLSelectElement>) => void;

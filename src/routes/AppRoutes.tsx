@@ -7,7 +7,6 @@ import { selectAccessData } from "../store/slices/accessSlice";
 import { LoaderOverlay } from "../atoms/LoaderOverlay";
 import { NavigationProgress } from "../atoms/NavigationProgress";
 import { DashboardSkeleton } from "../atoms/skeleton/DashboardSkeleton";
-import { BookingManagementSkeleton } from "../atoms/skeleton/BookingManagementSkeleton";
 import { SettingConfigSkeleton, ApiKeyPageSkeleton } from "../atoms/skeleton/SettingConfigSkeleton";
 
 // ── Lazy-loaded pages ──────────────────────────────────────────────────────
@@ -19,20 +18,20 @@ const CreatePasswordPage = lazy(() => import("../pages/CreatePasswordPage"));
 const DashboardPage      = lazy(() => import("../pages/dashboard-admin/DashboardPage").then(m => ({ default: m.DashboardPage })));
 const SettingConfig      = lazy(() => import("../pages/setting-config"));
 const ApiKeyPage         = lazy(() => import("../pages/setting-config/ApiKeyPage"));
-const BookingPage        = lazy(() => import("../pages/booking-management"));
 const AdminDashboard     = lazy(() => import("../pages/dashboard/admin-dashboard/AdminDashboard").then(m => ({ default: m.AdminDashboard })));
 const ManagerDashboard   = lazy(() => import("../pages/dashboard/manager-dashboard/ManagerDashboard").then(m => ({ default: m.ManagerDashboard })));
 const Course             = lazy(() => import("../pages/Course"));
 const NotFoundPage       = lazy(() => import("../pages/NotFoundPage"));
-const BoardPage          = lazy(() => import("../pages/Board/BoardPage"));
-const BoardsPage         = lazy(() => import("../pages/Boards/BoardsPage"));
-const HelpChatPage       = lazy(() => import("../pages/help-chat/HelpChatPage"));
 const DocListPage        = lazy(() => import("../pages/DocListPage"));
 const DeviceInfoPage     = lazy(() => import("../pages/device-info"));
 const ProjectPage        = lazy(() => import("../pages/project-management"));
 const ProjectDetailPage  = lazy(() => import("../pages/project-management/ProjectDetail"));
 const ProjectFormPage    = lazy(() => import("../pages/project-management/ProjectForm"));
 const ActivityLogsPage   = lazy(() => import("../pages/activity-logs"));
+const CampaignPage          = lazy(() => import("../pages/campaign-management"));
+const CampaignFormPage      = lazy(() => import("../pages/campaign-management/CampaignForm"));
+const CampaignAnalyticsPage = lazy(() => import("../pages/campaign-management/CampaignAnalytics"));
+const CampaignOverviewPage  = lazy(() => import("../pages/campaign-management/CampaignOverview"));
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -64,13 +63,23 @@ function rolePermitted(user: any, allowed: string[]): boolean {
  *
  *   "SUPER ADMIN" → /dashboard/admin
  *   "MANAGER"     → /dashboard/manager
- *   anything else → /booking-management  (safe fallback)
+ *   anything else → first module page the role can view, else /no-access
  */
-function dashboardForRole(roleName: string): string {
+const MODULE_HOME_ROUTES: Array<[moduleId: string, path: string]> = [
+  ["project_management",                "/projects"],
+  ["campaign_and_short_url_management", "/campaigns"],
+  ["device_info",                       "/device-info"],
+  ["activity_log",                      "/activity-logs"],
+  ["user_management",                   "/setting-config/user-management"],
+  ["api_key_management",                "/setting-config/api-key-management"],
+];
+
+function dashboardForRole(roleName: string, access: Record<string, any>): string {
   const role = (roleName || "").toLowerCase();
   if (role.includes("super"))   return "/dashboard/admin";
   if (role.includes("manager")) return "/dashboard/manager";
-  return "/booking-management";
+  const match = MODULE_HOME_ROUTES.find(([moduleId]) => access?.[moduleId]?.view);
+  return match ? match[1] : "/no-access";
 }
 
 // ── ProtectedRoute ─────────────────────────────────────────────────────────
@@ -97,19 +106,19 @@ function dashboardForRole(roleName: string): string {
  *    → Redirects to: / (which then sends user to their own dashboard)
  *
  * 3b. MODULE ACCESS CHECK  (moduleId prop)
- *    Most pages are gated by a module permission (e.g. "booking_management").
+ *    Most pages are gated by a module permission (e.g. "project_management").
  *    The access map is built in AuthContext.buildAccessMap() from the API's
  *    role_access array and stored in Redux accessSlice:
- *      accessData["booking_management"].view = true/false
+ *      accessData["project_management"].view = true/false
  *    If the user's role doesn't have view=true for that module → no access.
  *    → Redirects to: /no-access
  *
  * NOTE: roleAllowed and moduleId are BOTH optional. If neither is passed the
- * route is open to any authenticated user (e.g. /no-access, /help-chat).
+ * route is open to any authenticated user (e.g. /no-access).
  */
 const ProtectedRoute: React.FC<{
   children:     React.ReactNode;
-  moduleId?:    string;   // key in Redux accessSlice  e.g. "booking_management"
+  moduleId?:    string;   // key in Redux accessSlice  e.g. "project_management"
   roleAllowed?: string[]; // partial role-name matches  e.g. ["super", "manager"]
 }> = ({ children, moduleId, roleAllowed }) => {
   const { isAuthenticated, isLoading, initDone } = useAuth();
@@ -123,9 +132,6 @@ const ProtectedRoute: React.FC<{
   if (isLoading || !initDone) {
     if (pathname.startsWith("/dashboard/admin") || pathname.startsWith("/dashboard/manager")) {
       return <DashboardSkeleton />;
-    }
-    if (pathname === "/booking-management") {
-      return <BookingManagementSkeleton />;
     }
     if (
       pathname.startsWith("/setting-config/user-management") ||
@@ -176,7 +182,7 @@ const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
  *   3. Calls dashboardForRole() to pick the correct destination:
  *        SUPER ADMIN → /dashboard/admin
  *        MANAGER     → /dashboard/manager
- *        default     → /booking-management
+ *        default     → first viewable module page, else /no-access
  *   4. Navigates with replace so "/" never appears in browser history.
  *
  * This is wrapped inside <ProtectedRoute> so unauthenticated users are
@@ -185,13 +191,14 @@ const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 const RedirectToHome: React.FC = () => {
   const navigate = useNavigate();
   const { isAuthenticated, isLoading, initDone } = useAuth();
-  const user = useSelector((s: any) => s.user); // role_name lives here (flat)
+  const user   = useSelector((s: any) => s.user); // role_name lives here (flat)
+  const access = useSelector((s: any) => selectAccessData(s));
 
   useEffect(() => {
     if (isLoading || !initDone) return; // wait for profile on page refresh
     if (!isAuthenticated) { navigate("/login", { replace: true }); return; }
-    navigate(dashboardForRole(user?.role_name), { replace: true });
-  }, [isAuthenticated, isLoading, initDone, user?.role_name, navigate]);
+    navigate(dashboardForRole(user?.role_name, access), { replace: true });
+  }, [isAuthenticated, isLoading, initDone, user?.role_name, access, navigate]);
 
   return null;
 };
@@ -227,8 +234,6 @@ export const AppRoutes: React.FC = () => {
         {/* Fully public — no auth required */}
         <Route path="/c"                element={<Course />} />
         <Route path="/doc"              element={<DocListPage />} />
-        <Route path="/boards"           element={<BoardsPage />} />
-        <Route path="/board/:boardId"   element={<BoardPage />} />
 
         {/* ── ROOT REDIRECT ──────────────────────────────────────────────────
             "/" → ProtectedRoute (must be logged in) → RedirectToHome
@@ -247,10 +252,6 @@ export const AppRoutes: React.FC = () => {
         <Route path="/dashboard-team-leader"    element={<ProtectedRoute moduleId="dashboard-team-leader"    ><DashboardPage /></ProtectedRoute>} />
         <Route path="/dashboard-branch-manager" element={<ProtectedRoute moduleId="dashboard-branch-manager" ><DashboardPage /></ProtectedRoute>} />
         <Route path="/dashboard-xyz"            element={<ProtectedRoute moduleId="dashboard-xyz"            ><DashboardPage /></ProtectedRoute>} />
-
-        {/* Authenticated but no module/role restriction */}
-        {/* Authenticated but no module/role restriction */}
-        <Route path="/help-chat" element={<ProtectedRoute><InLayout><HelpChatPage /></InLayout></ProtectedRoute>} />
 
         {/* ── SETTINGS & CONFIG (module-id gated) ───────────────────────────
             Each sub-route checks a different module key from Redux accessSlice:
@@ -333,17 +334,6 @@ export const AppRoutes: React.FC = () => {
           }
         />
 
-        {/* ── OPERATIONS (module-id gated) ───────────────────────────────────
-            OPEN WHEN: accessSlice["booking_management"].view === true         */}
-        <Route
-          path="/booking-management"
-          element={
-            <ProtectedRoute moduleId="booking_management">
-              <InLayout><BookingPage /></InLayout>
-            </ProtectedRoute>
-          }
-        />
-
         {/* ── DEVICE INFO ─────────────────────────────────────────────────────
             OPEN WHEN: accessSlice["device_info"].view === true                */}
         <Route
@@ -389,6 +379,27 @@ export const AppRoutes: React.FC = () => {
             </ProtectedRoute>
           }
         />
+
+        {/* ── CAMPAIGNS & SHORT LINKS ─────────────────────────────────────────
+            OPEN WHEN: accessSlice["campaign_and_short_url_management"].view === true
+            /campaigns/analytics is a static segment, so it ranks above /campaigns/:id */}
+        {[
+          { path: "/campaigns",           page: <CampaignPage /> },
+          { path: "/campaigns/new",       page: <CampaignFormPage /> },
+          { path: "/campaigns/analytics", page: <CampaignOverviewPage /> },
+          { path: "/campaigns/:id",       page: <CampaignAnalyticsPage /> },
+          { path: "/campaigns/:id/edit",  page: <CampaignFormPage /> },
+        ].map(({ path, page }) => (
+          <Route
+            key={path}
+            path={path}
+            element={
+              <ProtectedRoute moduleId="campaign_and_short_url_management">
+                <InLayout>{page}</InLayout>
+              </ProtectedRoute>
+            }
+          />
+        ))}
 
         {/* ── ACTIVITY LOGS ──────────────────────────────────────────────────
             OPEN WHEN: accessSlice["activity_log"].view === true               */}

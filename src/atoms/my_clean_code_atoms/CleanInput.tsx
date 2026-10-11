@@ -2,7 +2,7 @@ import React, { useState } from "react";
 
 export interface CleanInputProps {
   type?:        "text" | "email" | "password" | "url" | "number" | "date" | "datetime-local";
-  label?:       string;
+  label?:       React.ReactNode;
   placeholder?: string;
   value?:       string;
   defaultValue?: string;

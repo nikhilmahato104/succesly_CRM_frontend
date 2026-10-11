@@ -1,6 +1,6 @@
 /**
  * LayoutShells.tsx — shared skeleton chrome for sidebar + topbar.
- * Used by both DashboardSkeleton and BookingManagementSkeleton.
+ * Used by DashboardSkeleton.
  * Mirrors the exact pixel dimensions and CSS variables of DashboardLayout.
  */
 import React from "react";

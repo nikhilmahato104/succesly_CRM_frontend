@@ -99,6 +99,7 @@ const UserProfileCard: React.FC<UserProfileCardProps> = ({ user, anchorEl, onClo
   const card = (
     <div
       ref={cardRef}
+      data-portal-popup="true"
       style={{
         position:      "fixed",
         top:           pos.top,

@@ -2,13 +2,6 @@ import React from "react";
 
 const docs = [
   {
-    file: "ImageKit_Integration_Guide.html",
-    title: "ImageKit Upload Integration",
-    description: "Vite proxy, Netlify function, CSRF token, session cookies, 2-step upload — local & production guide.",
-    tag: "Integration",
-    color: "#e44d26",
-  },
-  {
     file: "Frontend_Auth_Security_v2.html",
     title: "Frontend Auth Security v2.0",
     description: "JWT · CSRF Token · httpOnly Refresh Token · Silent Refresh · 5-layer security architecture.",
@@ -21,13 +14,6 @@ const docs = [
     description: "Product requirements document for the authentication and security system.",
     tag: "PRD",
     color: "#a855f7",
-  },
-  {
-    file: "BookingParser_SystemDesign.html",
-    title: "Booking Parser System Design",
-    description: "System design document for the booking management parsing architecture.",
-    tag: "System Design",
-    color: "#06b6d4",
   },
   {
     file: "PWA_iOS_Safari_Guide.html",

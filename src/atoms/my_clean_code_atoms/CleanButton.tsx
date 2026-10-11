@@ -19,6 +19,7 @@ export interface CleanButtonProps {
   style?:        React.CSSProperties;
   title?:        string;
   badge?:        number | string;   // small count badge (e.g. filter count)
+  className?:    string;            // e.g. "no-min-tap" to opt out of the 44px mobile tap target
 }
 
 // ── Size tokens ────────────────────────────────────────────────────────────────
@@ -87,6 +88,7 @@ export const CleanButton: React.FC<CleanButtonProps> = ({
   style,
   title,
   badge,
+  className,
 }) => {
   const sz = SIZE[size];
   const isDisabled = disabled || loading;
@@ -143,6 +145,7 @@ export const CleanButton: React.FC<CleanButtonProps> = ({
       disabled={isDisabled}
       onClick={onClick}
       title={title}
+      className={className}
       onMouseEnter={handleHover(true)}
       onMouseLeave={handleHover(false)}
     >
