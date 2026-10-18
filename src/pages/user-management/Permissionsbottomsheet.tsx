@@ -159,7 +159,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ open, onClose, access }) => {
             flexDirection: "column",
             outline: "none",
           }}
-          className="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 shadow-2xl"
+          className="app-modal-panel bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 shadow-2xl"
         >
         {/* Drag Handle — tap to toggle partial ↔ full */}
         <div className="pt-3 pb-2 flex-shrink-0">

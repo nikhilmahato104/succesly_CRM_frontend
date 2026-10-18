@@ -1,4 +1,5 @@
 import React from "react";
+import { createPortal } from "react-dom";
 import { X, ArrowRight } from "lucide-react";
 import type { ActivityLogItem } from "../../services/activityLogApi";
 
@@ -69,7 +70,9 @@ const ActivityLogDetail: React.FC<Props> = ({ log, onClose }) => {
   const actionStyle = ACTION_STYLE[log.action]  ?? { background: "var(--badge-gray-bg)", color: "var(--badge-gray-text)" };
   const methodStyle = METHOD_STYLE[log.method]  ?? { background: "var(--badge-gray-bg)", color: "var(--badge-gray-text)" };
 
-  return (
+  // Portaled: the content card is its own stacking context (dark glass panel),
+  // so an in-place panel could never rise above the mobile bottom bar
+  return createPortal(
     <>
       {/* Backdrop — above the mobile bottom bar (700) and floating search (650) */}
       <div
@@ -85,7 +88,7 @@ const ActivityLogDetail: React.FC<Props> = ({ log, onClose }) => {
           right:          0,
           bottom:         0,
           width:          "min(520px, 95vw)",
-          background:     "var(--sc-card)",
+          background:     "var(--modal-panel-bg, var(--sc-card))",
           borderLeft:     "1px solid var(--fi-border)",
           boxShadow:      "-4px 0 24px rgba(0,0,0,0.15)",
           zIndex:         801,
@@ -105,7 +108,7 @@ const ActivityLogDetail: React.FC<Props> = ({ log, onClose }) => {
           </div>
           <button
             onClick={onClose}
-            style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 28, height: 28, borderRadius: 6, border: "none", background: "transparent", cursor: "pointer", color: "var(--fi-muted)" }}
+            style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 28, height: 28, borderRadius: "var(--radius)", border: "none", background: "transparent", cursor: "pointer", color: "var(--fi-muted)" }}
             onMouseEnter={e => { e.currentTarget.style.background = "var(--sb-hover)"; }}
             onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
           >
@@ -133,7 +136,7 @@ const ActivityLogDetail: React.FC<Props> = ({ log, onClose }) => {
           {/* Field-level diff */}
           {log.changes && log.changes.length > 0 && (
             <Section title={`Changes (${log.changes.length} field${log.changes.length > 1 ? "s" : ""})`}>
-              <div style={{ border: "1px solid var(--fi-border)", borderRadius: 8, overflow: "hidden" }}>
+              <div style={{ border: "1px solid var(--fi-border)", borderRadius: "var(--radius)", overflow: "hidden" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
                   <thead>
                     <tr style={{ background: "var(--sc-surface)" }}>
@@ -191,7 +194,8 @@ const ActivityLogDetail: React.FC<Props> = ({ log, onClose }) => {
 
         </div>
       </div>
-    </>
+    </>,
+    document.body,
   );
 };
 

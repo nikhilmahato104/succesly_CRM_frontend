@@ -29,7 +29,7 @@ const sectionLabel: React.CSSProperties = {
 };
 
 const cardStyle: React.CSSProperties = {
-  border: "1px solid var(--fi-border)", borderRadius: 10, padding: "10px 12px",
+  border: "1px solid var(--fi-border)", borderRadius: "var(--radius)", padding: "10px 12px", background: "var(--sc-card)",
 };
 
 const DetailRow: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
@@ -84,7 +84,7 @@ const LiveStatusCheck: React.FC<{ site: Site }> = ({ site }) => {
 
         {result && (
           <div style={{
-            borderRadius: 8, padding: "8px 10px", fontSize: 12, lineHeight: 1.5,
+            borderRadius: "var(--radius)", padding: "8px 10px", fontSize: 12, lineHeight: 1.5,
             ...(down ? MODE_STYLE.down : MODE_STYLE.live),
           }}>
             <strong>{down ? "Maintenance page is showing" : "Site renders normally"}</strong>

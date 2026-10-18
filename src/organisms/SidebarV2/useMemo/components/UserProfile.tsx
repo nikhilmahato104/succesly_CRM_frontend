@@ -16,7 +16,7 @@ const Avatar: React.FC<{ name: string; url?: string | null }> = ({ name, url }) 
           width: 32, height: 32, borderRadius: "50%",
           display: "flex", alignItems: "center", justifyContent: "center",
           background: showImg ? "transparent" : "var(--sb-text-active)",
-          color: "var(--sb-bg)", fontSize: 12, fontWeight: 700,
+          color: "var(--sc-shell)", fontSize: 12, fontWeight: 700,
           userSelect: "none", letterSpacing: "0.02em", overflow: "hidden",
         }}
       >
@@ -29,7 +29,7 @@ const Avatar: React.FC<{ name: string; url?: string | null }> = ({ name, url }) 
         style={{
           position: "absolute", bottom: 0, right: 0,
           width: 9, height: 9, borderRadius: "50%",
-          background: "#22c55e", border: "2px solid var(--sb-bg)",
+          background: "#22c55e", border: "2px solid var(--sc-shell)",
         }}
       />
     </div>
@@ -179,7 +179,7 @@ const ProfileDropdown: React.FC<{
       left: 8,
       right: 8,
       background: "var(--sb-elevated)",
-      borderRadius: 10,
+      borderRadius: "var(--radius)",
       boxShadow: "0 8px 28px rgba(0,0,0,0.22), 0 2px 8px rgba(0,0,0,0.10)",
       border: "1px solid var(--sb-border)",
       overflow: "hidden",
@@ -244,7 +244,7 @@ const UserProfile: React.FC<UserProfileProps> = ({
         minHeight: 40,
         padding: isCollapsed ? "4px 0" : "5px 8px",
         gap: 10,
-        borderRadius: 9,
+        borderRadius: "var(--radius)",
         border: "none",
         background: "transparent",
         cursor: "pointer",

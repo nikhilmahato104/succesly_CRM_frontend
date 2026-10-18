@@ -32,7 +32,7 @@ const sectionLabel: React.CSSProperties = {
 };
 
 const cardStyle: React.CSSProperties = {
-  border: "1px solid var(--fi-border)", borderRadius: 10, padding: "10px 12px",
+  border: "1px solid var(--fi-border)", borderRadius: "var(--radius)", padding: "10px 12px", background: "var(--sc-card)",
 };
 
 const linkStyle: React.CSSProperties = {

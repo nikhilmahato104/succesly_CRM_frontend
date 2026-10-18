@@ -23,7 +23,7 @@ export const SidebarShellSkeleton: React.FC<SidebarShellSkeletonProps> = ({
         width:           W,
         flexShrink:      0,
         backgroundColor: "var(--sb-bg)",
-        borderRadius:    8,
+        borderRadius:    "var(--radius)",
         border:          "1px solid var(--sb-border)",
         display:         "flex",
         flexDirection:   "column",

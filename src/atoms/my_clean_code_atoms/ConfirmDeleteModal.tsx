@@ -51,7 +51,7 @@ export const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
       <div style={{
         width:           36,
         height:          36,
-        borderRadius:    8,
+        borderRadius:    "var(--radius)",
         background:      "rgba(239,68,68,0.10)",
         display:         "flex",
         alignItems:      "center",

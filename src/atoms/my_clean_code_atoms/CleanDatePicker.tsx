@@ -250,7 +250,7 @@ export const CleanDatePicker: React.FC<CleanDatePickerProps> = ({
   };
 
   const navBtnStyle: React.CSSProperties = {
-    width: 28, height: 28, borderRadius: 6, border: "1px solid var(--fi-border)",
+    width: 28, height: 28, borderRadius: "var(--radius)", border: "1px solid var(--fi-border)",
     background: "var(--fi-bg)", color: "var(--fi-text)", cursor: "pointer",
     display: "flex", alignItems: "center", justifyContent: "center",
     fontSize: 13, transition: "background 120ms ease", userSelect: "none",
@@ -311,7 +311,7 @@ export const CleanDatePicker: React.FC<CleanDatePickerProps> = ({
             display:       "flex",
             alignItems:    "center",
             justifyContent:"center",
-            borderRadius:  6,
+            borderRadius:  "var(--radius)",
             fontSize:      12,
             fontWeight:    isSelected ? 600 : 400,
             cursor:        (disabled || !cell.current) ? (disabled ? "not-allowed" : "default") : "pointer",

@@ -17,7 +17,7 @@ const StatCardSkeleton: React.FC = () => (
     style={{
       background:    "var(--sc-card)",
       border:        "1px solid var(--sc-border)",
-      borderRadius:  10,
+      borderRadius:  "var(--radius)",
       padding:       "13px 14px",
       display:       "flex",
       flexDirection: "column",
@@ -45,7 +45,7 @@ const ChartCardSkeleton: React.FC<{ minHeight?: number }> = ({ minHeight = 210 }
     style={{
       background:    "var(--sc-card)",
       border:        "1px solid var(--sc-border)",
-      borderRadius:  10,
+      borderRadius:  "var(--radius)",
       overflow:      "hidden",
       boxShadow:     "0 1px 2px rgba(0,0,0,0.04)",
     }}
@@ -77,7 +77,7 @@ const RecentBookingsTableSkeleton: React.FC = () => {
       style={{
         background:    "var(--sc-card)",
         border:        "1px solid var(--sc-border)",
-        borderRadius:  10,
+        borderRadius:  "var(--radius)",
         overflow:      "hidden",
         boxShadow:     "0 1px 2px rgba(0,0,0,0.04)",
       }}
@@ -181,7 +181,7 @@ export const DashboardSkeleton: React.FC = () => {
             display:         "flex",
             flexDirection:   "column",
             overflow:        "hidden",
-            borderRadius:    8,
+            borderRadius:    "var(--radius)",
             backgroundColor: "var(--sc-card)",
             border:          "1px solid var(--sc-border)",
           }}

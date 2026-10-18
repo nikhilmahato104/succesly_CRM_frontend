@@ -33,7 +33,7 @@ const FAB_Z     = 650;    // above page content, below the bottom bar
 const FADE_MS   = 180;
 const FAB_SIZE  = 48;
 const FAB_GAP   = 12;
-const FAB_BASE  = 80;     // px above the viewport bottom — clears the bottom bar
+const FAB_BASE  = 86;     // px above the viewport bottom — clears the floating bottom bar
 
 // ── Round floating button ──────────────────────────────────────────────────────
 
@@ -212,7 +212,7 @@ const MobileSearch: React.FC<CleanResponsiveSearchProps> = ({ value, onChange, p
               tabIndex={open ? 0 : -1}
               onClick={() => (hasValue ? (onChange(""), inputRef.current?.focus()) : closeSearch())}
               style={{
-                width: 36, height: 36, flexShrink: 0, borderRadius: 10,
+                width: 36, height: 36, flexShrink: 0, borderRadius: "var(--radius)",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 background: "transparent", border: "none", cursor: "pointer", color: "var(--fi-muted)",
               }}

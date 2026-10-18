@@ -12,7 +12,7 @@ const ApiKeyPage: React.FC = () => (
       flexShrink: 0, background: "var(--sc-card)",
     }}>
       <div style={{
-        width: 30, height: 30, borderRadius: 7,
+        width: 30, height: 30, borderRadius: "var(--radius)",
         background: "rgba(99,102,241,0.12)",
         display: "flex", alignItems: "center", justifyContent: "center", color: "#6366f1",
       }}>

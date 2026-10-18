@@ -72,7 +72,7 @@ const ApiKeyModal: React.FC = () => {
             leaveFrom="opacity-100 scale-100 translate-y-0"
             leaveTo="opacity-0 scale-95 translate-y-4"
           >
-            <Dialog.Panel className="w-full max-w-md rounded-xl bg-white dark:bg-gray-800 p-6 shadow-2xl transition-all">
+            <Dialog.Panel className="app-modal-panel w-full max-w-md rounded-xl bg-white dark:bg-gray-800 p-6 shadow-2xl transition-all">
               {/* Header */}
               <div className="flex items-center gap-3 mb-3">
                 <div className="p-2 bg-[var(--primary-light)] rounded-lg">

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import Sidebar from "@/organisms/SidebarV2";
@@ -7,7 +7,6 @@ import MobileBottomBar from "../organisms/MobileBottomBar";
 import { useDarkMode } from "../hooks/useDarkMode";
 import { useIOSViewport } from "../hooks/useIOSViewport";
 import { useLayoutMode } from "../hooks/useLayoutMode";
-import { useSwipeNavigation } from "../hooks/useSwipeNavigation";
 import { setPageTitle, clearPageTitle } from "../store/slices/pageTitleSlice";
 
 // ── Route → TopBar title map ──────────────────────────────────────────────────
@@ -80,11 +79,6 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
   const [layoutMode] = useLayoutMode();
   const isCompact = layoutMode === "compact";
 
-  // Mobile: swipe left/right on the content to move between top-level pages
-  const mainRef = useRef<HTMLElement>(null);
-  const pageRef = useRef<HTMLDivElement>(null);
-  useSwipeNavigation(mainRef, pageRef, isMobileOrTablet);
-
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
     try { return localStorage.getItem(STORAGE_KEY) === "true"; } catch { return false; }
   });
@@ -128,11 +122,12 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
         {/* ── Desktop sidebar ────────────────────────────────────────────── */}
         {!isMobileOrTablet && (
           <div
+            className="app-glass-panel"
             style={{
               flexShrink:      0,
               width:           sidebarCollapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH,
               overflow:        "hidden",
-              borderRadius:    isCompact ? 0 : "8px",
+              borderRadius:    isCompact ? 0 : "var(--radius)",
               borderTop:       isCompact ? "none" : "1px solid var(--sb-border)",
               borderLeft:      isCompact ? "none" : "1px solid var(--sb-border)",
               borderBottom:    isCompact ? "none" : "1px solid var(--sb-border)",
@@ -171,7 +166,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
               display:         "flex",
               flexDirection:   "column",
               overflow:        "hidden",
-              borderRadius:    isCompact ? 0 : (isMobileOrTablet ? 0 : "8px"),
+              borderRadius:    isCompact ? 0 : (isMobileOrTablet ? 0 : "var(--radius)"),
               backgroundColor: "var(--sc-card)",
               border:          isCompact || isMobileOrTablet ? "none" : "1px solid var(--sc-border)",
             }}
@@ -179,7 +174,6 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
             <TopBar />
 
             <main
-              ref={mainRef}
               className="sc-scrollbar"
               style={{
                 flex:                    1,
@@ -190,7 +184,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
                 WebkitOverflowScrolling: "touch" as any,
               }}
             >
-              <div ref={pageRef} style={{ flex: 1, boxSizing: "border-box", display: "flex", flexDirection: "column", minHeight: 0 }}>
+              <div style={{ flex: 1, boxSizing: "border-box", display: "flex", flexDirection: "column", minHeight: 0 }}>
                 {children}
               </div>
             </main>

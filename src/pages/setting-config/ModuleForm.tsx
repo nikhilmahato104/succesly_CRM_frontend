@@ -123,14 +123,14 @@ const ModuleForm: React.FC<ModuleFormProps> = ({
                     onClick={() => setFieldValue("is_active", !values.is_active)}
                     style={{
                       position: "relative", display: "inline-flex", flexShrink: 0,
-                      width: 36, height: 20, cursor: "pointer", borderRadius: 10,
+                      width: 36, height: 20, cursor: "pointer", borderRadius: "var(--radius)",
                       border: "2px solid transparent", outline: "none",
                       background: values.is_active ? "var(--btn-primary-bg)" : "var(--fi-border)",
                       transition: "background 200ms",
                     }}
                   >
                     <span style={{
-                      display: "inline-block", width: 16, height: 16, borderRadius: 8,
+                      display: "inline-block", width: 16, height: 16, borderRadius: "var(--radius)",
                       background: "white", boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
                       transform: values.is_active ? "translateX(16px)" : "translateX(0)",
                       transition: "transform 200ms", pointerEvents: "none",

@@ -1,4 +1,5 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo } from "react";
+import { emitNavDone } from "../../../atoms/NavigationProgress";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -76,6 +77,9 @@ const tooltipStyle = (theme: ReturnType<typeof useChartTheme>) => ({
 // ── Component ─────────────────────────────────────────────────────────────
 
 export const AdminDashboard: React.FC = () => {
+  // Static data — ready as soon as the charts have painted
+  useEffect(() => { requestAnimationFrame(() => requestAnimationFrame(() => emitNavDone())); }, []);
+
   const theme = useChartTheme();
 
   const lineData = useMemo(() => ({
@@ -140,7 +144,7 @@ export const AdminDashboard: React.FC = () => {
       }}>
         <div style={{ display:"flex", alignItems:"center", gap:8 }}>
           <div style={{
-            width:30, height:30, borderRadius:7,
+            width:30, height:30, borderRadius:"var(--radius)",
             background:"rgba(99,102,241,0.12)",
             display:"flex", alignItems:"center", justifyContent:"center", color:"#6366f1",
           }}>
@@ -154,7 +158,7 @@ export const AdminDashboard: React.FC = () => {
         <button style={{
           display:"flex", alignItems:"center", gap:5, fontSize:11,
           color:"var(--dt-muted)", background:"transparent",
-          border:"1px solid var(--sc-border)", borderRadius:6,
+          border:"1px solid var(--sc-border)", borderRadius:"var(--radius)",
           padding:"4px 9px", cursor:"pointer",
         }}>
           <RefreshCw size={11} /> Refresh
@@ -187,7 +191,7 @@ export const AdminDashboard: React.FC = () => {
         {/* Recent bookings */}
         <div style={{
           background:"var(--sc-card)", border:"1px solid var(--sc-border)",
-          borderRadius:10, overflow:"hidden",
+          borderRadius:"var(--radius)", overflow:"hidden",
           boxShadow:"0 1px 2px rgba(0,0,0,0.04)",
         }}>
           {/* Table header */}

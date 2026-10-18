@@ -16,7 +16,7 @@ export const ChartCard: React.FC<ChartCardProps> = ({
     style={{
       background:    "var(--sc-card)",
       border:        "1px solid var(--sc-border)",
-      borderRadius:  10,
+      borderRadius:  "var(--radius)",
       padding:       "13px 16px 16px",
       display:       "flex",
       flexDirection: "column",

@@ -26,7 +26,7 @@ export const BulkActionBar: React.FC<BulkActionBarProps> = ({
       zIndex:         100,
       transform:      selectedCount > 0 ? "translateY(0)" : "translateY(110%)",
       transition:     "transform 220ms cubic-bezier(0.4,0,0.2,1)",
-      background:     "var(--dt-bg)",
+      background:     "var(--dt-solid)",
       borderTop:      "2px solid var(--fi-border-error)",
       display:        "flex",
       alignItems:     "center",

@@ -2,10 +2,12 @@ import React, { useMemo, useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
 import {
-  LayoutDashboard, Plus, FolderKanban, Settings, Menu,
+  Plus, Settings, Menu,
   Users, ShieldCheck, Boxes, Key, ChevronRight, type LucideIcon,
 } from "lucide-react";
 import { selectAccessData } from "../store/slices/accessSlice";
+import { selectUserData } from "../store/slices/userSlice";
+import { useNavigation } from "./SidebarV2/hooks/useNavigation";
 import { CleanModal } from "../atoms/my_clean_code_atoms";
 import { emitNavStart } from "../atoms/NavigationProgress";
 
@@ -19,7 +21,24 @@ export const OPEN_CREATE_ROLE_EVENT     = "uttm-open-create-role";
 export const OPEN_CREATE_APIKEY_EVENT   = "uttm-open-create-api-key";
 export const OPEN_CREATE_MODULE_EVENT   = "uttm-open-create-module";
 
-type NavTab = { icon: LucideIcon; label: string; href?: string; match?: string; onClick?: () => void };
+type NavTab = { key: string; icon: LucideIcon; label: string; href?: string; match?: string; onClick?: () => void };
+
+// Bottom-bar labels must fit ~68px — sidebar names are too long
+const SHORT_LABEL: Record<string, string> = {
+  "/dashboard/admin":   "Dashboard",
+  "/dashboard/manager": "Dashboard",
+  "/device-info":       "Devices",
+  "/projects":          "Projects",
+  "/campaigns":         "Campaigns",
+  "/site-maintenance":  "Sites",
+  "/activity-logs":     "Logs",
+};
+
+const TAB_WIDTH  = 40;   // min width of an icon tab — tabs grow to fill each side
+const FAB_SIZE   = 58;
+const FAB_SLOT   = 72;   // centre gap reserved for the raised + button
+const ISLAND_GAP = 10;   // space between the floating bar and the screen edges
+const EDGE_FADE  = "linear-gradient(90deg, transparent 0, #000 10px, #000 calc(100% - 10px), transparent 100%)";
 
 type SettingsItem = { moduleId: string; label: string; description: string; href: string; icon: LucideIcon };
 
@@ -61,7 +80,7 @@ const SettingsSheet: React.FC<{
                 alignItems:     "center",
                 gap:            12,
                 padding:        "12px 10px",
-                borderRadius:   10,
+                borderRadius:   "var(--radius)",
                 border:         "none",
                 background:     active ? "var(--sb-hover)" : "transparent",
                 cursor:         "pointer",
@@ -72,7 +91,7 @@ const SettingsSheet: React.FC<{
               <span style={{
                 width:          36,
                 height:         36,
-                borderRadius:   10,
+                borderRadius:   "var(--radius)",
                 flexShrink:     0,
                 display:        "flex",
                 alignItems:     "center",
@@ -95,10 +114,94 @@ const SettingsSheet: React.FC<{
   </CleanModal>
 );
 
+// ── One side of the island: icon tabs, active one shows a pill + label ──────
+const TabStrip: React.FC<{
+  tabs:      NavTab[];
+  activeKey: string | null;
+  tabRefs:   React.MutableRefObject<Map<string, HTMLButtonElement>>;
+  onOpen:    (tab: NavTab) => void;
+}> = ({ tabs, activeKey, tabRefs, onOpen }) => (
+  <div
+    className="bb-strip"
+    style={{
+      flex:            1,
+      minWidth:        0,
+      display:         "flex",
+      justifyContent:  "space-around",
+      alignItems:      "stretch",
+      overflowX:       "auto",
+      overflowY:       "hidden",
+      scrollbarWidth:  "none",
+      // Only visible if a role has more tabs than fit — hints there is more
+      maskImage:       EDGE_FADE,
+      WebkitMaskImage: EDGE_FADE,
+      padding:         "0 2px",
+    }}
+  >
+    {tabs.map(tab => {
+      const active = tab.key === activeKey;
+      const Icon   = tab.icon;
+      return (
+        <button
+          key={tab.key}
+          ref={el => { if (el) tabRefs.current.set(tab.key, el); else tabRefs.current.delete(tab.key); }}
+          aria-label={tab.label}
+          aria-current={active ? "page" : undefined}
+          onClick={() => onOpen(tab)}
+          style={{
+            flex:           `1 0 ${TAB_WIDTH}px`,
+            position:       "relative",
+            display:        "flex",
+            flexDirection:  "column",
+            alignItems:     "center",
+            justifyContent: "center",
+            gap:            3,
+            padding:        0,
+            background:     "transparent",
+            border:         "none",
+            cursor:         "pointer",
+            color:          active ? "var(--primary)" : "var(--sb-text-dim)",
+            transition:     "color 180ms ease",
+            WebkitTapHighlightColor: "transparent",
+          }}
+        >
+          <span style={{
+            display:        "flex",
+            alignItems:     "center",
+            justifyContent: "center",
+            width:          active ? 44 : 36,
+            height:         active ? 28 : 32,
+            borderRadius:   99,
+            background:     active ? "var(--primary-light)" : "transparent",
+            transition:     "all 220ms cubic-bezier(0.34,1.56,0.64,1)",
+          }}>
+            <Icon style={{ width: 21, height: 21, flexShrink: 0, strokeWidth: active ? 2.3 : 1.9 }} />
+          </span>
+          {/* Label only under the active tab — keeps the island clean */}
+          <span style={{
+            fontSize:   10,
+            fontWeight: 700,
+            lineHeight: 1,
+            whiteSpace: "nowrap",
+            maxHeight:  active ? 12 : 0,
+            opacity:    active ? 1 : 0,
+            overflow:   "visible",
+            transition: "opacity 180ms ease, max-height 220ms ease",
+          }}>
+            {tab.label}
+          </span>
+        </button>
+      );
+    })}
+  </div>
+);
+
 const MobileBottomBar: React.FC<Props> = ({ onMenuOpen }) => {
   const navigate     = useNavigate();
   const { pathname } = useLocation();
   const access       = useSelector((s: any) => selectAccessData(s));
+  const userData     = useSelector(selectUserData);
+  const sidebarNav   = useNavigation(access, userData?.role_name || "");
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   const settingsItems = useMemo(
@@ -106,15 +209,23 @@ const MobileBottomBar: React.FC<Props> = ({ onMenuOpen }) => {
     [access],
   );
 
-  const nav = useMemo<Array<NavTab | null>>(() => [
-    { icon: LayoutDashboard, label: "Dashboard", href: "/" },
-    { icon: FolderKanban,    label: "Projects",  href: "/projects" },
-    null, // FAB slot
-    ...(settingsItems.length > 0
-      ? [{ icon: Settings, label: "Settings", match: "/setting-config", onClick: () => setSettingsOpen(true) }]
-      : []),
-    { icon: Menu,            label: "Menu",      onClick: onMenuOpen },
-  ], [settingsItems, onMenuOpen]);
+  // Every page the user can open, in sidebar order: dashboard, operations, settings
+  const tabs = useMemo<NavTab[]>(() => {
+    const out: NavTab[] = [];
+    for (const item of sidebarNav) {
+      if (item.kind === "group" || !item.href || !item.icon) continue;   // section headers, Settings group
+      out.push({
+        key:   item.href,
+        icon:  item.icon as LucideIcon,
+        label: SHORT_LABEL[item.href] ?? item.name.split(" ")[0],
+        href:  item.href,
+      });
+    }
+    if (settingsItems.length > 0) {
+      out.push({ key: "settings", icon: Settings, label: "Settings", match: "/setting-config", onClick: () => setSettingsOpen(true) });
+    }
+    return out;
+  }, [sidebarNav, settingsItems]);
 
   const goToSetting = (href: string) => {
     setSettingsOpen(false);
@@ -154,52 +265,51 @@ const MobileBottomBar: React.FC<Props> = ({ onMenuOpen }) => {
   const isActive = (href?: string) =>
     href ? (href === "/" ? pathname === "/" : pathname.startsWith(href)) : false;
 
-  // Route-aware FAB — null means hidden (no FAB rendered for that route)
+  const activeKey = settingsOpen
+    ? "settings"
+    : tabs.find(t => isActive(t.match ?? t.href))?.key ?? null;
+
+  // Glide the active tab to the middle of the strip on every route change / swipe
+  const tabRefs = useRef(new Map<string, HTMLButtonElement>());
+  useEffect(() => {
+    const tab   = activeKey ? tabRefs.current.get(activeKey) : undefined;
+    const strip = tab?.parentElement;
+    if (!tab || !strip || strip.scrollWidth <= strip.clientWidth) return;
+    strip.scrollTo({ left: tab.offsetLeft - strip.offsetLeft - (strip.clientWidth - tab.clientWidth) / 2, behavior: "smooth" });
+  }, [activeKey, tabs.length]);
+
+  // Tabs + Menu split around the centre + button
+  const allTabs = useMemo<NavTab[]>(
+    () => [...tabs, { key: "menu", icon: Menu, label: "Menu", onClick: onMenuOpen }],
+    [tabs, onMenuOpen],
+  );
+  const half      = Math.ceil(allTabs.length / 2);
+  const leftTabs  = allTabs.slice(0, half);
+  const rightTabs = allTabs.slice(half);
+
+  const openTab = (tab: NavTab) => {
+    if (tab.onClick) { tab.onClick(); return; }
+    if (!tab.href || pathname === tab.href) return;
+    emitNavStart();
+    navigate(tab.href);
+  };
+
+  // Route-aware create button — null means hidden (nothing to create on this page)
   const fab = useMemo<{ label: string; action: () => void } | null>(() => {
-    if (pathname === "/site-maintenance") {
-      return {
-        label:  "Register Site",
-        action: () => navigate("/site-maintenance/new"),
-      };
+    switch (pathname) {
+      case "/projects":         return { label: "New Project",   action: () => navigate("/projects/new") };
+      case "/campaigns":        return { label: "New Campaign",  action: () => navigate("/campaigns/new") };
+      case "/site-maintenance": return { label: "Register Site", action: () => navigate("/site-maintenance/new") };
+      case "/setting-config/user-management":
+        return { label: "New User",    action: () => window.dispatchEvent(new CustomEvent(OPEN_CREATE_USER_EVENT)) };
+      case "/setting-config/role-management":
+        return { label: "New Role",    action: () => window.dispatchEvent(new CustomEvent(OPEN_CREATE_ROLE_EVENT)) };
+      case "/setting-config/module-management":
+        return { label: "New Module",  action: () => window.dispatchEvent(new CustomEvent(OPEN_CREATE_MODULE_EVENT)) };
+      case "/setting-config/api-key-management":
+        return { label: "New API Key", action: () => window.dispatchEvent(new CustomEvent(OPEN_CREATE_APIKEY_EVENT)) };
+      default:                  return null;
     }
-    if (pathname.startsWith("/site-maintenance")) return null;
-    if (pathname.startsWith("/projects")) {
-      return {
-        label:  "New Project",
-        action: () => navigate("/projects/new"),
-      };
-    }
-    if (pathname === "/setting-config/user-management") {
-      return {
-        label:  "New User",
-        action: () => window.dispatchEvent(new CustomEvent(OPEN_CREATE_USER_EVENT)),
-      };
-    }
-    if (pathname === "/setting-config/role-management") {
-      return {
-        label:  "New Role",
-        action: () => window.dispatchEvent(new CustomEvent(OPEN_CREATE_ROLE_EVENT)),
-      };
-    }
-    if (pathname === "/setting-config/api-key-management") {
-      return {
-        label:  "New API Key",
-        action: () => window.dispatchEvent(new CustomEvent(OPEN_CREATE_APIKEY_EVENT)),
-      };
-    }
-    if (pathname === "/setting-config/module-management") {
-      return {
-        label:  "New Module",
-        action: () => window.dispatchEvent(new CustomEvent(OPEN_CREATE_MODULE_EVENT)),
-      };
-    }
-    // Other setting-config sub-pages — no relevant create action
-    if (pathname.startsWith("/setting-config")) return null;
-    // Default: show FAB that creates a project
-    return {
-      label:  "New Project",
-      action: () => navigate("/projects/new"),
-    };
   }, [pathname, navigate]);
 
   return (
@@ -207,124 +317,67 @@ const MobileBottomBar: React.FC<Props> = ({ onMenuOpen }) => {
       {/* ── Spacer so content is never hidden behind the bar ──────────── */}
       {/* handled by paddingBottom in DashboardLayout */}
 
-      <div
+      {/* ── Floating island bar ──────────────────────────────────────────── */}
+      <nav
+        aria-label="Main"
         className="mobile-bottom-bar"
         style={{
-          position:        "fixed",
-          bottom:          0,
-          left:            0,
-          right:           0,
-          zIndex:          700,
-          background:      "var(--bottom-bar-bg)",
-          backdropFilter:  "blur(20px) saturate(180%)",
-          WebkitBackdropFilter: "blur(20px) saturate(180%)",
-          display:         "flex",
-          alignItems:      "stretch",
-          paddingBottom:   "env(safe-area-inset-bottom, 0px)",
-          paddingLeft:     "env(safe-area-inset-left, 0px)",
-          paddingRight:    "env(safe-area-inset-right, 0px)",
+          position:     "fixed",
+          left:         `calc(${ISLAND_GAP}px + env(safe-area-inset-left, 0px))`,
+          right:        `calc(${ISLAND_GAP}px + env(safe-area-inset-right, 0px))`,
+          bottom:       `max(${ISLAND_GAP}px, env(safe-area-inset-bottom, 0px))`,
+          zIndex:       700,
+          height:       62,
+          display:      "flex",
+          alignItems:   "stretch",
+          borderRadius: 24,
+          background:   "var(--bottom-bar-bg)",
+          border:       "1px solid var(--glass-border, var(--sc-border))",
+          boxShadow:    "0 10px 32px rgba(0,0,0,0.35), 0 2px 8px rgba(0,0,0,0.2)",
           WebkitTapHighlightColor: "transparent",
-          transform:       barHidden ? "translateY(100%)" : "translateY(0)",
-          transition:      "transform 300ms cubic-bezier(0.4,0,0.2,1)",
-          willChange:      "transform",
+          // Hide while scrolling down — far enough that the raised + goes too
+          transform:    barHidden ? `translateY(calc(100% + ${ISLAND_GAP + FAB_SIZE}px))` : "translateY(0)",
+          transition:   "transform 320ms cubic-bezier(0.4,0,0.2,1)",
+          willChange:   "transform",
         }}
       >
-        {nav.map((item, i) => {
-          /* ── Center FAB ─────────────────────────────────────────────── */
-          if (item === null) {
-            return (
-              <div
-                key="fab"
-                style={{
-                  flex:           1,
-                  display:        "flex",
-                  alignItems:     "center",
-                  justifyContent: "center",
-                  paddingTop:     6,
-                  paddingBottom:  6,
-                }}
-              >
-                {fab && (
-                  <button
-                    onClick={fab.action}
-                    aria-label={fab.label}
-                    style={{
-                      width:           52,
-                      height:          52,
-                      borderRadius:    "50%",
-                      background:      "var(--primary)",
-                      border:          "none",
-                      cursor:          "pointer",
-                      display:         "flex",
-                      alignItems:      "center",
-                      justifyContent:  "center",
-                      boxShadow:       "0 4px 16px var(--primary-ring)",
-                      transform:       "translateY(-10px)",
-                      WebkitTapHighlightColor: "transparent",
-                      transition:      "transform 120ms ease, box-shadow 120ms ease",
-                      flexShrink:      0,
-                    }}
-                    onTouchStart={e => { (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-8px) scale(0.93)"; }}
-                    onTouchEnd={e => { (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-10px) scale(1)"; }}
-                  >
-                    <Plus style={{ width: 24, height: 24, color: "var(--primary-text)" }} />
-                  </button>
-                )}
-              </div>
-            );
-          }
+        <TabStrip tabs={leftTabs}  activeKey={activeKey} tabRefs={tabRefs} onOpen={openTab} />
 
-          /* ── Regular tab ────────────────────────────────────────────── */
-          const active = settingsOpen ? item.label === "Settings" : isActive(item.match ?? item.href);
-          const Icon   = item.icon;
-
-          return (
+        {/* Centre slot — raised + sits in a "notch" (ring in the page colour) */}
+        <div style={{ flex: `0 0 ${FAB_SLOT}px`, position: "relative" }}>
+          {fab && (
             <button
-              key={i}
-              aria-label={item.label}
-              onClick={() => item.onClick ? item.onClick() : item.href && navigate(item.href)}
+              onClick={fab.action}
+              aria-label={fab.label}
+              title={fab.label}
               style={{
-                flex:            1,
-                display:         "flex",
-                flexDirection:   "column",
-                alignItems:      "center",
-                justifyContent:  "center",
-                gap:             3,
-                padding:         "10px 0 8px",
-                background:      "transparent",
-                border:          "none",
-                cursor:          "pointer",
-                color:           active ? "var(--primary)" : "var(--sb-text-dim)",
-                transition:      "color 140ms ease",
+                position:       "absolute",
+                left:           "50%",
+                top:            -(FAB_SIZE / 2) + 4,
+                width:          FAB_SIZE,
+                height:         FAB_SIZE,
+                marginLeft:     -FAB_SIZE / 2,
+                borderRadius:   "50%",
+                border:         "none",
+                cursor:         "pointer",
+                display:        "flex",
+                alignItems:     "center",
+                justifyContent: "center",
+                background:     "linear-gradient(145deg, #8b6dff 0%, var(--primary) 55%, #5634e0 100%)",
+                boxShadow:      "0 0 0 5px var(--sc-shell), 0 8px 22px var(--primary-ring), inset 0 1px 0 rgba(255,255,255,0.25)",
                 WebkitTapHighlightColor: "transparent",
-                minWidth:        0,
+                transition:     "transform 160ms cubic-bezier(0.34,1.56,0.64,1)",
               }}
-              onTouchStart={e => {
-                if (!active) (e.currentTarget as HTMLButtonElement).style.color = "var(--fi-text)";
-              }}
-              onTouchEnd={e => {
-                (e.currentTarget as HTMLButtonElement).style.color = active ? "var(--primary)" : "var(--sb-text-dim)";
-              }}
+              onTouchStart={e => { (e.currentTarget as HTMLButtonElement).style.transform = "scale(0.9)"; }}
+              onTouchEnd={e => { (e.currentTarget as HTMLButtonElement).style.transform = "scale(1)"; }}
             >
-              <Icon style={{ width: 22, height: 22, flexShrink: 0 }} />
-              <span style={{ fontSize: 10, fontWeight: active ? 600 : 400, whiteSpace: "nowrap", lineHeight: 1 }}>
-                {item.label}
-              </span>
-              {/* active dot */}
-              {active && (
-                <span style={{
-                  position:     "absolute",
-                  bottom:       "calc(2px + env(safe-area-inset-bottom))",
-                  width:        4,
-                  height:       4,
-                  borderRadius: "50%",
-                  background:   "var(--primary)",
-                }} />
-              )}
+              <Plus style={{ width: 26, height: 26, color: "#ffffff", strokeWidth: 2.4 }} />
             </button>
-          );
-        })}
-      </div>
+          )}
+        </div>
+
+        <TabStrip tabs={rightTabs} activeKey={activeKey} tabRefs={tabRefs} onOpen={openTab} />
+      </nav>
 
       <SettingsSheet
         isOpen={settingsOpen}

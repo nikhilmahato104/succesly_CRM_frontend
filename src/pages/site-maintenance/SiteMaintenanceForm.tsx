@@ -43,7 +43,7 @@ const EMPTY_FORM: FormState = {
 const sectionStyle: React.CSSProperties = {
   background:   "var(--sc-card)",
   border:       "1px solid var(--fi-border)",
-  borderRadius: 10,
+  borderRadius: "var(--radius)",
   padding:      "14px 16px",
   marginBottom: 10,
 };
@@ -223,7 +223,7 @@ const SiteMaintenanceForm: React.FC = () => {
             {duplicate && (
               <div style={{
                 marginTop: 12, display: "flex", alignItems: "flex-start", gap: 10, padding: "10px 12px",
-                borderRadius: 8, background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.3)",
+                borderRadius: "var(--radius)", background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.3)",
               }}>
                 <AlertTriangle style={{ width: 16, height: 16, color: "#ef4444", flexShrink: 0, marginTop: 1 }} />
                 <div style={{ flex: 1, minWidth: 0 }}>

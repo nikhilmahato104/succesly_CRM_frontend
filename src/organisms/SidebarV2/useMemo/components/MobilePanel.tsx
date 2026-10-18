@@ -25,7 +25,7 @@ const MobilePanelHeader: React.FC<{ onClose: () => void }> = ({ onClose }) => (
     <button
       onClick={onClose}
       aria-label="Close menu"
-      style={{ padding: 6, borderRadius: 7, border: "none", background: "transparent", cursor: "pointer", color: "var(--sb-text-dim)", display: "flex", alignItems: "center", justifyContent: "center" }}
+      style={{ padding: 6, borderRadius: "var(--radius)", border: "none", background: "transparent", cursor: "pointer", color: "var(--sb-text-dim)", display: "flex", alignItems: "center", justifyContent: "center" }}
       onMouseEnter={e => { e.currentTarget.style.background = "var(--sb-hover)"; e.currentTarget.style.color = "var(--sb-text)"; }}
       onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--sb-text-dim)"; }}
     >
@@ -72,7 +72,7 @@ const MobilePanel: React.FC<MobilePanelProps> = ({
           bottom: 0,
           width: 280,
           maxWidth: "85vw",
-          background: "var(--sb-bg)",
+          background: "var(--sb-drawer-bg, var(--sb-bg))",
           borderRight: "1px solid var(--sb-border)",
           zIndex: Z_INDEX.SIDEBAR,
           display: "flex",

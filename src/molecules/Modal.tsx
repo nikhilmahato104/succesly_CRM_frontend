@@ -51,7 +51,7 @@ export const Modal: React.FC<ModalProps> = ({
           >
             <Dialog.Panel
               className={clsx(
-                "w-full rounded-xl bg-white dark:bg-gray-800 shadow-2xl transition-all overflow-hidden mx-auto",
+                "app-modal-panel w-full rounded-xl bg-white dark:bg-gray-800 shadow-2xl transition-all overflow-hidden mx-auto",
                 {
                   "max-w-sm": size === "sm",
                   "max-w-md": size === "md", 

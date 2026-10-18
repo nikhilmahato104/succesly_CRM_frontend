@@ -108,7 +108,7 @@ const EMPTY_FORM: FormState = {
 const sectionStyle: React.CSSProperties = {
   background:   "var(--sc-card)",
   border:       "1px solid var(--fi-border)",
-  borderRadius: 10,
+  borderRadius: "var(--radius)",
   padding:      "14px 16px",
   marginBottom: 10,
 };
@@ -566,7 +566,7 @@ const ProjectForm: React.FC = () => {
                   </table>
                 </div>
                 <div style={{
-                  marginTop: 10, padding: "6px 10px", borderRadius: 6,
+                  marginTop: 10, padding: "6px 10px", borderRadius: "var(--radius)",
                   background: totalMismatch ? "rgba(239,68,68,0.07)" : "var(--sc-surface)",
                   border: `1px solid ${totalMismatch ? "rgba(239,68,68,0.3)" : "var(--fi-border)"}`,
                 }}>
@@ -686,7 +686,7 @@ const ProjectForm: React.FC = () => {
 
                     {form.maint_terms.length > 0 && (
                       <div style={{
-                        marginTop: 10, padding: "6px 10px", borderRadius: 6,
+                        marginTop: 10, padding: "6px 10px", borderRadius: "var(--radius)",
                         background: maintMismatch ? "rgba(239,68,68,0.07)" : "var(--sc-surface)",
                         border: `1px solid ${maintMismatch ? "rgba(239,68,68,0.3)" : "var(--fi-border)"}`,
                       }}>

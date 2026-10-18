@@ -477,7 +477,7 @@ function DataCell<T>({
       <td
         style={{
           width: 50, minWidth: 50, maxWidth: 50, position: 'sticky', right: 0,
-          zIndex: 30, padding: 0, background: 'var(--dt-bg)',
+          zIndex: 30, padding: 0, background: 'var(--dt-solid)',
         }}
       />
     )
@@ -532,7 +532,7 @@ const SkeletonBodyCell: React.FC<{ col: GridColumn; width: number; min: number }
 }) => {
   if (col.field === 'column_config') {
     return (
-      <td style={{ width: 50, minWidth: 50, maxWidth: 50, position: 'sticky', right: 0, zIndex: 30, padding: 0, height: 32, background: 'var(--dt-bg)' }}>
+      <td style={{ width: 50, minWidth: 50, maxWidth: 50, position: 'sticky', right: 0, zIndex: 30, padding: 0, height: 32, background: 'var(--dt-solid)' }}>
         <div style={{ height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.15 }}>
           <CircleFadingPlus size={16} style={{ color: 'var(--dt-dim)' }} />
         </div>
@@ -620,7 +620,7 @@ const TableSkeleton: React.FC<{
                 <SkeletonBodyCell key={col.field} col={col} width={getColWidth(col, columnWidths)} min={minColumnWidth} />
               ))}
               {actionsCount > 0 && <SkeletonActionsCell count={actionsCount} />}
-              <td style={{ width: 36, minWidth: 36, position: 'sticky', right: 0, zIndex: 30, background: 'var(--dt-bg)', borderLeft: '1px solid var(--dt-border)' }} />
+              <td style={{ width: 36, minWidth: 36, position: 'sticky', right: 0, zIndex: 30, background: 'var(--dt-solid)', borderLeft: '1px solid var(--dt-border)' }} />
             </tr>
           ))}
         </tbody>
@@ -686,7 +686,7 @@ const PerPageSelect: React.FC<{
       style={{
         zIndex: 10000,
         minWidth: 'var(--button-width)',
-        background: 'var(--dt-bg)',
+        background: 'var(--dt-solid)',
         border: '1px solid var(--dt-border)',
         boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
       }}
@@ -762,7 +762,7 @@ const TablePagination: React.FC<{
               className="px-2.5 py-1 rounded text-xs font-medium min-w-[30px] transition-colors"
               style={
                 currentPage === p
-                  ? { background: 'var(--dt-accent)', border: '1px solid var(--dt-accent)', color: 'var(--dt-bg)' }
+                  ? { background: 'var(--dt-accent)', border: '1px solid var(--dt-accent)', color: 'var(--dt-accent-text)' }
                   : { background: 'var(--dt-bg)', border: '1px solid var(--dt-border)', color: 'var(--dt-text)' }
               }
             >
@@ -831,7 +831,7 @@ const ColumnConfigPanel: React.FC<{
       className="absolute top-0 right-0 h-full flex flex-col z-50"
       style={{
         width: 220,
-        background: 'var(--sb-bg)',
+        background: 'var(--dt-solid)',
         borderLeft: '1px solid var(--sb-border)',
         boxShadow: '-4px 0 16px rgba(0,0,0,0.06)',
       }}
@@ -872,7 +872,7 @@ const ColumnConfigPanel: React.FC<{
                 onClick={() => onToggle(col.field)}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 9, width: '100%',
-                  padding: '6px 8px', borderRadius: 6, fontSize: 13, fontWeight: 400,
+                  padding: '6px 8px', borderRadius: "var(--radius)", fontSize: 13, fontWeight: 400,
                   color: 'var(--sb-text)', background: 'transparent', border: 'none',
                   cursor: 'pointer', transition: 'background 140ms ease',
                   boxSizing: 'border-box', textAlign: 'left',
@@ -897,7 +897,7 @@ const ColumnConfigPanel: React.FC<{
                 onClick={() => onToggle(col.field)}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 9, width: '100%',
-                  padding: '6px 8px', borderRadius: 6, fontSize: 13, fontWeight: 400,
+                  padding: '6px 8px', borderRadius: "var(--radius)", fontSize: 13, fontWeight: 400,
                   color: 'var(--sb-text-dim)', background: 'transparent', border: 'none',
                   cursor: 'pointer', transition: 'background 140ms ease',
                   boxSizing: 'border-box', textAlign: 'left',
@@ -1591,7 +1591,7 @@ export function CustomDatagrid<T extends Record<string, unknown>>({
                       className="sticky right-0"
                       style={{
                         width: 36, minWidth: 36, padding: 0,
-                        background: 'var(--dt-bg)',
+                        background: 'var(--dt-solid)',
                         borderLeft: '1px solid var(--dt-border)',
                       }}
                     />

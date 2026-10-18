@@ -54,7 +54,7 @@ const LinkRow: React.FC<{ label: string; tip: MeaningKey; url: string; primary?:
     <FieldLabel k={tip}>{label}</FieldLabel>
     <div style={{
       display: "flex", alignItems: "center", gap: 2, minWidth: 0,
-      padding: "3px 4px 3px 10px", borderRadius: 8, minHeight: 36,
+      padding: "3px 4px 3px 10px", borderRadius: "var(--radius)", minHeight: 36,
       border: "1px solid var(--fi-border)", background: "var(--sc-surface)",
     }}>
       <a
@@ -110,7 +110,7 @@ export const ShortLinkCard: React.FC<ShortLinkCardProps> = ({ shortUrl, shortUrl
   };
 
   const segBtn = (active: boolean): React.CSSProperties => ({
-    flex: 1, height: 28, padding: "0 12px", border: "none", borderRadius: 6,
+    flex: 1, height: 28, padding: "0 12px", border: "none", borderRadius: "var(--radius)",
     fontSize: 12, fontWeight: 500, cursor: "pointer",
     background: active ? "#6366f1" : "transparent",
     color:      active ? "#fff"    : "var(--fi-muted)",
@@ -121,14 +121,14 @@ export const ShortLinkCard: React.FC<ShortLinkCardProps> = ({ shortUrl, shortUrl
       display: "flex", gap: 12, flexShrink: 0,
       flexDirection: isMobile ? "row" : "column",
       alignItems: "center",
-      ...(isMobile && { padding: 10, borderRadius: 10, border: "1px solid var(--fi-border)", background: "var(--sc-surface)" }),
+      ...(isMobile && { padding: 10, borderRadius: "var(--radius)", border: "1px solid var(--fi-border)", background: "var(--sc-surface)" }),
     }}>
-      <div style={{ padding: 6, background: "#fff", borderRadius: 8, border: "1px solid var(--fi-border)", lineHeight: 0 }}>
+      <div style={{ padding: 6, background: "#fff", borderRadius: "var(--radius)", border: "1px solid var(--fi-border)", lineHeight: 0 }}>
         <QRCodeCanvas ref={qrRef} value={qrUrl} size={isMobile ? 104 : 132} marginSize={1} />
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 8, flex: isMobile ? 1 : undefined, alignItems: "stretch", minWidth: 0 }}>
         <FieldLabel k="qr_code">QR code</FieldLabel>
-        <div style={{ display: "flex", padding: 2, borderRadius: 8, border: "1px solid var(--fi-border)", background: "var(--sc-card)" }}>
+        <div style={{ display: "flex", padding: 2, borderRadius: "var(--radius)", border: "1px solid var(--fi-border)", background: "var(--sc-card)" }}>
           <button type="button" className="no-min-tap" style={segBtn(qrTarget === "subdomain")} onClick={() => setQrTarget("subdomain")}>Short</button>
           <button type="button" className="no-min-tap" style={segBtn(qrTarget === "path")}      onClick={() => setQrTarget("path")}>Path</button>
         </div>

@@ -102,7 +102,7 @@ const SkeletonLoader: React.FC = () => (
           key={i}
           style={{
             height: 13,
-            borderRadius: 6,
+            borderRadius: "var(--radius)",
             width: `${w}%`,
             background: "linear-gradient(90deg, var(--sk-base) 25%, var(--sk-shine) 50%, var(--sk-base) 75%)",
             backgroundSize: "200% 100%",
@@ -219,7 +219,7 @@ const MessageBubble: React.FC<{ msg: Message }> = ({ msg }) => {
               cursor: "pointer",
               color: "var(--action-icon)",
               padding: "4px 5px",
-              borderRadius: 6,
+              borderRadius: "var(--radius)",
               display: "flex",
               alignItems: "center",
               transition: "color 0.15s",

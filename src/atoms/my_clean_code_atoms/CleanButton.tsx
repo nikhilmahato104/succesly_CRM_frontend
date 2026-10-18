@@ -159,9 +159,9 @@ export const CleanButton: React.FC<CleanButtonProps> = ({
           {iconRight && <span style={{ display: "flex", width: sz.iconSize, height: sz.iconSize }}>{iconRight}</span>}
           {badge !== undefined && (
             <span style={{
-              minWidth: 16, height: 16, borderRadius: 8, fontSize: 10, fontWeight: 700,
+              minWidth: 16, height: 16, borderRadius: "var(--radius)", fontSize: 10, fontWeight: 700,
               display: "flex", alignItems: "center", justifyContent: "center", padding: "0 4px",
-              background: "var(--sb-text-active)", color: "var(--sb-bg)",
+              background: "var(--sb-text-active)", color: "var(--sc-shell)",
             }}>
               {badge}
             </span>

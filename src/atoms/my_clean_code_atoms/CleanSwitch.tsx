@@ -43,7 +43,7 @@ export const CleanSwitch: React.FC<CleanSwitchProps> = ({
         border:       "none",
         padding:      0,
         cursor:       inactive ? "not-allowed" : "pointer",
-        background:   checked ? onColor : "var(--fi-border)",
+        background:   checked ? onColor : "var(--dt-border-strong)",
         opacity:      disabled ? 0.5 : 1,
         transition:   "background 160ms ease",
         WebkitTapHighlightColor: "transparent",

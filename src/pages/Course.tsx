@@ -82,7 +82,7 @@ const Course = () => {
           backgroundColor: "#3399cc",
           color: "#fff",
           border: "none",
-          borderRadius: "6px",
+          borderRadius: "var(--radius)",
           cursor: "pointer",
         }}
       >

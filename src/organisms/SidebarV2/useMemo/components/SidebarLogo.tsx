@@ -15,7 +15,7 @@ const collapseBtn: React.CSSProperties = {
   justifyContent: "center",
   width: 28,
   height: 28,
-  borderRadius: 7,
+  borderRadius: "var(--radius)",
   border: "none",
   background: "transparent",
   cursor: "pointer",
@@ -31,7 +31,7 @@ const SidebarLogo: React.FC<SidebarLogoProps> = ({ isCollapsed, isHovered, onCol
         <button
           onClick={onExpand}
           aria-label="Expand sidebar"
-          style={{ ...collapseBtn, width: 34, height: 34, borderRadius: 9 }}
+          style={{ ...collapseBtn, width: 34, height: 34, borderRadius: "var(--radius)" }}
           onMouseEnter={e => { e.currentTarget.style.background = "var(--sb-hover)"; e.currentTarget.style.color = "var(--sb-text-active)"; }}
           onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--sb-text-dim)"; }}
         >

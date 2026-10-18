@@ -51,7 +51,7 @@ import {
 const cardStyle: React.CSSProperties = {
   background:   "var(--sc-card)",
   border:       "1px solid var(--sc-border)",
-  borderRadius: 10,
+  borderRadius: "var(--radius)",
   padding:      16,
 };
 

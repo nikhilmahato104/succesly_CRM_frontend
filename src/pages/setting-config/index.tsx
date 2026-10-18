@@ -16,7 +16,7 @@
  * refresh shares a single in-flight Promise across concurrent callers.
  */
 
-import React from "react";
+import React, { useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Settings } from "lucide-react";
 import { useSelector } from "react-redux";
@@ -76,6 +76,14 @@ const SettingConfig: React.FC = () => {
     Boolean(access?.[t.moduleKey]?.view || access?.[t.moduleKey]?.edit)
   );
 
+  // One SettingConfig instance stays alive for all three tabs (KeepAliveOutlet),
+  // so the per-tab route gate only runs on its first visit — re-check here.
+  const activeModuleKey = TABS.find(t => t.label === activeLabel)?.moduleKey;
+  useEffect(() => {
+    if (!TABS.some(t => t.path === pathname) || !activeModuleKey || !access) return;
+    if (!access[activeModuleKey]?.view) navigate("/no-access", { replace: true });
+  }, [pathname, activeModuleKey, access, navigate]);
+
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden", background: "var(--dt-bg)" }}>
 
@@ -88,7 +96,7 @@ const SettingConfig: React.FC = () => {
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <div style={{
-              width: 30, height: 30, borderRadius: 7,
+              width: 30, height: 30, borderRadius: "var(--radius)",
               background: "rgba(99,102,241,0.12)",
               display: "flex", alignItems: "center", justifyContent: "center", color: "#6366f1",
             }}>

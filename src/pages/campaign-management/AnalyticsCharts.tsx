@@ -240,7 +240,7 @@ export const AnalyticsToolbar: React.FC<{
             onClick={() => onPreset(p.days)}
             style={{
               flex: isMobile ? 1 : undefined,
-              height: "calc(var(--fi-height) - 4px)", padding: "0 12px", borderRadius: 6, border: "none",
+              height: "calc(var(--fi-height) - 4px)", padding: "0 12px", borderRadius: "var(--radius)", border: "none",
               background: active ? "#6366f1" : "transparent",
               color: active ? "#fff" : "var(--dt-text)",
               fontSize: 12, fontWeight: 500, cursor: "pointer",

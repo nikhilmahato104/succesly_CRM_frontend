@@ -1,6 +1,5 @@
 import React from "react";
 import ReactDOM from "react-dom";
-import { COLORS } from "../theme/colors";
 
 
 type WarningModalProps = {
@@ -36,7 +35,7 @@ const WarningModal: React.FC<WarningModalProps> = ({
       
       {/* Modal Content */}
       <div
-        className="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md"
+        className="app-modal-panel relative bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md"
         style={{ width }}
         role="dialog"
         aria-modal="true"
@@ -80,7 +79,7 @@ const WarningModal: React.FC<WarningModalProps> = ({
             <button
               onClick={onProceed}
               //apply global color
-              style={{ backgroundColor: COLORS.primary.DEFAULT }}
+              style={{ backgroundColor: "var(--btn-primary-bg)", color: "var(--btn-primary-text)" }}
               className="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium text-white  transition-colors"
             >
               Proceed

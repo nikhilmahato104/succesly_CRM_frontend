@@ -84,7 +84,7 @@ export const InfoTip: React.FC<{ k: MeaningKey; size?: number }> = ({ k, size = 
           style={{
             position: "fixed", top: pos.top, left: pos.left, zIndex: 100000,
             width: Math.min(POPOVER_WIDTH, window.innerWidth - GUTTER * 2),
-            padding: "10px 12px", borderRadius: 8,
+            padding: "10px 12px", borderRadius: "var(--radius)",
             background: "var(--fi-bg-panel, var(--sc-card))", color: "var(--dt-text)",
             border: "1px solid var(--fi-border)", boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
             fontSize: 12, lineHeight: 1.5, fontWeight: 400,

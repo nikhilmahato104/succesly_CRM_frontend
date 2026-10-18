@@ -94,7 +94,7 @@ const DocListPage: React.FC = () => {
                 background: "#1a1d27",
                 border: "1px solid #2a2d3a",
                 borderLeft: `3px solid ${doc.color}`,
-                borderRadius: 10,
+                borderRadius: "var(--radius)",
                 padding: "20px 22px",
                 cursor: "pointer",
                 transition: "transform 120ms, box-shadow 120ms",

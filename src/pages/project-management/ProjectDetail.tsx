@@ -40,7 +40,7 @@ const pillStyle: React.CSSProperties = {
 const cardStyle: React.CSSProperties = {
   background:   "var(--sc-card)",
   border:       "1px solid var(--fi-border)",
-  borderRadius: 10,
+  borderRadius: "var(--radius)",
   padding:      20,
 };
 
@@ -436,7 +436,7 @@ const ProjectDetail: React.FC = () => {
                           : "—"
                       },
                     ].map((s) => (
-                      <div key={s.label} style={{ background: "var(--dt-bg)", border: "1px solid var(--fi-border)", borderRadius: 8, padding: "8px 12px" }}>
+                      <div key={s.label} style={{ background: "var(--sc-card)", border: "1px solid var(--fi-border)", borderRadius: "var(--radius)", padding: "8px 12px" }}>
                         <p style={{ margin: 0, fontSize: 10, color: "var(--fi-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>{s.label}</p>
                         <p style={{ margin: "3px 0 0", fontSize: 13, fontWeight: 700, color: (s.color as string) || "var(--fi-text)" }}>{s.value}</p>
                       </div>
@@ -584,7 +584,7 @@ const ProjectDetail: React.FC = () => {
                 </span>
               )},
             ].map((s) => (
-              <div key={s.label} style={{ background: "var(--dt-bg)", border: "1px solid var(--fi-border)", borderRadius: 8, padding: "10px 14px" }}>
+              <div key={s.label} style={{ background: "var(--sc-card)", border: "1px solid var(--fi-border)", borderRadius: "var(--radius)", padding: "10px 14px" }}>
                 <p style={{ margin: 0, fontSize: 11, color: "var(--fi-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>{s.label}</p>
                 <p style={{ margin: "4px 0 0", fontSize: 15, fontWeight: 700, color: (s.color as string) || "var(--fi-text)" }}>{s.value}</p>
               </div>

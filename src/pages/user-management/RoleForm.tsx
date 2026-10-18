@@ -165,7 +165,7 @@ const RoleForm: React.FC<RoleFormProps> = ({
             </div>
 
             {/* Permissions table */}
-            <div style={{ overflowX: "auto", borderRadius: 8, border: "1px solid var(--fi-border)", marginBottom: 8 }}>
+            <div style={{ overflowX: "auto", borderRadius: "var(--radius)", border: "1px solid var(--fi-border)", marginBottom: 8 }}>
               <table style={{ width: "100%", minWidth: 580, borderCollapse: "collapse" }}>
                 <thead>
                   <tr style={{ background: "var(--dt-header)" }}>

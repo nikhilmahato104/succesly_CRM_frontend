@@ -37,7 +37,7 @@ const PageShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             display:         "flex",
             flexDirection:   "column",
             overflow:        "hidden",
-            borderRadius:    8,
+            borderRadius:    "var(--radius)",
             backgroundColor: "var(--sc-card)",
             border:          "1px solid var(--sc-border)",
           }}

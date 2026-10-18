@@ -27,7 +27,7 @@ export const StatCard: React.FC<StatCardProps> = ({
       style={{
         background:   "var(--sc-card)",
         border:       "1px solid var(--sc-border)",
-        borderRadius: 10,
+        borderRadius: "var(--radius)",
         padding:      "13px 14px",
         display:      "flex",
         flexDirection:"column",
@@ -41,7 +41,7 @@ export const StatCard: React.FC<StatCardProps> = ({
           style={{
             width:          34,
             height:         34,
-            borderRadius:   8,
+            borderRadius:   "var(--radius)",
             background:     iconBg,
             display:        "flex",
             alignItems:     "center",

@@ -8,6 +8,7 @@ import { getData, deleteData } from "../../services/crmServices";
 import { selectApiKey, openApiKeyModal } from "../../store/slices/apiKeySlice";
 import { selectAccessData } from "../../store/slices/accessSlice";
 import { scrollToTop } from "../../utils/scrollToTop";
+import { emitNavDone } from "../../atoms/NavigationProgress";
 import type { RootState } from "../../store";
 import ApiKeyForm, { KeyRevealBanner } from "./ApiKeyForm";
 import {
@@ -188,6 +189,7 @@ const ApiKeyManagement: React.FC = () => {
       } finally {
         if (pageRef.current !== page) return;
         setLoading(false);
+        requestAnimationFrame(() => requestAnimationFrame(() => emitNavDone()));
       }
     },
     [apiKey, token, buildParams, dispatch],

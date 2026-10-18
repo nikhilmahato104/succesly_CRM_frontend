@@ -71,7 +71,7 @@ const SimpleBackdrop: React.FC = () => (
 
 const iconBtnStyle: React.CSSProperties = {
   display: "flex", alignItems: "center", justifyContent: "center",
-  width: 28, height: 28, borderRadius: 6, border: "none",
+  width: 28, height: 28, borderRadius: "var(--radius)", border: "none",
   background: "transparent", cursor: "pointer", color: "var(--fi-muted)",
   transition: "background 140ms ease, color 140ms ease",
 };
@@ -110,7 +110,7 @@ const ModalHeader: React.FC<{
 }> = ({ title, subtitle, headerExtra, expandControl, onClose, TitleTag = DialogTitle }) => {
   if (!title && !headerExtra) return null;
   return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 18px", borderBottom: "1px solid var(--fi-border)", background: "var(--modal-bg)" }}>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 18px", borderBottom: "1px solid var(--fi-border)", background: "transparent" }}>
       <div style={{ minWidth: 0 }}>
         {title && <TitleTag style={{ margin: 0, fontSize: 15, fontWeight: 600, color: "var(--fi-text)", lineHeight: 1.3 }}>{title}</TitleTag>}
         {subtitle && <p style={{ margin: "3px 0 0", fontSize: 12, color: "var(--fi-muted)", lineHeight: 1.4 }}>{subtitle}</p>}
@@ -125,7 +125,7 @@ const ModalHeader: React.FC<{
 };
 
 const ModalBody: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div className="sc-scrollbar" style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: 20, background: "var(--modal-bg)" }}>
+  <div className="sc-scrollbar" style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: 20, background: "transparent" }}>
     {children}
   </div>
 );
@@ -187,11 +187,12 @@ const DesktopModal: React.FC<CleanModalProps> = ({
                 maxHeight:     panelMaxH,
                 display:       "flex",
                 flexDirection: "column",
-                borderRadius:  expanded ? 0 : 12,
-                background:    "var(--modal-bg)",
+                borderRadius:  expanded ? 0 : "var(--radius)",
+                // Dark: Proton teal-glow gradient · Light: plain --modal-bg
+                background:    "var(--modal-panel-bg, var(--modal-bg))",
                 boxShadow:     "0 20px 60px rgba(0,0,0,0.2)",
                 overflow:      "hidden",
-                border:        "1px solid var(--fi-border)",
+                border:        "1px solid var(--modal-border, var(--fi-border))",
                 transition:    [
                   "opacity 0.2s ease-out",
                   "transform 0.2s ease-out",
@@ -322,15 +323,15 @@ const BottomSheet: React.FC<CleanModalProps> = ({
             display:       "flex",
             flexDirection: "column",
             borderRadius:  "16px 16px 0 0",
-            background:    "var(--modal-bg)",
-            border:        "1px solid var(--fi-border)",
+            background:    "var(--modal-panel-bg, var(--modal-bg))",
+            border:        "1px solid var(--modal-border, var(--fi-border))",
             borderBottom:  "none",
             boxShadow:     "0 -8px 40px rgba(0,0,0,0.3)",
             outline:       "none",
           }}
         >
           {/* Grab handle + header — tap the handle to toggle partial ↔ full */}
-          <div style={{ flexShrink: 0, borderRadius: "16px 16px 0 0", background: "var(--modal-bg)" }}>
+          <div style={{ flexShrink: 0, borderRadius: "16px 16px 0 0", background: "transparent" }}>
             <div style={{ padding: "8px 0 4px" }}>
               <Drawer.Handle style={{ width: 36, height: 4, background: "var(--fi-border)", opacity: 1 }} />
             </div>
@@ -349,7 +350,7 @@ const BottomSheet: React.FC<CleanModalProps> = ({
               overflowX:          "hidden",
               padding:            10,
               paddingBottom:      atPartial && footer ? 10 + partialHiddenPx() : 10,
-              background:         "var(--modal-bg)",
+              background:         "transparent",
               overscrollBehavior: "contain",
             }}
           >

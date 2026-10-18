@@ -15,6 +15,12 @@ export default {
     fontFamily: {
       brand: ['Bricolage Grotesque', 'sans-serif'],
     },
+    // One corner radius for the whole UI — see --radius in src/index.css
+    borderRadius: {
+      md: 'var(--radius)',
+      lg: 'var(--radius)',
+      xl: 'var(--radius)',
+    },
   },
 
   },

@@ -40,7 +40,7 @@ const Avatar: React.FC<{ name: string; url?: string | null; size?: number }> = (
         alignItems:     "center",
         justifyContent: "center",
         background:     showImg ? "transparent" : "var(--sb-text-active)",
-        color:          "var(--sb-bg)",
+        color:          "var(--sc-shell)",
         fontSize:       size * 0.38,
         fontWeight:     600,
         userSelect:     "none",
@@ -74,7 +74,7 @@ const IconBtn: React.FC<{
       justifyContent: "center",
       width:          30,
       height:         30,
-      borderRadius:   6,
+      borderRadius:   "var(--radius)",
       border:         "none",
       background:     "transparent",
       cursor:         "pointer",
@@ -113,7 +113,7 @@ const ProfileDropdown: React.FC<{
       minWidth:   210,
       background: "var(--sb-elevated)",
       border:     "1px solid var(--sb-border)",
-      borderRadius: 8,
+      borderRadius: "var(--radius)",
       boxShadow:  "0 4px 20px rgba(0,0,0,0.15)",
       overflow:   "hidden",
       zIndex:     200,
@@ -144,7 +144,7 @@ const ProfileDropdown: React.FC<{
         {isDarkMode ? "Dark mode" : "Light mode"}
       </span>
       {/* Clean pill — no track icons */}
-      <div style={{ position: "relative", width: 36, height: 20, borderRadius: 10, background: isDarkMode ? "#4b5563" : "#d1d5db", transition: "background 200ms ease", flexShrink: 0 }}>
+      <div style={{ position: "relative", width: 36, height: 20, borderRadius: "var(--radius)", background: isDarkMode ? "#4b5563" : "#d1d5db", transition: "background 200ms ease", flexShrink: 0 }}>
         <div style={{ position: "absolute", top: "50%", transform: "translateY(-50%)", left: isDarkMode ? 17 : 2, width: 16, height: 16, borderRadius: "50%", background: "#ffffff", boxShadow: "0 1px 3px rgba(0,0,0,0.30)", transition: "left 200ms ease" }} />
       </div>
     </button>
@@ -211,7 +211,7 @@ const LayoutPicker: React.FC<{ mode: LayoutMode; onSelect: (m: LayoutMode) => vo
       right:        0,
       background:   "var(--sb-elevated)",
       border:       "1px solid var(--sb-border)",
-      borderRadius: 10,
+      borderRadius: "var(--radius)",
       boxShadow:    "0 4px 20px rgba(0,0,0,0.18)",
       padding:      "10px",
       zIndex:       200,
@@ -234,7 +234,7 @@ const LayoutPicker: React.FC<{ mode: LayoutMode; onSelect: (m: LayoutMode) => vo
             alignItems:   "center",
             gap:          6,
             padding:      "10px 8px 8px",
-            borderRadius: 8,
+            borderRadius: "var(--radius)",
             border:       active ? "1.5px solid var(--sb-text-active)" : "1.5px solid var(--sb-border)",
             background:   active ? "rgba(255,255,255,0.06)" : "transparent",
             cursor:       "pointer",
@@ -325,7 +325,7 @@ export const TopBar: React.FC = () => {
             border:     "none",
             cursor:     "pointer",
             padding:    "4px 6px",
-            borderRadius: 6,
+            borderRadius: "var(--radius)",
             color:      "var(--sb-text-active)",
           }}
           onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "var(--sb-hover)"; }}
@@ -451,7 +451,7 @@ export const TopBar: React.FC = () => {
               gap:            5,
               height:         30,
               padding:        "0 5px",
-              borderRadius:   7,
+              borderRadius:   "var(--radius)",
               border:         "none",
               background:     profileOpen ? "var(--sb-hover)" : "transparent",
               cursor:         "pointer",

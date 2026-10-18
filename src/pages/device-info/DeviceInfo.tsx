@@ -447,7 +447,7 @@ const DeviceInfoPage: React.FC = () => {
               <strong>Pages Visited ({viewRow.website_all_url_route.length})</strong>
               <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6, maxHeight: 260, overflowY: "auto" }}>
                 {viewRow.website_all_url_route.map((r, i) => (
-                  <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 8, padding: "6px 8px", background: "var(--dt-header)", borderRadius: 6 }}>
+                  <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 8, padding: "6px 8px", background: "var(--dt-header)", borderRadius: "var(--radius)" }}>
                     <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}>{r.url}</span>
                     <span style={{ flexShrink: 0, color: "var(--dt-muted)" }}>{r.hit_count} hit{r.hit_count !== 1 ? "s" : ""}</span>
                   </div>

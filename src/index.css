@@ -111,6 +111,10 @@ button, nav, header, aside, label, [role="button"], [role="tab"] {
   --sb-accent:      var(--primary);   /* active nav item text + icon */
   --sb-border:      #b8b8b8;
 
+  /* ── Corner radius — ONE value for every card, input, button, panel ──── */
+  /* Pills (99px) and circles (50%) stay round; everything else uses this.  */
+  --radius: 8px;
+
   /* ── Button height scale — single source of truth ───────────────────── */
   /* Change here → all buttons + all form fields update everywhere         */
   --btn-h-xs: 22px;
@@ -128,7 +132,7 @@ button, nav, header, aside, label, [role="button"], [role="tab"] {
   --fi-muted:        #9e9e9e;
   --fi-label:        #4b4b4b;
   --fi-height:       var(--btn-h-sm);   /* inputs match sm button height   */
-  --fi-radius:       6px;
+  --fi-radius:       var(--radius);
   --fi-font-size:    13px;
   --fi-shadow-focus: 0 0 0 3px var(--primary-ring);
 
@@ -148,6 +152,8 @@ button, nav, header, aside, label, [role="button"], [role="tab"] {
 
   /* ── DataTable ───────────────────────────────────────────────────────── */
   --dt-bg:              #ffffff;
+  --dt-solid:           #ffffff;   /* pinned columns, popups — never see-through */
+  --dt-accent-text:     #ffffff;   /* text on --dt-accent (active page number)   */
   --dt-header:          #fafafa;
   --dt-hover:           #f5f5f5;
   --dt-header-hover:    #efefef;
@@ -164,81 +170,142 @@ button, nav, header, aside, label, [role="button"], [role="tab"] {
 }
 
 /* Dark mode ──────────────────────────────────────────────────────────────── */
-/* Netlify app palette (sampled from app.netlify.com):
-   page #0a1016 → card / input #12181f → hover #1a2129
-   subtle border #1e242c → strong border / secondary button #3b434c
-   text #ffffff → muted #abb5bf → dim #7e8792
-   accent teal #14d8d4 · success #64d87f · info blue #2036a1 · error #af2536  */
+/* Proton VPN desktop palette:
+   window   plum #8b3a55 at the top → #1b1a21 at the bottom (gradient shell)
+   panels   frosted glass rgba(24,21,30,.58) + hairline rgba(255,255,255,.08)
+   tiles    rgba(255,255,255,.05) · solid popovers / tables #1f1c26 – #2a2632
+   text     #ffffff → weak #a7a4b5 → hint #7c788c · accent purple #6d4aff
+   modals   teal glow at the top (#11454b) fading into #1f1c26               */
 .dark {
-  /* ── Brand primary — Netlify teal, dark text on top for contrast ─────── */
-  --primary:       #14d8d4;
-  --primary-hover: #32e6e2;
-  --primary-light: rgba(20,216,212,0.12);
-  --primary-text:  #0a1016;
-  --primary-ring:  rgba(20,216,212,0.28);
-  /* ── Modal background ────────────────────────────────────────────────── */
-  --modal-bg: #12181f;
+  /* ── Brand primary — Proton purple, white text on top ────────────────── */
+  --primary:       #6d4aff;
+  --primary-hover: #7c5cff;
+  --primary-light: rgba(109,74,255,0.16);
+  --primary-text:  #ffffff;
+  --primary-ring:  rgba(109,74,255,0.35);
+
+  /* ── App window: gradient shell + floating glass panels ─────────────── */
+  --sc-shell:          #1b1a21;
+  --sc-shell-gradient: linear-gradient(180deg,
+                         #8b3a55 0%, #6c2f4a 12%, #45283e 28%,
+                         #2a2231 48%, #1f1c26 70%, #1b1a21 100%);
+  --glass-bg:          rgba(24,21,30,0.58);
+  --glass-border:      rgba(255,255,255,0.07);
+  --glass-blur:        blur(22px) saturate(140%);
+
+  /* ── Modals — Proton "Discover" teal glow fading into the dialog body ── */
+  --modal-bg:          #1f1c26;   /* solid: footers, sticky bars, popovers  */
+  --modal-panel-bg:    linear-gradient(180deg,
+                         #11454b 0%, #173640 16%, #1e2731 34%,
+                         #211f2a 56%, #1f1c26 100%);
+  --modal-border:      rgba(255,255,255,0.08);
 
   /* ── Shell + Content card ───────────────────────────────────────────── */
-  --sc-shell:   #0a1016;     /* page background                               */
-  --sc-card:    #0a1016;     /* main content — flat, like Netlify             */
-  --bottom-bar-bg: rgba(10,16,22,0.80); /* dark frosted glass bottom bar      */
-  --sc-surface: #12181f;     /* cards, toolbars                               */
-  --sc-border:  #1e242c;     /* card outlines, dividers                       */
+  --sc-card:       rgba(255,255,255,0.04);  /* filled tiles, no outline     */
+  --bottom-bar-bg: rgba(27,25,33,0.82);     /* frosted bottom bar          */
+  --sc-surface:    rgba(255,255,255,0.06);  /* toolbars, search pill       */
+  --sc-border:     rgba(255,255,255,0.05);  /* barely-there dividers      */
 
-  /* ── Sidebar ─────────────────────────────────────────────────────────── */
-  --sb-bg:          #0a1016;
-  --sb-elevated:    #12181f;
-  --sb-hover:       #12181f;
-  --sb-active:      rgba(20,216,212,0.08);
-  --sb-text:        #abb5bf;
-  --sb-text-dim:    #7e8792;
+  /* ── Sidebar — transparent on its glass panel ────────────────────────── */
+  --sb-bg:          transparent;
+  --sb-drawer-bg:   linear-gradient(180deg, #6c2f4a 0%, #3a2637 30%, #221f2a 60%, #1d1b23 100%);
+  --sb-elevated:    #2a2632;
+  --sb-hover:       rgba(255,255,255,0.07);
+  --sb-active:      rgba(255,255,255,0.11);
+  --sb-text:        #ffffff;
+  --sb-text-dim:    #b8b5c6;
   --sb-text-active: #ffffff;
-  --sb-accent:      #14d8d4;
-  --sb-border:      #1e242c;
+  --sb-accent:      #ffffff;
+  --sb-border:      rgba(255,255,255,0.04);  /* top bar / footer: no hard line */
 
   /* ── Form / Input atoms ─────────────────────────────────────────────── */
-  --fi-bg:           #12181f;
-  --fi-bg-panel:     #12181f;
-  --fi-border:       #3b434c;
+  --fi-bg:           rgba(255,255,255,0.07);  /* filled, borderless — like Proton */
+  --fi-bg-panel:     #2a2632;               /* solid dropdown / popover panels */
+  --fi-border:       rgba(255,255,255,0.05);  /* hairline — shapes come from the fill */
   --fi-border-focus: var(--primary);
   --fi-border-error: #f0566a;
   --fi-text:         #ffffff;
-  --fi-muted:        #7e8792;
-  --fi-label:        #abb5bf;
-  --fi-radius:       8px;
+  --fi-muted:        #a7a4b5;               /* placeholders stay readable      */
+  --fi-label:        #ffffff;
+  --fi-radius:       var(--radius);
   --fi-font-size:    13px;
   --fi-shadow-focus: 0 0 0 3px var(--primary-ring);
 
   /* ── Button primary token ────────────────────────────────────────────── */
   --btn-primary-bg:    var(--primary);
-  --btn-primary-text:  #0a1016;
+  --btn-primary-text:  #ffffff;
   --btn-primary-hover: var(--primary-hover);
 
   /* ── Badge color tokens ──────────────────────────────────────────────── */
-  --badge-purple-bg:    rgba(20,216,212,0.12);   --badge-purple-text:  #5ff0ec;
-  --badge-green-bg:     rgba(100,216,127,0.14);  --badge-green-text:   #93f5a5;
-  --badge-gray-bg:      #1e242c;                 --badge-gray-text:    #abb5bf;
-  --badge-amber-bg:     rgba(247,171,57,0.15);   --badge-amber-text:   #f7ab39;
+  --badge-purple-bg:    rgba(109,74,255,0.20);   --badge-purple-text:  #b7a6ff;
+  --badge-green-bg:     rgba(30,168,133,0.18);   --badge-green-text:   #5fe0b8;
+  --badge-gray-bg:      rgba(255,255,255,0.08);  --badge-gray-text:    #c9c6d4;
+  --badge-amber-bg:     rgba(255,179,0,0.15);    --badge-amber-text:   #ffc34d;
   --badge-orange-bg:    rgba(249,115,22,0.16);   --badge-orange-text:  #fdba74;
-  --badge-red-bg:       rgba(175,37,54,0.28);    --badge-red-text:     #ff8a98;
-  --badge-blue-bg:      rgba(32,54,161,0.40);    --badge-blue-text:    #a3b4ff;
+  --badge-red-bg:       rgba(220,50,81,0.22);    --badge-red-text:     #ff8fa3;
+  --badge-blue-bg:      rgba(79,124,255,0.20);   --badge-blue-text:    #9db4ff;
 
-  /* ── DataTable ───────────────────────────────────────────────────────── */
-  --dt-bg:              #0a1016;
-  --dt-header:          #12181f;
-  --dt-hover:           #12181f;
-  --dt-header-hover:    #1a2129;
-  --dt-border:          #1e242c;
-  --dt-border-strong:   #3b434c;
+  /* ── DataTable — rows are see-through so the gradient shows on every
+        route; pinned columns / popups use --dt-solid, the sticky header
+        is near-opaque so scrolled rows don't bleed through it ─────────── */
+  --dt-bg:              transparent;
+  --dt-solid:           #221f2a;
+  --dt-accent-text:     #1b1a21;
+  --dt-header:          rgba(34,31,42,0.92);
+  --dt-hover:           rgba(255,255,255,0.05);
+  --dt-header-hover:    #2e2a37;
+  --dt-border:          #2a2631;
+  --dt-border-strong:   #403b4c;
   --dt-text:            #ffffff;
-  --dt-dim:             #abb5bf;
-  --dt-muted:           #7e8792;
-  --dt-accent:          #14d8d4;
-  --dt-scrollbar:       rgba(171,181,191,0.18);
-  --dt-scrollbar-hover: rgba(171,181,191,0.32);
-  --dt-skeleton-from:   #12181f;
-  --dt-skeleton-to:     #1a2129;
+  --dt-dim:             #e9e7ef;
+  --dt-muted:           #a7a4b5;
+  --dt-accent:          #9d8cff;
+  --dt-scrollbar:       rgba(255,255,255,0.16);
+  --dt-scrollbar-hover: rgba(255,255,255,0.28);
+  --dt-skeleton-from:   #25212c;
+  --dt-skeleton-to:     #2d2935;
+}
+
+/* ── Proton-style window: gradient shell, floating frosted panels ─────────── */
+.dark body,
+.dark .dashboard-shell {
+  background-image: var(--sc-shell-gradient);
+  background-attachment: fixed;
+}
+
+/* The frosted layer lives on ::before — backdrop-filter on the panel itself
+   would become the containing block for position:fixed children (floating
+   search/filter buttons, bulk action bar) and pin them to the panel. */
+.dark .app-glass-panel,
+.dark .content-card {
+  position: relative;
+  isolation: isolate;
+  background: transparent !important;
+  border: 1px solid var(--glass-border) !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+}
+.dark .app-glass-panel::before,
+.dark .content-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: var(--glass-blur);
+          backdrop-filter: var(--glass-blur);
+  pointer-events: none;
+}
+/* Mobile: the content card is edge-to-edge — glass, but no frame */
+@media (max-width: 1023px) {
+  .dark .content-card { border: none !important; box-shadow: none; }
+}
+
+/* Legacy Tailwind dialogs (WarningModal, DeleteModal, …) share the modal look */
+.dark .app-modal-panel {
+  background: var(--modal-panel-bg) !important;
+  border: 1px solid var(--modal-border);
+  box-shadow: 0 24px 64px rgba(0,0,0,0.5);
 }
 
 /* Dark mode: body matches shell */
@@ -262,7 +329,7 @@ button, nav, header, aside, label, [role="button"], [role="tab"] {
 }
 
 .dark select option {
-  background-color: #12181f;
+  background-color: #2a2632;
   color: #ffffff;
 }
 
@@ -312,11 +379,13 @@ button, nav, header, aside, label, [role="button"], [role="tab"] {
   -webkit-backdrop-filter: blur(20px) saturate(180%);
           backdrop-filter: blur(20px) saturate(180%);
 }
+/* Bottom-bar tab strip scrolls sideways without a visible scrollbar */
+.bb-strip::-webkit-scrollbar { display: none; }
 
 /* Table pagination footer — same breakpoint as the bottom bar (DashboardLayout),
    so the page controls always sit above it on phones and tablets */
 @media (max-width: 1023px) {
-  .dt-pagination-bar { padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px)) !important; }
+  .dt-pagination-bar { padding-bottom: calc(82px + env(safe-area-inset-bottom, 0px)) !important; }
 }
 
 /* ── Project form responsive grids ─────────────────────────────────────────

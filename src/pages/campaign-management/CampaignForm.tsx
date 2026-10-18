@@ -119,7 +119,7 @@ const HTTP_URL_RE    = /^https?:\/\/.+/i;
 const sectionStyle: React.CSSProperties = {
   background:   "var(--sc-card)",
   border:       "1px solid var(--fi-border)",
-  borderRadius: 10,
+  borderRadius: "var(--radius)",
   padding:      "14px 16px",
   marginBottom: 10,
 };
@@ -565,7 +565,7 @@ const CampaignForm: React.FC = () => {
 
                 {/* Live final URL preview */}
                 {previewUrl && (
-                  <div style={{ marginTop: 14, padding: "8px 10px", borderRadius: 6, background: "var(--sc-surface)", border: "1px solid var(--fi-border)" }}>
+                  <div style={{ marginTop: 14, padding: "8px 10px", borderRadius: "var(--radius)", background: "var(--sc-surface)", border: "1px solid var(--fi-border)" }}>
                     <div style={{ fontSize: 10, fontWeight: 600, color: "var(--fi-muted)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "flex", alignItems: "center", gap: 4 }}>
                       Final URL preview <InfoTip k="redirects_to" />
                     </div>

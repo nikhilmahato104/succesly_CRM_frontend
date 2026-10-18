@@ -8,6 +8,7 @@ import { LoaderOverlay } from "../atoms/LoaderOverlay";
 import { NavigationProgress } from "../atoms/NavigationProgress";
 import { DashboardSkeleton } from "../atoms/skeleton/DashboardSkeleton";
 import { SettingConfigSkeleton, ApiKeyPageSkeleton } from "../atoms/skeleton/SettingConfigSkeleton";
+import { KeepAliveOutlet } from "./KeepAliveOutlet";
 
 // ── Lazy-loaded pages ──────────────────────────────────────────────────────
 // Each page is code-split: the JS bundle for that page is only downloaded
@@ -256,206 +257,211 @@ export const AppRoutes: React.FC = () => {
         <Route path="/dashboard-branch-manager" element={<ProtectedRoute moduleId="dashboard-branch-manager" ><DashboardPage /></ProtectedRoute>} />
         <Route path="/dashboard-xyz"            element={<ProtectedRoute moduleId="dashboard-xyz"            ><DashboardPage /></ProtectedRoute>} />
 
-        {/* ── SETTINGS & CONFIG (module-id gated) ───────────────────────────
-            Each sub-route checks a different module key from Redux accessSlice:
-              /user-management   → accessSlice["user_management"].view
-              /role-management   → accessSlice["role_management"].view
-              /module-management → accessSlice["module_management"].view
-              /api-key-management→ accessSlice["api_key_management"].view
-            All four render <SettingConfig /> (or <ApiKeyPage />) inside the
-            DashboardLayout.  The SettingConfig component shows tabs based on
-            which modules are accessible.                                     */}
-        <Route
-          path="/setting-config/user-management"
-          element={
-            // OPEN WHEN: accessSlice["user_management"].view === true
-            <ProtectedRoute moduleId="user_management">
-              <InLayout><SettingConfig /></InLayout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/setting-config/role-management"
-          element={
-            // OPEN WHEN: accessSlice["role_management"].view === true
-            <ProtectedRoute moduleId="role_management">
-              <InLayout><SettingConfig /></InLayout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/setting-config/module-management"
-          element={
-            // OPEN WHEN: accessSlice["module_management"].view === true
-            <ProtectedRoute moduleId="module_management">
-              <InLayout><SettingConfig /></InLayout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/setting-config/api-key-management"
-          element={
-            // OPEN WHEN: accessSlice["api_key_management"].view === true
-            <ProtectedRoute moduleId="api_key_management">
-              <InLayout><ApiKeyPage /></InLayout>
-            </ProtectedRoute>
-          }
-        />
-
-        {/* ── ROLE-BASED DASHBOARDS ──────────────────────────────────────────
-            These routes use roleAllowed instead of moduleId.
-            rolePermitted() reads user.role_name from Redux userSlice and
-            checks if it contains the allowed substring (case-insensitive).
-
-            /dashboard/admin
-              OPEN WHEN: user.role_name contains "super"  (e.g. "SUPER ADMIN")
-              BLOCKED:   any other role → redirected to "/" → their own dashboard
-
-            /dashboard/manager
-              OPEN WHEN: user.role_name contains "manager"
-              BLOCKED:   SUPER ADMIN and others → redirected to "/"
-
-            HOW role_name GETS INTO REDUX:
-              Login → fetchProfile() → applyProfile() → setUserData({ role_name })
-              Page refresh → AuthContext useEffect → fetchProfile() → same path  */}
-        <Route
-          path="/dashboard/admin"
-          element={
-            // OPEN WHEN: user.role_name includes "super"  (e.g. "SUPER ADMIN")
-            <ProtectedRoute roleAllowed={["super"]}>
-              <InLayout><AdminDashboard /></InLayout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/dashboard/manager"
-          element={
-            // OPEN WHEN: user.role_name includes "manager"  (e.g. "MANAGER")
-            <ProtectedRoute roleAllowed={["manager"]}>
-              <InLayout><ManagerDashboard /></InLayout>
-            </ProtectedRoute>
-          }
-        />
-
-        {/* ── DEVICE INFO ─────────────────────────────────────────────────────
-            OPEN WHEN: accessSlice["device_info"].view === true                */}
-        <Route
-          path="/device-info"
-          element={
-            <ProtectedRoute moduleId="device_info">
-              <InLayout><DeviceInfoPage /></InLayout>
-            </ProtectedRoute>
-          }
-        />
-
-        {/* ── PROJECT MANAGEMENT ─────────────────────────────────────────────
-            OPEN WHEN: accessSlice["project_management"].view === true         */}
-        <Route
-          path="/projects"
-          element={
-            <ProtectedRoute moduleId="project_management">
-              <InLayout><ProjectPage /></InLayout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/projects/new"
-          element={
-            <ProtectedRoute moduleId="project_management">
-              <InLayout><ProjectFormPage /></InLayout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/projects/:id"
-          element={
-            <ProtectedRoute moduleId="project_management">
-              <InLayout><ProjectDetailPage /></InLayout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/projects/:id/edit"
-          element={
-            <ProtectedRoute moduleId="project_management">
-              <InLayout><ProjectFormPage /></InLayout>
-            </ProtectedRoute>
-          }
-        />
-
-        {/* ── CAMPAIGNS & SHORT LINKS ─────────────────────────────────────────
-            OPEN WHEN: accessSlice["campaign_and_short_url_management"].view === true
-            /campaigns/analytics is a static segment, so it ranks above /campaigns/:id */}
-        {[
-          { path: "/campaigns",           page: <CampaignPage /> },
-          { path: "/campaigns/new",       page: <CampaignFormPage /> },
-          { path: "/campaigns/analytics", page: <CampaignOverviewPage /> },
-          { path: "/campaigns/:id",       page: <CampaignAnalyticsPage /> },
-          { path: "/campaigns/:id/edit",  page: <CampaignFormPage /> },
-        ].map(({ path, page }) => (
+        {/* ── APP SHELL (layout route) ───────────────────────────────────────
+            Every in-app page renders inside ONE persistent DashboardLayout.
+            KeepAliveOutlet keeps visited module pages mounted, so switching
+            modules (tap / swipe) is instant — no refetch, no skeleton.
+            Each child keeps its own module / role gate.                     */}
+        <Route element={<ProtectedRoute><InLayout><KeepAliveOutlet /></InLayout></ProtectedRoute>}>
+          {/* ── SETTINGS & CONFIG (module-id gated) ───────────────────────────
+              Each sub-route checks a different module key from Redux accessSlice:
+                /user-management   → accessSlice["user_management"].view
+                /role-management   → accessSlice["role_management"].view
+                /module-management → accessSlice["module_management"].view
+                /api-key-management→ accessSlice["api_key_management"].view
+              All four render <SettingConfig /> (or <ApiKeyPage />) inside the
+              DashboardLayout.  The SettingConfig component shows tabs based on
+              which modules are accessible.                                     */}
           <Route
-            key={path}
-            path={path}
+            path="/setting-config/user-management"
             element={
-              <ProtectedRoute moduleId="campaign_and_short_url_management">
-                <InLayout>{page}</InLayout>
+              // OPEN WHEN: accessSlice["user_management"].view === true
+              <ProtectedRoute moduleId="user_management">
+                <SettingConfig />
               </ProtectedRoute>
             }
           />
-        ))}
-
-        {/* ── SITE MAINTENANCE ────────────────────────────────────────────────
-            OPEN WHEN: accessSlice["site_maintenance"].view === true          */}
-        {[
-          { path: "/site-maintenance",          page: <SiteMaintenancePage /> },
-          { path: "/site-maintenance/new",      page: <SiteMaintenanceFormPage /> },
-          { path: "/site-maintenance/:id/edit", page: <SiteMaintenanceFormPage /> },
-        ].map(({ path, page }) => (
           <Route
-            key={path}
-            path={path}
+            path="/setting-config/role-management"
             element={
-              <ProtectedRoute moduleId="site_maintenance">
-                <InLayout>{page}</InLayout>
+              // OPEN WHEN: accessSlice["role_management"].view === true
+              <ProtectedRoute moduleId="role_management">
+                <SettingConfig />
               </ProtectedRoute>
             }
           />
-        ))}
+          <Route
+            path="/setting-config/module-management"
+            element={
+              // OPEN WHEN: accessSlice["module_management"].view === true
+              <ProtectedRoute moduleId="module_management">
+                <SettingConfig />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/setting-config/api-key-management"
+            element={
+              // OPEN WHEN: accessSlice["api_key_management"].view === true
+              <ProtectedRoute moduleId="api_key_management">
+                <ApiKeyPage />
+              </ProtectedRoute>
+            }
+          />
 
-        {/* ── ACTIVITY LOGS ──────────────────────────────────────────────────
-            OPEN WHEN: accessSlice["activity_log"].view === true               */}
-        <Route
-          path="/activity-logs"
-          element={
-            <ProtectedRoute moduleId="activity_log">
-              <InLayout><ActivityLogsPage /></InLayout>
-            </ProtectedRoute>
-          }
-        />
+          {/* ── ROLE-BASED DASHBOARDS ──────────────────────────────────────────
+              These routes use roleAllowed instead of moduleId.
+              rolePermitted() reads user.role_name from Redux userSlice and
+              checks if it contains the allowed substring (case-insensitive).
 
-        {/* ── LEGACY REDIRECT ────────────────────────────────────────────────
-            Old /user-management URL → new location under /setting-config     */}
-        <Route path="/user-management" element={<Navigate to="/setting-config/user-management" replace />} />
+              /dashboard/admin
+                OPEN WHEN: user.role_name contains "super"  (e.g. "SUPER ADMIN")
+                BLOCKED:   any other role → redirected to "/" → their own dashboard
 
-        {/* ── NO ACCESS ──────────────────────────────────────────────────────
-            Shown when a moduleId check fails (user is authenticated but the
-            module is not in their role_access array from the API).
-            No moduleId or roleAllowed — any authenticated user can see this. */}
-        <Route
-          path="/no-access"
-          element={
-            <ProtectedRoute>
-              <InLayout>
+              /dashboard/manager
+                OPEN WHEN: user.role_name contains "manager"
+                BLOCKED:   SUPER ADMIN and others → redirected to "/"
+
+              HOW role_name GETS INTO REDUX:
+                Login → fetchProfile() → applyProfile() → setUserData({ role_name })
+                Page refresh → AuthContext useEffect → fetchProfile() → same path  */}
+          <Route
+            path="/dashboard/admin"
+            element={
+              // OPEN WHEN: user.role_name includes "super"  (e.g. "SUPER ADMIN")
+              <ProtectedRoute roleAllowed={["super"]}>
+                <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/manager"
+            element={
+              // OPEN WHEN: user.role_name includes "manager"  (e.g. "MANAGER")
+              <ProtectedRoute roleAllowed={["manager"]}>
+                <ManagerDashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* ── DEVICE INFO ─────────────────────────────────────────────────────
+              OPEN WHEN: accessSlice["device_info"].view === true                */}
+          <Route
+            path="/device-info"
+            element={
+              <ProtectedRoute moduleId="device_info">
+                <DeviceInfoPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* ── PROJECT MANAGEMENT ─────────────────────────────────────────────
+              OPEN WHEN: accessSlice["project_management"].view === true         */}
+          <Route
+            path="/projects"
+            element={
+              <ProtectedRoute moduleId="project_management">
+                <ProjectPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/projects/new"
+            element={
+              <ProtectedRoute moduleId="project_management">
+                <ProjectFormPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/projects/:id"
+            element={
+              <ProtectedRoute moduleId="project_management">
+                <ProjectDetailPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/projects/:id/edit"
+            element={
+              <ProtectedRoute moduleId="project_management">
+                <ProjectFormPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* ── CAMPAIGNS & SHORT LINKS ─────────────────────────────────────────
+              OPEN WHEN: accessSlice["campaign_and_short_url_management"].view === true
+              /campaigns/analytics is a static segment, so it ranks above /campaigns/:id */}
+          {[
+            { path: "/campaigns",           page: <CampaignPage /> },
+            { path: "/campaigns/new",       page: <CampaignFormPage /> },
+            { path: "/campaigns/analytics", page: <CampaignOverviewPage /> },
+            { path: "/campaigns/:id",       page: <CampaignAnalyticsPage /> },
+            { path: "/campaigns/:id/edit",  page: <CampaignFormPage /> },
+          ].map(({ path, page }) => (
+            <Route
+              key={path}
+              path={path}
+              element={
+                <ProtectedRoute moduleId="campaign_and_short_url_management">
+                  {page}
+                </ProtectedRoute>
+              }
+            />
+          ))}
+
+          {/* ── SITE MAINTENANCE ────────────────────────────────────────────────
+              OPEN WHEN: accessSlice["site_maintenance"].view === true          */}
+          {[
+            { path: "/site-maintenance",          page: <SiteMaintenancePage /> },
+            { path: "/site-maintenance/new",      page: <SiteMaintenanceFormPage /> },
+            { path: "/site-maintenance/:id/edit", page: <SiteMaintenanceFormPage /> },
+          ].map(({ path, page }) => (
+            <Route
+              key={path}
+              path={path}
+              element={
+                <ProtectedRoute moduleId="site_maintenance">
+                  {page}
+                </ProtectedRoute>
+              }
+            />
+          ))}
+
+          {/* ── ACTIVITY LOGS ──────────────────────────────────────────────────
+              OPEN WHEN: accessSlice["activity_log"].view === true               */}
+          <Route
+            path="/activity-logs"
+            element={
+              <ProtectedRoute moduleId="activity_log">
+                <ActivityLogsPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* ── LEGACY REDIRECT ────────────────────────────────────────────────
+              Old /user-management URL → new location under /setting-config     */}
+          <Route path="/user-management" element={<Navigate to="/setting-config/user-management" replace />} />
+
+          {/* ── NO ACCESS ──────────────────────────────────────────────────────
+              Shown when a moduleId check fails (user is authenticated but the
+              module is not in their role_access array from the API).
+              No moduleId or roleAllowed — any authenticated user can see this. */}
+          <Route
+            path="/no-access"
+            element={
+              <ProtectedRoute>
                 <div className="text-center py-16">
                   <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">No Access</h1>
                   <p className="text-gray-600 dark:text-gray-400">
                     You do not have permission to access this page. Please contact your administrator.
                   </p>
                 </div>
-              </InLayout>
-            </ProtectedRoute>
-          }
-        />
+              </ProtectedRoute>
+            }
+          />
+        </Route>
 
         {/* ── 404 CATCH-ALL ──────────────────────────────────────────────────
             Any unknown URL renders NotFoundPage inside the dashboard layout.

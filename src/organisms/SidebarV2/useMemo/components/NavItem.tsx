@@ -27,7 +27,7 @@ const itemStyle = (isActive: boolean, level: number): React.CSSProperties => ({
   width: "100%",
   padding: level > 0 ? "5px 8px 5px 6px" : "6px 10px",
   gap: 8,
-  borderRadius: 8,
+  borderRadius: "var(--radius)",
   fontSize: 13,
   fontWeight: 400,
   cursor: "pointer",

@@ -68,7 +68,7 @@ export const KeyRevealBanner: React.FC<{ apiKey: string }> = ({ apiKey }) => {
 
   return (
     <div style={{
-      borderRadius: 10, border: "1px solid #fcd34d",
+      borderRadius: "var(--radius)", border: "1px solid #fcd34d",
       background: "rgba(254,243,199,0.2)", padding: 16,
       display: "flex", flexDirection: "column", gap: 12,
     }}>
@@ -92,7 +92,7 @@ export const KeyRevealBanner: React.FC<{ apiKey: string }> = ({ apiKey }) => {
             value={apiKey}
             style={{
               width: "100%", fontFamily: "ui-monospace, monospace", fontSize: 12,
-              padding: "7px 36px 7px 10px", borderRadius: 7,
+              padding: "7px 36px 7px 10px", borderRadius: "var(--radius)",
               border: "1px solid var(--fi-border)", background: "var(--fi-bg)",
               color: "var(--fi-text)", boxSizing: "border-box", outline: "none",
             }}
@@ -116,7 +116,7 @@ export const KeyRevealBanner: React.FC<{ apiKey: string }> = ({ apiKey }) => {
           onClick={handleCopy}
           style={{
             display: "flex", alignItems: "center", gap: 5, padding: "7px 12px",
-            fontSize: 12, borderRadius: 7, border: "1px solid var(--fi-border)",
+            fontSize: 12, borderRadius: "var(--radius)", border: "1px solid var(--fi-border)",
             background: "var(--fi-bg)", color: "var(--fi-text)", cursor: "pointer",
             whiteSpace: "nowrap", flexShrink: 0,
           }}
@@ -201,14 +201,14 @@ const ApiKeyForm: React.FC<ApiKeyFormProps> = ({
                     onClick={() => setFieldValue("is_active", !values.is_active)}
                     style={{
                       position: "relative", display: "inline-flex", flexShrink: 0,
-                      width: 36, height: 20, cursor: "pointer", borderRadius: 10,
+                      width: 36, height: 20, cursor: "pointer", borderRadius: "var(--radius)",
                       border: "2px solid transparent", outline: "none",
                       background: values.is_active ? "var(--btn-primary-bg)" : "var(--fi-border)",
                       transition: "background 200ms",
                     }}
                   >
                     <span style={{
-                      display: "inline-block", width: 16, height: 16, borderRadius: 8,
+                      display: "inline-block", width: 16, height: 16, borderRadius: "var(--radius)",
                       background: "white", boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
                       transform: values.is_active ? "translateX(16px)" : "translateX(0)",
                       transition: "transform 200ms", pointerEvents: "none",
