@@ -38,7 +38,7 @@ type RoleItem = { _id: string; role_name: string; role_access?: RoleAccess[] | n
 const mapRole = (r: RoleApiItem): RoleItem =>
   ({ _id: r._id, role_name: r.role_name, role_access: r.role_access ?? null });
 
-const PER_PAGE = 25;
+const DEFAULT_PAGE_SIZE = 25;
 
 // ── Component ──────────────────────────────────────────────────────────────
 
@@ -54,8 +54,8 @@ const RoleManagement: React.FC = () => {
   const [debouncedSearch, setDebouncedSearch] = React.useState("");
   const [total,           setTotal]           = React.useState(0);
   const [loading,         setLoading]         = React.useState(false);
-  const [loadingMore,     setLoadingMore]     = React.useState(false);
-  const [hasMore,         setHasMore]         = React.useState(false);
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const [perPage,     setPerPage]     = React.useState(DEFAULT_PAGE_SIZE);
   const [showModal,       setShowModal]       = React.useState(false);
   const [editItem,        setEditItem]        = React.useState<RoleItem | null>(null);
   const [formSubmitting,  setFormSubmitting]  = React.useState(false);
@@ -77,45 +77,50 @@ const RoleManagement: React.FC = () => {
   }, [search]);
 
   const buildParams = useCallback(
-    (page: number) => ({ page, limit: PER_PAGE, search: debouncedSearch || undefined }),
-    [debouncedSearch],
+    (page: number) => ({ page, limit: perPage, search: debouncedSearch || undefined }),
+    [perPage, debouncedSearch],
   );
 
   const fetchPage = useCallback(
-    async (page: number, append: boolean) => {
+    async (page: number) => {
       if (!apiKey) { dispatch(openApiKeyModal(false)); return; }
-      append ? setLoadingMore(true) : setLoading(true);
+      pageRef.current = page;
+      setCurrentPage(page);
+      setLoading(true);
       try {
         const tok    = token ?? undefined;
         const params = buildParams(page);
         const key    = cacheKey("roles", params as Record<string, unknown>);
-        const res = append || page > 1
+        const res = page > 1
           ? await getData<RolesApiResponse>({ endpoint: "roles", token: tok, instance: "identity", params })
           : await fetchSWR<RolesApiResponse>(
               key,
               () => getData<RolesApiResponse>({ endpoint: "roles", token: tok, instance: "identity", params }),
               30_000, 60_000,
               (fresh) => {
+                if (pageRef.current !== 1) return; // user already moved to another page
                 setData(fresh.data.data.map(mapRole));
                 setTotal(fresh.data.total);
-                setHasMore(1 < fresh.data.totalPages);
               },
             );
+        if (pageRef.current !== page) return; // a newer page request took over
         const items = res.data.data.map(mapRole);
-        setData((prev) => (append ? [...prev, ...items] : items));
+        setData(items);
         setTotal(res.data.total);
-        setHasMore(page < res.data.totalPages);
-        pageRef.current = page;
       } catch { showToastnew.error("Failed to fetch roles"); }
-      finally   { append ? setLoadingMore(false) : setLoading(false); }
+      finally   { if (pageRef.current !== page) return; setLoading(false); }
     },
     [apiKey, token, buildParams, dispatch],
   );
 
-  React.useEffect(() => { pageRef.current = 1; setData([]); fetchPage(1, false); }, [fetchPage]);
+  React.useEffect(() => { fetchPage(1); }, [fetchPage]);
+  const handleRefresh  = useCallback(() => { invalidatePrefix("roles"); fetchPage(pageRef.current); }, [fetchPage]);
 
-  const handleLoadMore = useCallback(() => fetchPage(pageRef.current + 1, true), [fetchPage]);
-  const handleRefresh  = useCallback(() => { invalidatePrefix("roles"); pageRef.current = 1; setData([]); fetchPage(1, false); }, [fetchPage]);
+  // A delete emptied the last page → step back to the new last page
+  React.useEffect(() => {
+    const lastPage = Math.max(1, Math.ceil(total / perPage));
+    if (!loading && currentPage > lastPage) fetchPage(lastPage);
+  }, [total, perPage, currentPage, loading, fetchPage]);
 
   const handleEdit   = useCallback((row: RoleItem) => { setEditItem(row); setShowModal(true); }, []);
 
@@ -187,10 +192,10 @@ const RoleManagement: React.FC = () => {
           getRowId={(row) => row._id}
           isLoading={loading}
           totalItems={total}
-          onScrollPagination
-          onLoadMore={handleLoadMore}
-          hasMore={hasMore}
-          loadingMore={loadingMore}
+          currentPage={currentPage}
+          itemsPerPage={perPage}
+          onPageChange={fetchPage}
+          onItemsPerPageChange={setPerPage}
           onRefresh={handleRefresh}
           selectable={perms.delete}
           onBulkDelete={perms.delete ? handleBulkDelete : undefined}

@@ -8,6 +8,7 @@ import {
   Activity,
   Smartphone,
   Link2,
+  Construction,
 } from "lucide-react";
 
 import { NavItemType } from "../types";
@@ -67,6 +68,9 @@ export const useNavigation = (
         : []),
       ...(hasAccess("campaign_and_short_url_management")
         ? [{ name: "Campaigns & Short Links", href: "/campaigns", icon: Link2 }]
+        : []),
+      ...(hasAccess("site_maintenance")
+        ? [{ name: "Site Maintenance", href: "/site-maintenance", icon: Construction }]
         : []),
       ...(hasAccess("activity_log")
         ? [{ name: "Activity Logs", href: "/activity-logs", icon: Activity }]

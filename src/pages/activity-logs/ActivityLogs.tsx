@@ -225,6 +225,8 @@ const panelStyle: React.CSSProperties = {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
+const DEFAULT_PAGE_SIZE = 25;
+
 const ActivityLogs: React.FC = () => {
   const token   = useSelector(selectAccessToken);
   const dispatch = useDispatch();
@@ -235,8 +237,8 @@ const ActivityLogs: React.FC = () => {
   const [debouncedSearch, setDebouncedSearch] = React.useState("");
   const [total,       setTotal]       = React.useState(0);
   const [loading,     setLoading]     = React.useState(false);
-  const [loadingMore, setLoadingMore] = React.useState(false);
-  const [hasMore,     setHasMore]     = React.useState(false);
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const [perPage,     setPerPage]     = React.useState(DEFAULT_PAGE_SIZE);
   const [detailLog,   setDetailLog]   = React.useState<ActivityLogItem | null>(null);
 
   const [showDatePanel,   setShowDatePanel]   = React.useState(false);
@@ -248,7 +250,6 @@ const ActivityLogs: React.FC = () => {
 
   const pageRef       = useRef(1);
   const fetchAbortRef = useRef<AbortController | null>(null);
-  const PER_PAGE = 25;
 
   // Close panels on outside click
   useEffect(() => {
@@ -282,7 +283,7 @@ const ActivityLogs: React.FC = () => {
   const buildParams = useCallback(
     (page: number) => ({
       page,
-      limit:      PER_PAGE,
+      limit:      perPage,
       search:     debouncedSearch         || undefined,
       module:     filters.module          || undefined,
       action:     filters.action          || undefined,
@@ -292,36 +293,35 @@ const ActivityLogs: React.FC = () => {
       date_from:  filters.date_from       || undefined,
       date_to:    filters.date_to         || undefined,
     }),
-    [debouncedSearch, filters],
+    [perPage, debouncedSearch, filters],
   );
 
   const fetchPage = useCallback(
-    async (page: number, append: boolean) => {
+    async (page: number) => {
       if (!apiKey) { dispatch(openApiKeyModal(false)); return; }
 
-      let signal: AbortSignal | undefined;
-      if (!append) {
-        fetchAbortRef.current?.abort();
-        fetchAbortRef.current = new AbortController();
-        signal = fetchAbortRef.current.signal;
-      }
+      fetchAbortRef.current?.abort();
+      fetchAbortRef.current = new AbortController();
+      const signal = fetchAbortRef.current.signal;
 
-      append ? setLoadingMore(true) : setLoading(true);
+      pageRef.current = page;
+
+      setCurrentPage(page);
+
+      setLoading(true);
       try {
         const res = await fetchActivityLogs(buildParams(page), signal);
         const items = res.data.data;
-        setData((prev) => (append ? [...prev, ...items] : items));
+        setData(items);
         setTotal(res.data.total);
-        setHasMore(page < res.data.totalPages);
-        pageRef.current = page;
       } catch (err: unknown) {
         const name = (err as any)?.name ?? (err as any)?.code;
         if (name === "AbortError" || name === "CanceledError" || (err as any)?.message === "canceled") return;
         showToastnew.error("Failed to fetch activity logs");
       } finally {
         if (!signal?.aborted) {
-          append ? setLoadingMore(false) : setLoading(false);
-          if (!append) requestAnimationFrame(() => requestAnimationFrame(() => emitNavDone()));
+          setLoading(false);
+          requestAnimationFrame(() => requestAnimationFrame(() => emitNavDone()));
         }
       }
     },
@@ -329,13 +329,15 @@ const ActivityLogs: React.FC = () => {
   );
 
   useEffect(() => {
-    pageRef.current = 1;
-    setData([]);
-    fetchPage(1, false);
+    fetchPage(1);
   }, [fetchPage]);
+  const handleRefresh  = useCallback(() => { fetchPage(pageRef.current); }, [fetchPage]);
 
-  const handleLoadMore = useCallback(() => fetchPage(pageRef.current + 1, true), [fetchPage]);
-  const handleRefresh  = useCallback(() => { pageRef.current = 1; setData([]); fetchPage(1, false); }, [fetchPage]);
+  // A delete emptied the last page → step back to the new last page
+  useEffect(() => {
+    const lastPage = Math.max(1, Math.ceil(total / perPage));
+    if (!loading && currentPage > lastPage) fetchPage(lastPage);
+  }, [total, perPage, currentPage, loading, fetchPage]);
   const handleView     = useCallback((row: ActivityLogItem) => setDetailLog(row), []);
 
   return (
@@ -474,10 +476,10 @@ const ActivityLogs: React.FC = () => {
           getRowId={(row) => row._id}
           isLoading={loading}
           totalItems={total}
-          onScrollPagination
-          onLoadMore={handleLoadMore}
-          hasMore={hasMore}
-          loadingMore={loadingMore}
+          currentPage={currentPage}
+          itemsPerPage={perPage}
+          onPageChange={fetchPage}
+          onItemsPerPageChange={setPerPage}
           onRefresh={handleRefresh}
           emptyStateImage="/icons/no-booking-found.png"
           emptyStateTitle="No activity logs found"

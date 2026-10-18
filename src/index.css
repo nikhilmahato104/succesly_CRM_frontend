@@ -313,6 +313,12 @@ button, nav, header, aside, label, [role="button"], [role="tab"] {
           backdrop-filter: blur(20px) saturate(180%);
 }
 
+/* Table pagination footer — same breakpoint as the bottom bar (DashboardLayout),
+   so the page controls always sit above it on phones and tablets */
+@media (max-width: 1023px) {
+  .dt-pagination-bar { padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px)) !important; }
+}
+
 /* ── Project form responsive grids ─────────────────────────────────────────
    Use className="pf-g2" or "pf-g4" on grid containers.
    On mobile (≤ 640px) everything collapses to a single column.

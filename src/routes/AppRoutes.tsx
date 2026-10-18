@@ -32,6 +32,8 @@ const CampaignPage          = lazy(() => import("../pages/campaign-management"))
 const CampaignFormPage      = lazy(() => import("../pages/campaign-management/CampaignForm"));
 const CampaignAnalyticsPage = lazy(() => import("../pages/campaign-management/CampaignAnalytics"));
 const CampaignOverviewPage  = lazy(() => import("../pages/campaign-management/CampaignOverview"));
+const SiteMaintenancePage     = lazy(() => import("../pages/site-maintenance"));
+const SiteMaintenanceFormPage = lazy(() => import("../pages/site-maintenance/SiteMaintenanceForm"));
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -68,6 +70,7 @@ function rolePermitted(user: any, allowed: string[]): boolean {
 const MODULE_HOME_ROUTES: Array<[moduleId: string, path: string]> = [
   ["project_management",                "/projects"],
   ["campaign_and_short_url_management", "/campaigns"],
+  ["site_maintenance",                  "/site-maintenance"],
   ["device_info",                       "/device-info"],
   ["activity_log",                      "/activity-logs"],
   ["user_management",                   "/setting-config/user-management"],
@@ -395,6 +398,24 @@ export const AppRoutes: React.FC = () => {
             path={path}
             element={
               <ProtectedRoute moduleId="campaign_and_short_url_management">
+                <InLayout>{page}</InLayout>
+              </ProtectedRoute>
+            }
+          />
+        ))}
+
+        {/* ── SITE MAINTENANCE ────────────────────────────────────────────────
+            OPEN WHEN: accessSlice["site_maintenance"].view === true          */}
+        {[
+          { path: "/site-maintenance",          page: <SiteMaintenancePage /> },
+          { path: "/site-maintenance/new",      page: <SiteMaintenanceFormPage /> },
+          { path: "/site-maintenance/:id/edit", page: <SiteMaintenanceFormPage /> },
+        ].map(({ path, page }) => (
+          <Route
+            key={path}
+            path={path}
+            element={
+              <ProtectedRoute moduleId="site_maintenance">
                 <InLayout>{page}</InLayout>
               </ProtectedRoute>
             }

@@ -25,7 +25,9 @@ import React, {
   useCallback,
   useRef,
 } from 'react'
+import { Listbox, ListboxButton, ListboxOption, ListboxOptions } from '@headlessui/react'
 import {
+  Check,
   ChevronDown,
   ChevronUp,
   ChevronLeft,
@@ -655,6 +657,55 @@ const NavBtn: React.FC<{ onClick: () => void; disabled: boolean; children: React
   </button>
 )
 
+// ─── PerPageSelect ────────────────────────────────────────────────────────────
+// Headless UI Listbox instead of a native <select>: themed popup, no OS flicker,
+// auto-flips above/below the button, full keyboard support.
+
+const PerPageSelect: React.FC<{
+  value: number; disabled: boolean; onChange: (n: number) => void
+}> = ({ value, disabled, onChange }) => (
+  <Listbox value={value} onChange={onChange} disabled={disabled}>
+    <ListboxButton
+      className="flex items-center gap-1.5 rounded px-2 py-1 text-xs outline-none transition-colors data-[disabled]:opacity-50 data-[focus]:ring-1"
+      style={{ border: '1px solid var(--dt-border)', background: 'var(--dt-bg)', color: 'var(--dt-text)', minWidth: 52, ['--tw-ring-color' as string]: 'var(--dt-accent)' }}
+    >
+      {({ open }) => (
+        <>
+          <span className="flex-1 text-left">{value}</span>
+          <ChevronDown
+            size={11}
+            style={{ color: 'var(--dt-dim)', transition: 'transform 150ms ease', transform: open ? 'rotate(180deg)' : 'none' }}
+          />
+        </>
+      )}
+    </ListboxButton>
+    <ListboxOptions
+      anchor={{ to: 'top start', gap: 4 }}
+      transition
+      className="rounded-md p-1 text-xs outline-none origin-bottom transition duration-100 ease-out data-[closed]:scale-95 data-[closed]:opacity-0"
+      style={{
+        zIndex: 10000,
+        minWidth: 'var(--button-width)',
+        background: 'var(--dt-bg)',
+        border: '1px solid var(--dt-border)',
+        boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+      }}
+    >
+      {PER_PAGE_OPTIONS.map((o) => (
+        <ListboxOption
+          key={o}
+          value={o}
+          className="group flex cursor-pointer select-none items-center justify-between gap-3 rounded px-2 py-1.5 data-[focus]:bg-[var(--dt-hover)]"
+          style={{ color: 'var(--dt-text)' }}
+        >
+          <span className="group-data-[selected]:font-semibold group-data-[selected]:text-[var(--dt-accent)]">{o}</span>
+          <Check size={12} className="invisible group-data-[selected]:visible" style={{ color: 'var(--dt-accent)' }} />
+        </ListboxOption>
+      ))}
+    </ListboxOptions>
+  </Listbox>
+)
+
 const TablePagination: React.FC<{
   currentPage: number; totalPages: number; startItem: number; endItem: number
   totalCount: number; itemsPerPage: number; isLoading: boolean
@@ -672,24 +723,14 @@ const TablePagination: React.FC<{
 
   return (
     <div
-      className="flex flex-col md:flex-row md:items-center justify-between gap-3 px-4 py-2 shrink-0"
+      // dt-pagination-bar (index.css): below 1024px it pads itself above the fixed MobileBottomBar
+      className="dt-pagination-bar flex flex-col md:flex-row md:items-center justify-between gap-3 px-4 py-2 shrink-0"
       style={{ borderTop: '1px solid var(--dt-border)', background: 'var(--dt-bg)' }}
     >
       {isShowResult && (
         <div className="flex items-center gap-2">
           <span className="text-xs" style={{ color: 'var(--dt-dim)' }}>Show</span>
-          <div className="relative">
-            <select
-              value={itemsPerPage}
-              onChange={(e) => onItemsPerPageChange(Number(e.target.value))}
-              disabled={isLoading}
-              className="appearance-none rounded px-2 py-1 pr-6 text-xs outline-none"
-              style={{ border: '1px solid var(--dt-border)', background: 'var(--dt-bg)', color: 'var(--dt-text)' }}
-            >
-              {PER_PAGE_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
-            </select>
-            <ChevronDown size={11} className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--dt-dim)' }} />
-          </div>
+          <PerPageSelect value={itemsPerPage} disabled={isLoading} onChange={onItemsPerPageChange} />
         </div>
       )}
 
@@ -1200,8 +1241,10 @@ export function CustomDatagrid<T extends Record<string, unknown>>({
     onPageChange ? onPageChange(page) : setInternalPage(page)
   }, [totalPages, onPageChange])
 
+  // Controlled (server) pagination: the parent refetches page 1 for the new size itself
   const handlePerPageChange = useCallback((n: number) => {
-    onItemsPerPageChange ? onItemsPerPageChange(n) : setInternalPerPage(n)
+    if (onItemsPerPageChange) { onItemsPerPageChange(n); return }
+    setInternalPerPage(n)
     handlePageChange(1)
   }, [onItemsPerPageChange, handlePageChange])
 

@@ -121,6 +121,8 @@ const dropdownPanelStyle: React.CSSProperties = {
 
 // ── Component ──────────────────────────────────────────────────────────────────
 
+const DEFAULT_PAGE_SIZE = 25;
+
 const CampaignManagement: React.FC = () => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
@@ -135,8 +137,8 @@ const CampaignManagement: React.FC = () => {
   const [debouncedUtm, setDebouncedUtm] = useState("");
   const [total,       setTotal]       = useState(0);
   const [loading,     setLoading]     = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [hasMore,     setHasMore]     = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [perPage,     setPerPage]     = useState(DEFAULT_PAGE_SIZE);
   const [industries,  setIndustries]  = useState<Option[]>([]);
   const [togglingId,  setTogglingId]  = useState<string | null>(null);
 
@@ -151,7 +153,6 @@ const CampaignManagement: React.FC = () => {
 
   const pageRef  = useRef(1);
   const abortRef = useRef<AbortController | null>(null);
-  const PER_PAGE = 25;
 
   useEffect(() => {
     fetchIndustryTypes().then(setIndustries).catch(() => { /* filter just stays empty */ });
@@ -193,7 +194,7 @@ const CampaignManagement: React.FC = () => {
   const buildParams = useCallback(
     (page: number) => ({
       page,
-      limit:         PER_PAGE,
+      limit:         perPage,
       search:        debouncedQ,
       industry_type: filters.industry_type,
       status:        filters.status,
@@ -201,34 +202,33 @@ const CampaignManagement: React.FC = () => {
       sort_by:       filters.sort_by,
       sort_order:    filters.sort_order,
     }),
-    [debouncedQ, debouncedUtm, filters.industry_type, filters.status, filters.sort_by, filters.sort_order],
+    [perPage, debouncedQ, debouncedUtm, filters.industry_type, filters.status, filters.sort_by, filters.sort_order],
   );
 
   const fetchPage = useCallback(
-    async (page: number, append: boolean) => {
+    async (page: number) => {
       if (!apiKey) { dispatch(openApiKeyModal(false)); return; }
 
-      let signal: AbortSignal | undefined;
-      if (!append) {
-        abortRef.current?.abort();
-        abortRef.current = new AbortController();
-        signal = abortRef.current.signal;
-      }
+      abortRef.current?.abort();
+      abortRef.current = new AbortController();
+      const signal = abortRef.current.signal;
 
-      if (append) setLoadingMore(true); else setLoading(true);
+      pageRef.current = page;
+
+      setCurrentPage(page);
+
+      setLoading(true);
       try {
         const res = await fetchCampaigns(buildParams(page), signal);
-        setData(prev => append ? [...prev, ...res.data] : res.data);
+        setData(res.data);
         setTotal(res.total);
-        setHasMore(page < res.totalPages);
-        pageRef.current = page;
       } catch (err: unknown) {
         if (axios.isCancel(err)) return;
         showToastnew.error(apiErrorMessage(err, "Failed to fetch campaigns"));
       } finally {
         if (!signal?.aborted) {
-          if (append) setLoadingMore(false); else setLoading(false);
-          if (!append) requestAnimationFrame(() => requestAnimationFrame(() => emitNavDone()));
+          setLoading(false);
+          requestAnimationFrame(() => requestAnimationFrame(() => emitNavDone()));
         }
       }
     },
@@ -236,13 +236,15 @@ const CampaignManagement: React.FC = () => {
   );
 
   useEffect(() => {
-    pageRef.current = 1;
-    setData([]);
-    fetchPage(1, false);
+    fetchPage(1);
   }, [fetchPage]);
+  const handleRefresh  = useCallback(() => { fetchPage(pageRef.current); }, [fetchPage]);
 
-  const handleLoadMore = useCallback(() => fetchPage(pageRef.current + 1, true), [fetchPage]);
-  const handleRefresh  = useCallback(() => { pageRef.current = 1; setData([]); fetchPage(1, false); }, [fetchPage]);
+  // A delete emptied the last page → step back to the new last page
+  useEffect(() => {
+    const lastPage = Math.max(1, Math.ceil(total / perPage));
+    if (!loading && currentPage > lastPage) fetchPage(lastPage);
+  }, [total, perPage, currentPage, loading, fetchPage]);
 
   const handleView = useCallback((row: Campaign) => navigate(`/campaigns/${row._id}`), [navigate]);
   const openQuickView = useCallback((row: Campaign) => { setViewId(row._id); setViewOpen(true); }, []);
@@ -576,10 +578,10 @@ const CampaignManagement: React.FC = () => {
           getRowId={row => row._id}
           isLoading={loading}
           totalItems={total}
-          onScrollPagination
-          onLoadMore={handleLoadMore}
-          hasMore={hasMore}
-          loadingMore={loadingMore}
+          currentPage={currentPage}
+          itemsPerPage={perPage}
+          onPageChange={fetchPage}
+          onItemsPerPageChange={setPerPage}
           onRefresh={handleRefresh}
           emptyStateImage="/icons/no-booking-found.png"
           emptyStateTitle="No campaigns found"

@@ -156,6 +156,13 @@ const MobileBottomBar: React.FC<Props> = ({ onMenuOpen }) => {
 
   // Route-aware FAB — null means hidden (no FAB rendered for that route)
   const fab = useMemo<{ label: string; action: () => void } | null>(() => {
+    if (pathname === "/site-maintenance") {
+      return {
+        label:  "Register Site",
+        action: () => navigate("/site-maintenance/new"),
+      };
+    }
+    if (pathname.startsWith("/site-maintenance")) return null;
     if (pathname.startsWith("/projects")) {
       return {
         label:  "New Project",

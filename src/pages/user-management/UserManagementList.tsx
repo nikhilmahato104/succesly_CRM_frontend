@@ -129,7 +129,7 @@ const panelStyle: React.CSSProperties = {
 };
 
 const CLOSE_STATUS: StatusState = { isOpen: false, id: "", name: "", is_active: true };
-const PER_PAGE = 25;
+const DEFAULT_PAGE_SIZE = 25;
 
 // ── Component ──────────────────────────────────────────────────────────────
 
@@ -146,8 +146,8 @@ const UserManagementList: React.FC = () => {
   const [statusFilter,    setStatusFilter]    = React.useState("");
   const [total,           setTotal]           = React.useState(0);
   const [loading,         setLoading]         = React.useState(false);
-  const [loadingMore,     setLoadingMore]     = React.useState(false);
-  const [hasMore,         setHasMore]         = React.useState(false);
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const [perPage,     setPerPage]     = React.useState(DEFAULT_PAGE_SIZE);
   const [showModal,       setShowModal]       = React.useState(false);
   const [editItem,        setEditItem]        = React.useState<UserItem | null>(null);
   const [statusModal,     setStatusModal]     = React.useState<StatusState>(CLOSE_STATUS);
@@ -183,53 +183,59 @@ const UserManagementList: React.FC = () => {
 
   const buildParams = useCallback(
     (page: number) => ({
-      page, limit: PER_PAGE,
+      page, limit: perPage,
       search:    debouncedSearch || undefined,
       is_active: statusFilter   || undefined,
     }),
-    [debouncedSearch, statusFilter],
+    [perPage, debouncedSearch, statusFilter],
   );
 
   const fetchPage = useCallback(
-    async (page: number, append: boolean) => {
+    async (page: number) => {
       if (!apiKey) { dispatch(openApiKeyModal(false)); return; }
-      append ? setLoadingMore(true) : setLoading(true);
+      pageRef.current = page;
+      setCurrentPage(page);
+      setLoading(true);
       try {
         const params = buildParams(page);
         const key    = cacheKey("users", params as Record<string, unknown>);
 
-        // Page 1 (non-append) uses SWR: serve cached data instantly while
-        // revalidating in background. Append / pagination always fetches fresh.
+        // Page 1 uses SWR: serve cached data instantly while revalidating
+        // in background. Other pages always fetch fresh.
         const tok = token ?? undefined;
-        const res = append || page > 1
+        const res = page > 1
           ? await getData<UsersApiResponse>({ endpoint: "users", token: tok, instance: "identity", params })
           : await fetchSWR<UsersApiResponse>(
               key,
               () => getData<UsersApiResponse>({ endpoint: "users", token: tok, instance: "identity", params }),
               30_000, 60_000,
               (fresh) => {
+                if (pageRef.current !== 1) return; // user already moved to another page
                 const freshItems = fresh.data.data.map(mapUser);
                 setData(freshItems);
                 setTotal(fresh.data.total);
-                setHasMore(1 < fresh.data.totalPages);
               },
             );
 
+        if (pageRef.current !== page) return; // a newer page request took over
+
         const items = res.data.data.map(mapUser);
-        setData((prev) => (append ? [...prev, ...items] : items));
+        setData(items);
         setTotal(res.data.total);
-        setHasMore(page < res.data.totalPages);
-        pageRef.current = page;
       } catch { showToastnew.error("Failed to fetch users"); }
-      finally   { append ? setLoadingMore(false) : setLoading(false); if (!append) requestAnimationFrame(() => requestAnimationFrame(() => emitNavDone())); }
+      finally   { if (pageRef.current !== page) return; setLoading(false); requestAnimationFrame(() => requestAnimationFrame(() => emitNavDone())); }
     },
     [apiKey, token, buildParams, dispatch],
   );
 
-  React.useEffect(() => { pageRef.current = 1; setData([]); fetchPage(1, false); }, [fetchPage]);
+  React.useEffect(() => { fetchPage(1); }, [fetchPage]);
+  const handleRefresh  = useCallback(() => { invalidatePrefix("users"); fetchPage(pageRef.current); }, [fetchPage]);
 
-  const handleLoadMore = useCallback(() => fetchPage(pageRef.current + 1, true), [fetchPage]);
-  const handleRefresh  = useCallback(() => { invalidatePrefix("users"); pageRef.current = 1; setData([]); fetchPage(1, false); }, [fetchPage]);
+  // A delete emptied the last page → step back to the new last page
+  React.useEffect(() => {
+    const lastPage = Math.max(1, Math.ceil(total / perPage));
+    if (!loading && currentPage > lastPage) fetchPage(lastPage);
+  }, [total, perPage, currentPage, loading, fetchPage]);
 
   const handleEdit   = useCallback((row: UserItem) => { setEditItem(row); setShowModal(true); }, []);
   const handleDelete = useCallback(async (row: UserItem) => {
@@ -413,10 +419,10 @@ const UserManagementList: React.FC = () => {
           getRowId={(row) => row._id}
           isLoading={loading}
           totalItems={total}
-          onScrollPagination
-          onLoadMore={handleLoadMore}
-          hasMore={hasMore}
-          loadingMore={loadingMore}
+          currentPage={currentPage}
+          itemsPerPage={perPage}
+          onPageChange={fetchPage}
+          onItemsPerPageChange={setPerPage}
           onRefresh={handleRefresh}
           selectable={perms.delete}
           onBulkDelete={perms.delete ? handleBulkDelete : undefined}

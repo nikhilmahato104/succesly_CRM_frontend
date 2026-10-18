@@ -8,6 +8,7 @@ export { CleanDateRangePicker }  from "./CleanDateRangePicker";
 export { CleanSearchBar }        from "./CleanSearchBar";
 export { CleanResponsiveSearch } from "./CleanResponsiveSearch";
 export { CleanModal }            from "./CleanModal";
+export { CleanSwitch }           from "./CleanSwitch";
 export { BulkActionBar }         from "./BulkActionBar";
 export { ConfirmDeleteModal }    from "./ConfirmDeleteModal";
 
@@ -21,5 +22,6 @@ export type { CleanDateRangePickerProps } from "./CleanDateRangePicker";
 export type { CleanSearchBarProps } from "./CleanSearchBar";
 export type { CleanResponsiveSearchProps } from "./CleanResponsiveSearch";
 export type { CleanModalProps }    from "./CleanModal";
+export type { CleanSwitchProps }   from "./CleanSwitch";
 export type { BulkActionBarProps }      from "./BulkActionBar";
 export type { ConfirmDeleteModalProps } from "./ConfirmDeleteModal";

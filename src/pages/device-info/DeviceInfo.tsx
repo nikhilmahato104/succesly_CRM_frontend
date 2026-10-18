@@ -202,6 +202,8 @@ const dropdownPanelStyle: React.CSSProperties = {
 
 // ── Component ──────────────────────────────────────────────────────────────────
 
+const DEFAULT_PAGE_SIZE = 25;
+
 const DeviceInfoPage: React.FC = () => {
   const isMobile = useIsMobile();
   const dispatch = useDispatch();
@@ -214,8 +216,8 @@ const DeviceInfoPage: React.FC = () => {
   const [debouncedQ,  setDebouncedQ]  = useState("");
   const [total,       setTotal]       = useState(0);
   const [loading,     setLoading]     = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [hasMore,     setHasMore]     = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [perPage,     setPerPage]     = useState(DEFAULT_PAGE_SIZE);
 
   const [viewRow, setViewRow] = useState<DeviceInfo | null>(null);
 
@@ -226,7 +228,6 @@ const DeviceInfoPage: React.FC = () => {
 
   const pageRef  = useRef(1);
   const abortRef = useRef<AbortController | null>(null);
-  const PER_PAGE = 25;
 
   // Close desktop panel on outside click.
   useEffect(() => {
@@ -256,41 +257,40 @@ const DeviceInfoPage: React.FC = () => {
   const buildParams = useCallback(
     (page: number) => ({
       page,
-      limit:    PER_PAGE,
+      limit:    perPage,
       search:   debouncedQ || undefined,
       date_from: filters.date_from || undefined,
       date_to:   filters.date_to   || undefined,
     }),
-    [debouncedQ, filters],
+    [perPage, debouncedQ, filters],
   );
 
   const fetchPage = useCallback(
-    async (page: number, append: boolean) => {
+    async (page: number) => {
       if (!apiKey) { dispatch(openApiKeyModal(false)); return; }
 
-      let signal: AbortSignal | undefined;
-      if (!append) {
-        abortRef.current?.abort();
-        abortRef.current = new AbortController();
-        signal = abortRef.current.signal;
-      }
+      abortRef.current?.abort();
+      abortRef.current = new AbortController();
+      const signal = abortRef.current.signal;
 
-      append ? setLoadingMore(true) : setLoading(true);
+      pageRef.current = page;
+
+      setCurrentPage(page);
+
+      setLoading(true);
       try {
         const res   = await fetchDeviceInfos({ ...buildParams(page) });
         const items = res.data.data;
-        setData(prev => append ? [...prev, ...items] : items);
+        setData(items);
         setTotal(res.data.total);
-        setHasMore(page < res.data.totalPages);
-        pageRef.current = page;
       } catch (err: unknown) {
         const name = (err as any)?.name ?? (err as any)?.code;
         if (name === "AbortError" || name === "CanceledError" || (err as any)?.message === "canceled") return;
         showToastnew.error("Failed to fetch device info");
       } finally {
         if (!signal?.aborted) {
-          append ? setLoadingMore(false) : setLoading(false);
-          if (!append) requestAnimationFrame(() => requestAnimationFrame(() => emitNavDone()));
+          setLoading(false);
+          requestAnimationFrame(() => requestAnimationFrame(() => emitNavDone()));
         }
       }
     },
@@ -298,13 +298,15 @@ const DeviceInfoPage: React.FC = () => {
   );
 
   useEffect(() => {
-    pageRef.current = 1;
-    setData([]);
-    fetchPage(1, false);
+    fetchPage(1);
   }, [fetchPage]);
+  const handleRefresh  = useCallback(() => { fetchPage(pageRef.current); }, [fetchPage]);
 
-  const handleLoadMore = useCallback(() => fetchPage(pageRef.current + 1, true), [fetchPage]);
-  const handleRefresh  = useCallback(() => { pageRef.current = 1; setData([]); fetchPage(1, false); }, [fetchPage]);
+  // A delete emptied the last page → step back to the new last page
+  useEffect(() => {
+    const lastPage = Math.max(1, Math.ceil(total / perPage));
+    if (!loading && currentPage > lastPage) fetchPage(lastPage);
+  }, [total, perPage, currentPage, loading, fetchPage]);
 
   const handleView = useCallback((row: DeviceInfo) => setViewRow(row), []);
 
@@ -464,10 +466,10 @@ const DeviceInfoPage: React.FC = () => {
           getRowId={row => row._id}
           isLoading={loading}
           totalItems={total}
-          onScrollPagination
-          onLoadMore={handleLoadMore}
-          hasMore={hasMore}
-          loadingMore={loadingMore}
+          currentPage={currentPage}
+          itemsPerPage={perPage}
+          onPageChange={fetchPage}
+          onItemsPerPageChange={setPerPage}
           onRefresh={handleRefresh}
           emptyStateImage="/icons/no-booking-found.png"
           emptyStateTitle="No device records found"
