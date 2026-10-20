@@ -2,7 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { ChevronRight, ChevronDown } from "lucide-react";
 import { NavItemProps } from "../../types";
-import { emitNavStart } from "../../../../atoms/NavigationProgress";
+import { emitNavStartIfNeeded } from "../../../../routes/KeepAliveOutlet";
 
 const NavIcon: React.FC<{ Icon: React.ComponentType<{ className?: string }>; isActive: boolean }> = ({ Icon, isActive }) => (
   <span
@@ -44,7 +44,7 @@ const itemStyle = (isActive: boolean, level: number): React.CSSProperties => ({
 const NavLinkItem: React.FC<NavItemProps> = ({ item, isCollapsed, isActive, level = 0, onClick }) => (
   <Link
     to={item.href!}
-    onClick={() => { if (!isActive) emitNavStart(); onClick?.(); }}
+    onClick={() => { if (!isActive) emitNavStartIfNeeded(item.href!); onClick?.(); }}
     title={isCollapsed ? item.name : undefined}
     style={{
       ...itemStyle(!!isActive, level),

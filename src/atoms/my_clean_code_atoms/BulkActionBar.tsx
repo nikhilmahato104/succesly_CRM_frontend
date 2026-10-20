@@ -8,6 +8,8 @@ export interface BulkActionBarProps {
   onClear:        () => void;
   loading?:       boolean;
   warningLabel?:  string;
+  /** Lift the bar (e.g. above the mobile bottom nav) */
+  bottom?:        number | string;
 }
 
 export const BulkActionBar: React.FC<BulkActionBarProps> = ({
@@ -16,11 +18,12 @@ export const BulkActionBar: React.FC<BulkActionBarProps> = ({
   onClear,
   loading       = false,
   warningLabel  = "This action cannot be undone",
+  bottom        = 0,
 }) => (
   <div
     style={{
       position:       "absolute",
-      bottom:         0,
+      bottom,
       left:           0,
       right:          0,
       zIndex:         100,
@@ -34,6 +37,7 @@ export const BulkActionBar: React.FC<BulkActionBarProps> = ({
       padding:        "10px 16px",
       gap:            12,
       pointerEvents:  selectedCount > 0 ? "auto" : "none",
+      visibility:     selectedCount > 0 ? "inherit" : "hidden",
     }}
   >
     <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>

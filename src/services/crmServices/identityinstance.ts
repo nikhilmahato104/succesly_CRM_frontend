@@ -9,7 +9,7 @@
 //   • 401 → call silentRefresh → update Redux → retry original request
 //   • If refresh also fails → clearAllAuthState → redirect to /login
 
-import axios, { AxiosInstance, AxiosError } from "axios";
+import axios, { AxiosInstance, AxiosError, type AxiosResponse, type InternalAxiosRequestConfig } from "axios";
 import { store } from "../../store";
 import { openApiKeyModal, clearApiKey } from "../../store/slices/apiKeySlice";
 import { showToastnew } from "../toastifynewService/toastifynewService";
@@ -103,5 +103,45 @@ identityInstance.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+// ── GET response cache ───────────────────────────────────────────────────────
+// Module pages switch like an app (keep-alive + swipe). Even if a page has to
+// remount (hot reload, a sub-page visit), the same GET within GET_TTL_MS is
+// answered from memory — no repeat API call. Any write (POST/PUT/PATCH/DELETE)
+// clears the cache, so lists are fresh after create / edit / delete.
+// The key includes the Authorization + x-api-key headers, so another session
+// or a refreshed token never reads someone else's cached data.
+
+const GET_TTL_MS = 5 * 60 * 1000;
+const getCache   = new Map<string, { at: number; response: AxiosResponse }>();
+
+/** Drop every cached GET — e.g. a manual "refresh" that must hit the server */
+export const clearGetCache = (): void => getCache.clear();
+
+const networkAdapter = axios.getAdapter(identityInstance.defaults.adapter);
+
+identityInstance.defaults.adapter = async (config: InternalAxiosRequestConfig): Promise<AxiosResponse> => {
+  const method = (config.method ?? "get").toLowerCase();
+  if (method !== "get") {
+    getCache.clear();                       // any write may change any list
+    return networkAdapter(config);
+  }
+
+  const key = [
+    String(config.headers?.["Authorization"] ?? ""),
+    String(config.headers?.["x-api-key"] ?? ""),
+    identityInstance.getUri(config),        // url + serialized params
+  ].join(" ");
+
+  const hit = getCache.get(key);
+  if (hit && Date.now() - hit.at < GET_TTL_MS) {
+    if (config.signal?.aborted) throw new axios.CanceledError(undefined, undefined, config);
+    return { ...hit.response, config };
+  }
+
+  const response = await networkAdapter(config);
+  if (response.status >= 200 && response.status < 300) getCache.set(key, { at: Date.now(), response });
+  return response;
+};
 
 export default identityInstance;

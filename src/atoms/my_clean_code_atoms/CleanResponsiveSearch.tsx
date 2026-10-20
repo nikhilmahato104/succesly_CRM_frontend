@@ -33,7 +33,7 @@ const FAB_Z     = 650;    // above page content, below the bottom bar
 const FADE_MS   = 180;
 const FAB_SIZE  = 48;
 const FAB_GAP   = 12;
-const FAB_BASE  = 86;     // px above the viewport bottom — clears the floating bottom bar
+const FAB_BASE  = 126;    // px above the viewport bottom — sits above the table pager circle
 
 // ── Round floating button ──────────────────────────────────────────────────────
 

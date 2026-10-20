@@ -657,6 +657,34 @@ const NavBtn: React.FC<{ onClick: () => void; disabled: boolean; children: React
   </button>
 )
 
+// Mobile pager: round 32px buttons in one compact row
+const CircleBtn: React.FC<{
+  onClick: () => void; disabled?: boolean; active?: boolean; label: string; children: React.ReactNode
+}> = ({ onClick, disabled = false, active = false, label, children }) => (
+  <button
+    type="button"
+    aria-label={label}
+    aria-current={active ? 'page' : undefined}
+    onClick={onClick}
+    disabled={disabled}
+    style={{
+      width: 32, height: 32, flexShrink: 0,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      borderRadius: '50%', padding: 0,
+      fontSize: 12, fontWeight: 600,
+      border: active ? '1px solid var(--dt-accent)' : '1px solid var(--dt-border)',
+      background: active ? 'var(--dt-accent)' : 'transparent',
+      color: active ? 'var(--dt-accent-text)' : 'var(--dt-text)',
+      opacity: disabled ? 0.35 : 1,
+      cursor: disabled ? 'not-allowed' : 'pointer',
+      transition: 'background 140ms ease, color 140ms ease',
+      WebkitTapHighlightColor: 'transparent',
+    }}
+  >
+    {children}
+  </button>
+)
+
 // ─── PerPageSelect ────────────────────────────────────────────────────────────
 // Headless UI Listbox instead of a native <select>: themed popup, no OS flicker,
 // auto-flips above/below the button, full keyboard support.
@@ -777,6 +805,98 @@ const TablePagination: React.FC<{
         <NavBtn onClick={() => onPageChange(totalPages)} disabled={atLast}><ChevronsRight size={14} /></NavBtn>
       </div>
     </div>
+  )
+}
+
+// ─── FloatingPager (mobile card view) ─────────────────────────────────────────
+// Collapsed: a round button showing "page / pages" — the list keeps the whole
+// screen. Tapped: a frosted-glass panel with the pager and rows-per-page.
+
+const FLOAT_BOTTOM = 'calc(66px + env(safe-area-inset-bottom, 0px))'   // just above the bottom bar
+
+const FloatingPager: React.FC<{
+  currentPage: number; totalPages: number; startItem: number; endItem: number
+  totalCount: number; itemsPerPage: number; isLoading: boolean
+  onPageChange: (page: number) => void; onItemsPerPageChange: (n: number) => void
+}> = ({
+  currentPage, totalPages, startItem, endItem, totalCount, itemsPerPage, isLoading,
+  onPageChange, onItemsPerPageChange,
+}) => {
+  const [open, setOpen] = useState(false)
+  const pageNums = buildPageNumbers(currentPage, totalPages, 3)
+  const atFirst  = currentPage === 1 || isLoading
+  const atLast   = currentPage === totalPages || totalPages === 0 || isLoading
+
+  return (
+    <>
+      {/* Collapsed circle */}
+      <button
+        type="button"
+        aria-label={`Page ${currentPage} of ${totalPages} — show pagination`}
+        aria-expanded={open}
+        onClick={() => setOpen(true)}
+        style={{
+          position: 'fixed', right: 16, bottom: FLOAT_BOTTOM, zIndex: 650,
+          width: 48, height: 48, borderRadius: '50%', padding: 0,
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          background: 'var(--modal-bg)', border: '1px solid var(--sc-border)',
+          boxShadow: '0 6px 20px rgba(0,0,0,0.3)', color: 'var(--dt-text)', cursor: 'pointer',
+          opacity: open ? 0 : 1, pointerEvents: open ? 'none' : 'auto',
+          transition: 'opacity 160ms ease', WebkitTapHighlightColor: 'transparent',
+        }}
+      >
+        <span style={{ fontSize: 15, fontWeight: 700, lineHeight: 1 }}>{currentPage}</span>
+        <span style={{ fontSize: 9, color: 'var(--dt-muted)', lineHeight: 1, marginTop: 3 }}>of {totalPages}</span>
+      </button>
+
+      {/* Expanded glass panel */}
+      <div
+        role="dialog"
+        aria-label="Pagination"
+        aria-hidden={!open}
+        style={{
+          position: 'fixed', left: 12, right: 12, bottom: FLOAT_BOTTOM, zIndex: 660,
+          display: 'flex', flexDirection: 'column', gap: 12, padding: 12,
+          borderRadius: 20,
+          background: 'var(--glass-pop-bg)',
+          WebkitBackdropFilter: 'blur(18px) saturate(160%)',
+          backdropFilter: 'blur(18px) saturate(160%)',
+          border: '1px solid var(--glass-pop-border)',
+          boxShadow: '0 12px 40px rgba(0,0,0,0.35)',
+          transformOrigin: 'bottom right',
+          transform: open ? 'scale(1)' : 'scale(0.6)',
+          opacity: open ? 1 : 0,
+          visibility: open ? 'inherit' : 'hidden',   // inherit: stays hidden on a hidden keep-alive page
+          pointerEvents: open ? 'auto' : 'none',
+          transition: open
+            ? 'transform 240ms cubic-bezier(0.34,1.56,0.64,1), opacity 160ms ease'
+            : 'transform 180ms ease, opacity 140ms ease, visibility 0s linear 180ms',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ flex: 1, fontSize: 12, color: 'var(--dt-muted)', whiteSpace: 'nowrap' }}>
+            {isLoading ? 'Loading…' : <><b style={{ color: 'var(--dt-text)' }}>{startItem}–{endItem}</b> of {totalCount}</>}
+          </span>
+          <span style={{ fontSize: 12, color: 'var(--dt-muted)' }}>Rows</span>
+          <PerPageSelect value={itemsPerPage} disabled={isLoading} onChange={onItemsPerPageChange} />
+          <CircleBtn label="Hide pagination" onClick={() => setOpen(false)}>
+            <ChevronDown size={16} />
+          </CircleBtn>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+          <CircleBtn label="First page" onClick={() => onPageChange(1)} disabled={atFirst}><ChevronsLeft size={15} /></CircleBtn>
+          <CircleBtn label="Previous page" onClick={() => onPageChange(currentPage - 1)} disabled={atFirst}><ChevronLeft size={15} /></CircleBtn>
+          {pageNums.map((p) => (
+            <CircleBtn key={p} label={`Page ${p}`} active={p === currentPage} onClick={() => onPageChange(p)} disabled={isLoading}>
+              {p}
+            </CircleBtn>
+          ))}
+          <CircleBtn label="Next page" onClick={() => onPageChange(currentPage + 1)} disabled={atLast}><ChevronRight size={15} /></CircleBtn>
+          <CircleBtn label="Last page" onClick={() => onPageChange(totalPages)} disabled={atLast}><ChevronsRight size={15} /></CircleBtn>
+        </div>
+      </div>
+    </>
   )
 }
 
@@ -916,7 +1036,162 @@ const ColumnConfigPanel: React.FC<{
   )
 }
 
+// ─── Mobile card list (Instagram-style) ───────────────────────────────────────
+// Below 1024px each row renders as a compact card: title/subtitle, then every
+// other column as a label/value pair (wrapping — nothing is cut off).
+//   tap        → open the row (row click / view / edit, whichever the page has)
+//   long-press → delete (centred confirm modal)
+
+const CARD_HIDDEN_FIELDS = new Set(['column_config', 'actions'])
+const NAME_LIKE   = /(^|_)(name|client|title|user|email|username)(_|$)/i
+const LONG_PRESS  = 550   // ms
+const MOVE_CANCEL = 10    // px — a scroll / swipe is not a long-press
+
+function cardColumns<T>(cols: GridColumn<T>[]) {
+  const shown     = cols.filter((c) => !CARD_HIDDEN_FIELDS.has(c.field))
+  const primary   = shown.find((c) => NAME_LIKE.test(c.field)) ?? shown[0]
+  const secondary = shown.find((c) => c !== primary)
+  const rest      = shown.filter((c) => c !== primary && c !== secondary)
+  return { primary, secondary, rest }
+}
+
+function renderCardCell<T>(col: GridColumn<T>, row: T): React.ReactNode {
+  const value = (row as Record<string, unknown>)[col.field]
+  if (col.renderCell) return col.renderCell({ row, value })
+  return value != null && value !== '' ? String(value) : '—'
+}
+
+const cardStyle: React.CSSProperties = {
+  display: 'flex', alignItems: 'flex-start', gap: 10,
+  padding: '10px 12px', borderRadius: 'var(--radius)',
+  background: 'var(--sc-card)', border: '1px solid var(--dt-border)',
+}
+
+function DataCard<T>({
+  row, columns, selectable, selected, onToggle, onTap, onLongPress,
+}: {
+  row: T
+  columns: GridColumn<T>[]
+  selectable: boolean
+  selected: boolean
+  onToggle: () => void
+  onTap?: (row: T) => void
+  onLongPress?: (row: T) => void
+}) {
+  const { primary, secondary, rest } = cardColumns(columns)
+  const timer   = useRef(0)
+  const fired   = useRef(false)
+  const origin  = useRef({ x: 0, y: 0 })
+  const [pressing, setPressing] = useState(false)
+
+  useEffect(() => () => window.clearTimeout(timer.current), [])
+  if (!primary) return null
+
+  const cancelPress = () => { window.clearTimeout(timer.current); setPressing(false) }
+
+  const startPress = (e: React.PointerEvent) => {
+    if (!onLongPress || (e.pointerType === 'mouse' && e.button !== 0)) return
+    fired.current  = false
+    origin.current = { x: e.clientX, y: e.clientY }
+    setPressing(true)
+    timer.current = window.setTimeout(() => {
+      fired.current = true
+      setPressing(false)
+      navigator.vibrate?.(20)
+      onLongPress(row)
+    }, LONG_PRESS)
+  }
+
+  const movePress = (e: React.PointerEvent) => {
+    if (Math.hypot(e.clientX - origin.current.x, e.clientY - origin.current.y) > MOVE_CANCEL) cancelPress()
+  }
+
+  return (
+    <div
+      role={onTap ? 'button' : undefined}
+      className="cdg-card"
+      onPointerDown={startPress}
+      onPointerMove={movePress}
+      onPointerUp={cancelPress}
+      onPointerLeave={cancelPress}
+      onPointerCancel={cancelPress}
+      onContextMenu={(e) => { if (onLongPress) e.preventDefault() }}   // no browser menu on long-press
+      onClick={() => {
+        if (fired.current) { fired.current = false; return }           // the long-press already acted
+        onTap?.(row)
+      }}
+      style={{
+        ...cardStyle,
+        cursor: onTap ? 'pointer' : undefined,
+        background: selected ? 'var(--dt-hover)' : cardStyle.background,
+        borderColor: selected ? 'var(--dt-accent)' : 'var(--dt-border)',
+        transform: pressing ? 'scale(0.98)' : undefined,
+        transition: 'transform 160ms ease, background 160ms ease',
+      }}
+    >
+      {selectable && (
+        <span style={{ paddingTop: 2 }} onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()}>
+          <CheckboxCell checked={selected} onChange={onToggle} />
+        </span>
+      )}
+
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div className="cdg-card-value" style={{ fontSize: 14, fontWeight: 600, color: 'var(--dt-text)', lineHeight: 1.3 }}>
+          {renderCardCell(primary, row)}
+        </div>
+        {secondary && (
+          <div className="cdg-card-value" style={{ marginTop: 2, fontSize: 12, color: 'var(--dt-muted)', lineHeight: 1.35 }}>
+            {renderCardCell(secondary, row)}
+          </div>
+        )}
+
+        {rest.length > 0 && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '6px 12px', marginTop: 8 }}>
+            {rest.map((col) => (
+              <div key={col.field} style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 10.5, color: 'var(--dt-muted)', marginBottom: 1 }}>
+                  {col.headerName}
+                </div>
+                <div className="cdg-card-value" style={{ fontSize: 12.5, color: 'var(--dt-text)', lineHeight: 1.35 }}>
+                  {renderCardCell(col, row)}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+const CardSkeleton: React.FC = () => (
+  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 10 }}>
+    {Array.from({ length: 6 }).map((_, i) => (
+      <div key={i} style={{ ...cardStyle, flexDirection: 'column', gap: 8 }}>
+        <span className="sk-pulse" style={{ height: 13, width: '55%', borderRadius: 4, background: 'var(--dt-skeleton-from)' }} />
+        <span className="sk-pulse" style={{ height: 10, width: '35%', borderRadius: 4, background: 'var(--dt-skeleton-from)' }} />
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, width: '100%' }}>
+          {[0, 1, 2, 3].map((k) => (
+            <span key={k} className="sk-pulse" style={{ height: 22, borderRadius: 4, background: 'var(--dt-skeleton-from)' }} />
+          ))}
+        </div>
+      </div>
+    ))}
+  </div>
+)
+
 // ─── Hooks ────────────────────────────────────────────────────────────────────
+
+/** Card list instead of a table — same breakpoint as the mobile bottom bar */
+function useIsCardView(): boolean {
+  const [card, setCard] = useState(typeof window !== 'undefined' && window.innerWidth < 1024)
+  useEffect(() => {
+    const handler = () => setCard(window.innerWidth < 1024)
+    window.addEventListener('resize', handler)
+    return () => window.removeEventListener('resize', handler)
+  }, [])
+  return card
+}
 
 function useIsMobile(): boolean {
   const [mobile, setMobile] = useState(
@@ -1147,6 +1422,7 @@ export function CustomDatagrid<T extends Record<string, unknown>>({
   deleteConfirmDescription,
 }: CustomDatagridProps<T>) {
   const isMobile = useIsMobile()
+  const isCardView = useIsCardView()
 
   // Loading skeleton is shown for at least 600 ms to avoid flash
   const [showSkeleton, setShowSkeleton]     = useState(true)
@@ -1163,6 +1439,7 @@ export function CustomDatagrid<T extends Record<string, unknown>>({
 
   // ── Single-row delete state ──────────────────────────────────────────────
   const [deleteTarget, setDeleteTarget] = useState<T | null>(null)
+  const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false)   // mobile bulk delete confirm
   const [deletingRow, setDeletingRow]   = useState(false)
 
   const scrollableRef    = useRef<HTMLDivElement>(null)
@@ -1184,9 +1461,12 @@ export function CustomDatagrid<T extends Record<string, unknown>>({
 
   useEffect(() => { setColumnOrder(buildColumnOrder(columns as GridColumn[])) }, [columns])
 
+  // Skeleton stays at least 300 ms (no flash) — but not 300 ms *after* a slow load
+  const skeletonSince = useRef(Date.now())
   useEffect(() => {
-    if (isLoading) { setShowSkeleton(true); return }
-    const t = setTimeout(() => setShowSkeleton(false), 600)
+    if (isLoading) { skeletonSince.current = Date.now(); setShowSkeleton(true); return }
+    const remaining = Math.max(0, 300 - (Date.now() - skeletonSince.current))
+    const t = setTimeout(() => setShowSkeleton(false), remaining)
     return () => clearTimeout(t)
   }, [isLoading])
 
@@ -1362,14 +1642,18 @@ export function CustomDatagrid<T extends Record<string, unknown>>({
     return (
       <div className="flex flex-col h-full" style={{ background: 'var(--dt-bg)', overflow: 'hidden' }}>
         <style>{SCROLL_CSS}</style>
-        <TableSkeleton
-          columns={visibleColumns as GridColumn[]}
-          columnWidths={columnWidths}
-          minColumnWidth={minColumnWidth}
-          hasSelect={selectable}
-          actionsCount={actionsCount}
-        />
-        {onScrollPagination ? (
+        {isCardView ? (
+          <div style={{ flex: '1 1 0', height: 0, overflow: 'hidden' }}><CardSkeleton /></div>
+        ) : (
+          <TableSkeleton
+            columns={visibleColumns as GridColumn[]}
+            columnWidths={columnWidths}
+            minColumnWidth={minColumnWidth}
+            hasSelect={selectable}
+            actionsCount={actionsCount}
+          />
+        )}
+        {isCardView ? null : onScrollPagination ? (
           <ScrollCounter count={0} total={0} onRefresh={onRefresh} isLoading />
         ) : (
           <TablePagination
@@ -1393,7 +1677,65 @@ export function CustomDatagrid<T extends Record<string, unknown>>({
     >
       <style>{SCROLL_CSS}</style>
 
-      {/* ── Scrollable table area ─────────────────────────────────────── */}
+      {isCardView ? (
+        /* ── Mobile: card list ─────────────────────────────────────────── */
+        <div
+          ref={scrollableRef}
+          className="cdg-scroll"
+          style={{
+            flex: '1 1 0', height: 0, overflowY: 'auto', overflowX: 'hidden', overscrollBehavior: 'contain',
+            padding: '10px 10px calc(130px + env(safe-area-inset-bottom, 0px))',
+          }}
+        >
+          {displayRows.length > 0 && (selectable || onDelete) && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 32, padding: '0 4px 8px', fontSize: 12, color: 'var(--dt-muted)' }}>
+              {selectable && (
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                  <CheckboxCell checked={allSelected} indeterminate={someSelected} onChange={toggleAll} />
+                  {selectedIds.size > 0 ? `${selectedIds.size} selected` : 'Select all'}
+                </label>
+              )}
+              {selectedIds.size > 0 && onBulkDelete ? (
+                // Selection actions live here on mobile — no bottom bar under the nav
+                <span style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
+                  <button type="button" onClick={() => setSelectedIds(new Set())}
+                    style={{ height: 28, padding: '0 12px', borderRadius: 99, border: '1px solid var(--dt-border)', background: 'transparent', color: 'var(--dt-text)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                    Clear
+                  </button>
+                  <button type="button" onClick={() => setBulkConfirmOpen(true)}
+                    style={{ height: 28, padding: '0 12px', borderRadius: 99, border: 'none', background: '#ed4956', color: '#ffffff', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <Trash2 size={13} /> Delete
+                  </button>
+                </span>
+              ) : (
+                onDelete && <span style={{ marginLeft: 'auto', fontSize: 11 }}>Hold a card to delete</span>
+              )}
+            </div>
+          )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {displayRows.length === 0 && !emptyStateImage && (
+              <p style={{ textAlign: 'center', padding: '40px 0', fontSize: 13, color: 'var(--dt-muted)' }}>No data</p>
+            )}
+            {displayRows.map((row) => {
+              const rowId = getRowId(row)
+              return (
+                <DataCard<T>
+                  key={rowId}
+                  row={row}
+                  columns={visibleColumns}
+                  selectable={selectable}
+                  selected={selectable && selectedIds.has(rowId)}
+                  onToggle={() => toggleRow(rowId)}
+                  onTap={onRowClick ?? onView ?? onEdit}
+                  onLongPress={onDelete ? setDeleteTarget : undefined}
+                />
+              )
+            })}
+            {loadingMore && <CardSkeleton />}
+          </div>
+        </div>
+      ) : (
+      /* ── Scrollable table area ─────────────────────────────────────── */
       <div
         ref={scrollableRef}
         className="overflow-x-auto overflow-y-auto cdg-scroll"
@@ -1635,6 +1977,7 @@ export function CustomDatagrid<T extends Record<string, unknown>>({
           </tbody>
         </table>
       </div>
+      )}
 
       {/* ── Empty-state overlay — fixed to viewport center, never scrolls ── */}
       {displayRows.length === 0 && !isLoading && emptyStateImage && (
@@ -1682,6 +2025,20 @@ export function CustomDatagrid<T extends Record<string, unknown>>({
       {/* ── Footer ──────────────────────────────────────────────────────── */}
       {onScrollPagination ? (
         !isMobile && <ScrollCounter count={rows.length} total={totalCount} onRefresh={onRefresh} />
+      ) : isCardView ? (
+        totalCount > 0 && (
+          <FloatingPager
+            currentPage={currentPage}
+            totalPages={totalPages}
+            startItem={startItem}
+            endItem={endItem}
+            totalCount={totalCount}
+            itemsPerPage={itemsPerPage}
+            isLoading={isLoading}
+            onPageChange={handlePageChange}
+            onItemsPerPageChange={handlePerPageChange}
+          />
+        )
       ) : (
         <TablePagination
           currentPage={currentPage}
@@ -1709,13 +2066,27 @@ export function CustomDatagrid<T extends Record<string, unknown>>({
       )}
 
       {/* ── Bulk action bar — slides up from bottom when rows selected ── */}
-      {selectable && onBulkDelete && (
+      {selectable && onBulkDelete && !isCardView && (
         <BulkActionBar
           selectedCount={selectedIds.size}
           onDeleteAll={handleBulkDelete}
           onClear={() => setSelectedIds(new Set())}
           loading={bulkDeleting}
           warningLabel={bulkDeleteLabel}
+        />
+      )}
+
+      {/* ── Mobile bulk delete — centred confirm modal ───────────────── */}
+      {isCardView && selectable && onBulkDelete && (
+        <ConfirmDeleteModal
+          isOpen={bulkConfirmOpen}
+          onClose={() => { if (!bulkDeleting) setBulkConfirmOpen(false) }}
+          onConfirm={async () => { await handleBulkDelete(); setBulkConfirmOpen(false) }}
+          loading={bulkDeleting}
+          title={`Delete ${selectedIds.size} item${selectedIds.size === 1 ? '' : 's'}?`}
+          description={bulkDeleteLabel ?? 'This action cannot be undone.'}
+          mode="modal"
+          zIndex={99999}
         />
       )}
 
@@ -1728,6 +2099,7 @@ export function CustomDatagrid<T extends Record<string, unknown>>({
           loading={deletingRow}
           title={deleteConfirmTitle}
           description={deleteConfirmDescription}
+          mode="modal"
           zIndex={99999}
         />
       )}

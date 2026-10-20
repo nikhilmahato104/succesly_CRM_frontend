@@ -308,6 +308,115 @@ button, nav, header, aside, label, [role="button"], [role="tab"] {
   box-shadow: 0 24px 64px rgba(0,0,0,0.5);
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   MOBILE (< 1024px) — Instagram look. Desktop keeps the Proton window above.
+   IG dark:  #000 page · #121212 cards · #262626 inputs/sheets · #f5f5f5 text
+             #a8a8a8 secondary · #0095f6 blue · flat, no gradient / glass
+   IG light: #fff page · #efefef inputs · #dbdbdb dividers · #000 / #737373 text
+   ═══════════════════════════════════════════════════════════════════════════ */
+@media (max-width: 1023px) {
+  :root {
+    --primary:        #0095f6;
+    --primary-hover:  #1877f2;
+    --primary-light:  rgba(0,149,246,0.12);
+    --primary-text:   #ffffff;
+    --primary-ring:   rgba(0,149,246,0.25);
+
+    --sc-shell:       #ffffff;
+    --sc-card:        #ffffff;
+    --sc-surface:     #efefef;
+    --sc-border:      #dbdbdb;
+    --bottom-bar-bg:  #ffffff;
+    --modal-bg:       #ffffff;
+
+    --sb-hover:       #efefef;
+    --sb-active:      #efefef;
+    --sb-text:        #000000;
+    --sb-text-dim:    #737373;
+    --sb-border:      #dbdbdb;
+
+    --fi-bg:          #efefef;
+    --fi-border:      transparent;
+    --fi-text:        #000000;
+    --fi-muted:       #737373;
+
+    --dt-text:        #000000;
+    --dt-dim:         #262626;
+    --dt-muted:       #737373;
+    --dt-border:      #efefef;
+    --dt-hover:       #fafafa;
+    --dt-accent:      #0095f6;
+    --dt-accent-text: #ffffff;
+
+    --glass-pop-bg:     rgba(255,255,255,0.72);   /* floating pager glass */
+    --glass-pop-border: rgba(0,0,0,0.08);
+  }
+
+  .dark {
+    --primary:        #0095f6;
+    --primary-hover:  #1aa1f7;
+    --primary-light:  rgba(0,149,246,0.16);
+    --primary-text:   #ffffff;
+    --primary-ring:   rgba(0,149,246,0.30);
+
+    --sc-shell:          #000000;
+    --sc-shell-gradient: none;
+    --glass-bg:          #000000;
+    --glass-border:      transparent;
+    --glass-blur:        none;
+
+    --modal-bg:       #262626;
+    --modal-panel-bg: #262626;
+    --modal-border:   transparent;
+
+    --sc-card:        #121212;
+    --sc-surface:     #262626;
+    --sc-border:      #262626;
+    --bottom-bar-bg:  #000000;
+
+    --sb-drawer-bg:   #000000;
+    --sb-elevated:    #262626;
+    --sb-hover:       #1a1a1a;
+    --sb-active:      #262626;
+    --sb-text:        #f5f5f5;
+    --sb-text-dim:    #a8a8a8;
+    --sb-accent:      #ffffff;
+    --sb-border:      #262626;
+
+    --fi-bg:          #262626;
+    --fi-bg-panel:    #262626;
+    --fi-border:      transparent;
+    --fi-text:        #f5f5f5;
+    --fi-muted:       #a8a8a8;
+    --fi-label:       #f5f5f5;
+
+    --badge-purple-bg:  rgba(0,149,246,0.16);  --badge-purple-text: #7cc4ff;
+
+    --dt-bg:            transparent;
+    --dt-solid:         #000000;
+    --dt-accent-text:   #ffffff;
+    --dt-header:        #000000;
+    --dt-hover:         #1a1a1a;
+    --dt-header-hover:  #121212;
+    --dt-border:        #262626;
+    --dt-border-strong: #363636;
+    --dt-text:          #f5f5f5;
+    --dt-dim:           #e0e0e0;
+    --dt-muted:         #a8a8a8;
+    --dt-accent:        #0095f6;
+    --dt-skeleton-from: #1a1a1a;
+    --dt-skeleton-to:   #262626;
+
+    --glass-pop-bg:     rgba(38,38,38,0.62);
+    --glass-pop-border: rgba(255,255,255,0.12);
+  }
+
+  /* Flat black window — no Proton gradient or glass on phones */
+  .dark body,
+  .dark .dashboard-shell { background-image: none; }
+  .dark .content-card { box-shadow: none; }
+}
+
 /* Dark mode: body matches shell */
 .dark body {
   background-color: var(--sc-shell);
@@ -379,13 +488,24 @@ button, nav, header, aside, label, [role="button"], [role="tab"] {
   -webkit-backdrop-filter: blur(20px) saturate(180%);
           backdrop-filter: blur(20px) saturate(180%);
 }
+/* Mobile card values show in full — page cell renderers often truncate for tables */
+.cdg-card { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.cdg-card-value,
+.cdg-card-value * {
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  max-width: 100% !important;
+  overflow-wrap: anywhere;
+}
+
 /* Bottom-bar tab strip scrolls sideways without a visible scrollbar */
 .bb-strip::-webkit-scrollbar { display: none; }
 
 /* Table pagination footer — same breakpoint as the bottom bar (DashboardLayout),
    so the page controls always sit above it on phones and tablets */
 @media (max-width: 1023px) {
-  .dt-pagination-bar { padding-bottom: calc(82px + env(safe-area-inset-bottom, 0px)) !important; }
+  .dt-pagination-bar { padding-bottom: calc(58px + env(safe-area-inset-bottom, 0px)) !important; }
 }
 
 /* ── Project form responsive grids ─────────────────────────────────────────

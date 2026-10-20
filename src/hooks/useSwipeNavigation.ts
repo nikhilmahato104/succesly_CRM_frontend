@@ -7,8 +7,8 @@ import { useNavigation } from "../organisms/SidebarV2/hooks/useNavigation";
 import type { NavItemType } from "../organisms/SidebarV2/types";
 
 /**
- * Mobile left/right swipe between top-level pages, in sidebar order
- * (e.g. Device Info ⇄ Projects ⇄ Campaigns).
+ * Mobile left/right swipe between the bottom-bar pages only
+ * (Dashboard ⇄ Device Info ⇄ Campaigns) — same list the bar shows.
  *
  * useSwipePager only reads the gesture — it reports how far the finger has
  * travelled and which page lies that way. KeepAliveOutlet does the rendering:
@@ -19,12 +19,8 @@ import type { NavItemType } from "../organisms/SidebarV2/types";
  *   • Sub-pages (/projects/new, /campaigns/:id, …) are not in the order → no swipe.
  */
 
-// Settings sidebar entry → the individual SettingConfig tabs, each gated on its module
-const SETTINGS_TABS: Array<[moduleId: string, href: string]> = [
-  ["user_management",   "/setting-config/user-management"],
-  ["role_management",   "/setting-config/role-management"],
-  ["module_management", "/setting-config/module-management"],
-];
+// The frequently used pages on the mobile bottom bar, left → right
+const BAR_ROUTES = ["/device-info", "/campaigns"] as const;
 
 const EDGE_GUARD   = 24;    // px from the screen edge — leave the browser's back-swipe alone
 const LOCK_SLOP    = 10;    // px before deciding horizontal vs vertical
@@ -42,17 +38,29 @@ function flattenHrefs(items: NavItemType[], out: string[] = []): string[] {
   return out;
 }
 
-export function useSwipePageOrder(): string[] {
+/**
+ * Bottom-bar pages this role can open, in bar order: its dashboard,
+ * Device Info, Campaigns. Shared by MobileBottomBar and the swipe pager so
+ * the two can never disagree.
+ */
+export function useBottomBarRoutes(): { dashboard: string | null; devices: string | null; campaigns: string | null; order: string[] } {
   const access   = useSelector((s: any) => selectAccessData(s)) as Record<string, any> | null;
   const userData = useSelector(selectUserData);
   const nav      = useNavigation(access, userData?.role_name || "");
 
   return useMemo(() => {
-    const settingsTabs = SETTINGS_TABS.filter(([id]) => access?.[id]?.view).map(([, href]) => href);
-    return flattenHrefs(nav).flatMap(href =>
-      href === "/setting-config/user-management" ? settingsTabs : [href],
-    );
-  }, [nav, access]);
+    const hrefs     = flattenHrefs(nav);
+    const dashboard = hrefs.find(h => h.startsWith("/dashboard")) ?? null;
+    const [devicesHref, campaignsHref] = BAR_ROUTES;
+    const devices   = hrefs.includes(devicesHref)   ? devicesHref   : null;
+    const campaigns = hrefs.includes(campaignsHref) ? campaignsHref : null;
+    return { dashboard, devices, campaigns, order: [dashboard, devices, campaigns].filter(Boolean) as string[] };
+  }, [nav]);
+}
+
+/** Swipe order — only the bottom-bar pages */
+export function useSwipePageOrder(): string[] {
+  return useBottomBarRoutes().order;
 }
 
 /** Whether every horizontal scroller between target and root can't scroll further that way */

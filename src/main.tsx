@@ -26,6 +26,19 @@ if ("serviceWorker" in navigator && import.meta.env.PROD) {
 }
 
 
+// ── App-like: no pinch zoom on iOS Safari ─────────────────────────────────
+// iOS ignores user-scalable=no in the viewport tag, so cancel its pinch
+// gestures here. Double-tap zoom is already off via touch-action: manipulation.
+const blockZoom = (e: Event) => e.preventDefault();
+document.addEventListener("gesturestart",  blockZoom, { passive: false });
+document.addEventListener("gesturechange", blockZoom, { passive: false });
+document.addEventListener("gestureend",    blockZoom, { passive: false });
+document.addEventListener(
+  "touchmove",
+  (e: TouchEvent) => { if (e.touches.length > 1) e.preventDefault(); },   // two-finger pinch
+  { passive: false },
+);
+
 // Define your routes (simple wrapper for now, can be expanded)
 const router = createBrowserRouter([
   {

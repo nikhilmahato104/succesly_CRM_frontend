@@ -7,10 +7,12 @@
   <!--
     viewport-fit=cover  → content extends behind notch / Dynamic Island / home indicator
     The app itself pads away from those edges using env(safe-area-inset-*)
+    maximum-scale=1 + user-scalable=no → app-like: no pinch / double-tap zoom
+    (Android Chrome, Samsung Internet). iOS Safari ignores these — see main.tsx.
   -->
   <meta
     name="viewport"
-    content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
   />
 
   <!-- ── SEO / Description ─────────────────────────────────────────────── -->
