@@ -62,6 +62,11 @@ const FIRST_LOAD_TIMEOUT_MS = 6000;   // safety net if a page never reports done
 const SLIDE_MS = 280;
 const EASE     = "cubic-bezier(0.32, 0.72, 0, 1)";
 
+// Opt-in trace of the pager: run  localStorage.setItem("debug:pager", "1")  and reload
+const debugPager = (...args: unknown[]): void => {
+  try { if (localStorage.getItem("debug:pager") === "1") console.debug("[pager]", ...args); } catch { /* storage blocked */ }
+};
+
 const prefersReducedMotion = () =>
   typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
@@ -132,6 +137,7 @@ const KeepAlivePane = React.forwardRef<HTMLDivElement, {
         // No transform at rest — a transform would trap the page's fixed children
         transform,
         transition,
+        willChange:    transform ? "transform" : undefined,
       }}
     >
       {/* The page mounts and fetches underneath, invisible, then fades in */}
@@ -155,6 +161,8 @@ export const KeepAliveOutlet: React.FC = () => {
   const { pathname } = useLocation();
   const { isMobile } = useDevice();
   const activeKey    = keepAliveKey(pathname);
+  const pathnameRef  = useRef(pathname);
+  pathnameRef.current = pathname;
 
   const cacheRef = useRef(new Map<string, React.ReactNode>());
   const cache    = cacheRef.current;
@@ -239,14 +247,23 @@ export const KeepAliveOutlet: React.FC = () => {
     onRelease: (commit, dest, dx) => {
       window.clearTimeout(settleTimer.current);
       const width = surfaceRef.current?.clientWidth ?? window.innerWidth;
+      debugPager("release", { commit, dest, dx: Math.round(dx), from: pathnameRef.current });
       if (commit && dest) {
-        // Finish the slide, then switch route — the neighbour is already in place
+        // Finish the slide, then switch route — the neighbour is already in place.
+        // Do NOT clear the drag here: React Router applies navigate() as a
+        // transition, so clearing now would paint the old page back for a frame
+        // (the "loads twice" flicker). The route-change layout effect clears it
+        // in the same frame the new page becomes active.
         setDrag({ dx: dx < 0 ? -width : width, dest, settling: true });
         settleTimer.current = window.setTimeout(() => {
           swipedTo.current = dest;
           emitNavStartIfNeeded(dest);
+          debugPager("navigate", dest);
           navigate(dest);
-          setDrag(null);
+          // Safety net: if the navigation never lands, don't leave the pages slid
+          settleTimer.current = window.setTimeout(() => {
+            if (pathnameRef.current !== dest) { debugPager("navigation did not land — reset"); swipedTo.current = null; setDrag(null); }
+          }, 800);
         }, SLIDE_MS);
       } else {
         setDrag(d => d && { ...d, dx: 0, settling: true });
@@ -269,7 +286,15 @@ export const KeepAliveOutlet: React.FC = () => {
     const main = mainEl();
     if (main && activeKey) main.scrollTop = scrollPos.current.get(activeKey) ?? 0;
 
-    if (swipedTo.current === pathname) { swipedTo.current = null; return; }   // pager already slid it in
+    if (swipedTo.current === pathname) {
+      // Pager already slid this page into place — drop the drag state now,
+      // inside the same commit, so no in-between frame is ever painted
+      swipedTo.current = null;
+      window.clearTimeout(settleTimer.current);
+      setDrag(null);
+      debugPager("route landed", { from, to: pathname });
+      return;
+    }
     const fromKey = keepAliveKey(from);
     if (!isMobile || !activeKey || !fromKey || fromKey === activeKey || !cache.has(fromKey) || prefersReducedMotion()) return;
 
@@ -294,12 +319,17 @@ export const KeepAliveOutlet: React.FC = () => {
   }, [leaving, activeKey]);
 
   // ── Layout of the panes for this frame ──────────────────────────────────────
+  // A settled swipe whose target is now the current route is finished: lay the
+  // frame out as final already (the layout effect then just drops the state).
+  const landed   = !!drag?.settling && !!drag.dest && drag.dest === pathname;
+  const liveDrag = landed ? null : drag;
+
   const width       = surfaceRef.current?.clientWidth ?? 0;
-  const neighborKey = drag?.dest ? keepAliveKey(drag.dest) : null;
+  const neighborKey = liveDrag?.dest ? keepAliveKey(liveDrag.dest) : null;
   const neighborIsCachedPage = !!neighborKey && neighborKey !== activeKey && cache.has(neighborKey);
-  const showPlaceholder      = !!drag?.dest && !neighborIsCachedPage;
-  const neighborOffset       = drag ? drag.dx + (drag.dx < 0 ? width : -width) : 0;
-  const transition           = drag?.settling ? `transform ${SLIDE_MS}ms ${EASE}` : "none";
+  const showPlaceholder      = !!liveDrag?.dest && !neighborIsCachedPage;
+  const neighborOffset       = liveDrag ? liveDrag.dx + (liveDrag.dx < 0 ? width : -width) : 0;
+  const transition           = liveDrag?.settling ? `transform ${SLIDE_MS}ms ${EASE}` : "none";
 
   const modeOf = (key: string): PaneMode => {
     if (key === activeKey) return "active";
@@ -309,8 +339,8 @@ export const KeepAliveOutlet: React.FC = () => {
   };
 
   const dragTransform = (mode: PaneMode): string | undefined => {
-    if (!drag) return undefined;
-    if (mode === "active")   return `translateX(${drag.dx}px)`;
+    if (!liveDrag) return undefined;
+    if (mode === "active")   return `translateX(${liveDrag.dx}px)`;
     if (mode === "neighbor") return `translateX(${neighborOffset}px)`;
     return undefined;
   };
