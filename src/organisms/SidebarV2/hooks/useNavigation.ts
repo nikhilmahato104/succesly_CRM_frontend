@@ -9,6 +9,7 @@ import {
   Smartphone,
   Link2,
   Construction,
+  ImageDown,
 } from "lucide-react";
 
 import { NavItemType } from "../types";
@@ -83,9 +84,15 @@ export const useNavigation = (
         : []),
     ];
 
+    // Browser-only tools — no module permission, available to every signed-in user
+    const tools: NavItemType[] = [
+      { name: "Image to WebP", href: "/tools/image-converter", icon: ImageDown },
+    ];
+
     return [
       ...dashboards,
       ...(operations.length > 0 ? [group("Operations"),    ...operations] : []),
+      group("Tools"), ...tools,
       ...(config.length     > 0 ? [group("Configuration"), ...config]     : []),
     ];
   }, [accessData, roleName]);

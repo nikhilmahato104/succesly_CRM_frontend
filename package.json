@@ -31,6 +31,7 @@
     "formik": "^2.4.6",
     "framer-motion": "^12.23.24",
     "jotai": "^2.15.1",
+    "jszip": "^3.10.1",
     "lottie-react": "^2.4.1",
     "lucide-react": "^0.344.0",
     "moment": "^2.30.1",

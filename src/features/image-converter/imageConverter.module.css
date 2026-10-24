@@ -1,0 +1,375 @@
+/*
+ * Scoped styles for the image converter (CSS Module — class names are hashed,
+ * so nothing here can leak into the rest of the app). Only what inline styles
+ * can't express lives here: states, keyframes and responsive grids.
+ * Colours come from the platform tokens in src/index.css.
+ */
+
+.page {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Sections keep their natural height — the page scrolls instead of squashing them */
+.page > * { flex-shrink: 0; }
+
+@media (min-width: 768px) {
+  .page { padding: 20px 24px; }
+}
+
+/* Phones & tablets (same breakpoint as the app's bottom bar): the TopBar already
+   shows the title, and content must clear the fixed bottom bar */
+@media (max-width: 1023px) {
+  .page {
+    padding: 12px 12px calc(58px + env(safe-area-inset-bottom, 0px) + 24px);
+    gap: 12px;
+  }
+  .pageHeader { display: none; }
+}
+
+.mobileOnly { display: none; }
+
+@media (max-width: 1023px) {
+  .mobileOnly  { display: revert; }
+  .desktopOnly { display: none; }
+}
+
+.panel {
+  background: var(--sc-card);
+  border: 1px solid var(--sc-border);
+  border-radius: var(--radius);
+  padding: 14px;
+}
+
+/* ── Dropzone ─────────────────────────────────────────────────────────────── */
+
+.dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 28px 16px;
+  text-align: center;
+  border: 1.5px dashed var(--fi-border-focus);
+  border-radius: var(--radius);
+  background: var(--sc-surface);
+  color: var(--fi-text);
+  cursor: pointer;
+  transition: background 140ms ease, border-color 140ms ease;
+  outline: none;
+}
+
+.dropzone:hover,
+.dropzone[data-active="true"] {
+  background: var(--primary-light);
+}
+
+.dropzone:focus-visible {
+  box-shadow: var(--fi-shadow-focus);
+}
+
+.dropzone[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.55;
+  border-color: var(--fi-border);
+}
+
+@media (max-width: 1023px) {
+  .dropzone { padding: 18px 14px; gap: 6px; }
+}
+
+/* ── Settings ─────────────────────────────────────────────────────────────── */
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  height: var(--btn-h-sm);
+  padding: 0 12px;
+  border-radius: 99px;
+  border: 1px solid var(--fi-border);
+  background: var(--fi-bg);
+  color: var(--fi-text);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 140ms ease, border-color 140ms ease;
+}
+
+.chip:hover:not(:disabled) { border-color: var(--fi-border-focus); }
+.chip:focus-visible { outline: none; box-shadow: var(--fi-shadow-focus); }
+.chip[aria-pressed="true"],
+.chip[aria-checked="true"] {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--primary-text);
+}
+.chip:disabled { opacity: 0.5; cursor: not-allowed; }
+
+@media (max-width: 640px) {
+  /* Target presets: one swipeable row instead of tall wrapped rows of 44px tap targets */
+  .chipsScroll {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    margin: 0 -14px;
+    padding: 2px 14px;
+    scrollbar-width: none;
+    scroll-snap-type: x proximity;
+    overscroll-behavior-x: contain;
+  }
+  .chipsScroll::-webkit-scrollbar { display: none; }
+  .chipsScroll > .chip { flex-shrink: 0; scroll-snap-align: start; }
+
+  /* Modes: equal-width segmented control */
+  .segmented {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .segmented > .chip {
+    padding: 0 6px;
+    white-space: normal;
+    line-height: 1.15;
+  }
+}
+
+.settingsGrid {
+  display: grid;
+  /* minmax(0, …) — a plain 1fr can't shrink below the nowrap chip strip and overflows */
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+}
+
+@media (min-width: 640px) {
+  .settingsGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (min-width: 1100px) {
+  .settingsGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+.range {
+  width: 100%;
+  accent-color: var(--primary);
+}
+
+.disclosure {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--fi-label);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.disclosure:focus-visible { outline: none; box-shadow: var(--fi-shadow-focus); border-radius: 4px; }
+
+/* ── Batch toolbar ────────────────────────────────────────────────────────── */
+
+.toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.toolbarActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.summaryRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 12px;
+  padding: 0 2px;
+}
+
+.toolbarSecondary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-left: auto;
+}
+
+@media (max-width: 640px) {
+  /* Stays in reach while scrolling through up to 100 cards */
+  .toolbar {
+    position: sticky;
+    top: -12px;   /* sticky honours the page's 12px top padding — pin flush to the edge instead */
+    z-index: 3;
+    background: var(--dt-solid, var(--sc-card));
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+  }
+  .toolbarActions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .toolbarActions > button { width: 100%; }
+  .toolbarActions > .fullRow,
+  .toolbarActions > button:only-child { grid-column: 1 / -1; }
+  .toolbarSecondary { margin-left: -6px; }
+}
+
+/* ── Image grid ───────────────────────────────────────────────────────────── */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 270px), 1fr));
+  gap: 12px;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  background: var(--sc-card);
+  border: 1px solid var(--sc-border);
+  border-radius: var(--radius);
+  padding: 12px;
+}
+
+.thumb {
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+  border-radius: var(--radius);
+  background: var(--sc-surface);
+  /* checkerboard so transparent images read correctly */
+  background-image:
+    linear-gradient(45deg, rgba(127,127,127,0.12) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(127,127,127,0.12) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgba(127,127,127,0.12) 75%),
+    linear-gradient(-45deg, transparent 75%, rgba(127,127,127,0.12) 75%);
+  background-size: 12px 12px;
+  background-position: 0 0, 0 6px, 6px -6px, -6px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 0;
+  padding: 0;
+  color: var(--fi-muted);
+}
+
+button.thumb { cursor: zoom-in; }
+button.thumb:focus-visible { outline: none; box-shadow: var(--fi-shadow-focus); }
+
+@media (max-width: 640px) {
+  .grid { gap: 10px; }
+  .card { padding: 10px; gap: 8px; }
+  .thumb { width: 56px; height: 56px; }
+}
+
+.linkButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--fi-muted);
+  font-size: 11px;
+  cursor: pointer;
+  align-self: flex-start;
+}
+
+.linkButton:hover:not(:disabled) { color: var(--fi-text); }
+.linkButton:disabled { cursor: not-allowed; opacity: 0.5; }
+.linkButton:focus-visible { outline: none; box-shadow: var(--fi-shadow-focus); border-radius: 4px; }
+
+.thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Progress ─────────────────────────────────────────────────────────────── */
+
+.track {
+  position: relative;
+  height: 6px;
+  border-radius: 99px;
+  background: var(--sc-surface);
+  overflow: hidden;
+}
+
+.fill {
+  height: 100%;
+  border-radius: 99px;
+  background: var(--primary);
+  transition: width 200ms ease;
+}
+
+.indeterminate {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 35%;
+  border-radius: 99px;
+  background: var(--primary);
+  animation: slide 1.1s ease-in-out infinite;
+}
+
+@keyframes slide {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(290%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .indeterminate { animation: none; width: 100%; opacity: 0.45; }
+  .fill { transition: none; }
+}
+
+/* ── Preview ──────────────────────────────────────────────────────────────── */
+
+.compare {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+@media (min-width: 720px) {
+  .compare { grid-template-columns: 1fr 1fr; }
+}
+
+.compareImage {
+  width: 100%;
+  max-height: 60vh;
+  object-fit: contain;
+  border-radius: var(--radius);
+  background: var(--sc-surface);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

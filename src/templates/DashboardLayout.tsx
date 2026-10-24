@@ -19,6 +19,7 @@ const ROUTE_MAP: Array<{ re: RegExp; title: string | null; back: ((m: RegExpMatc
   { re: /^\/site-maintenance\/[^/]+\/edit$/,        title: "Edit Site",           back: "/site-maintenance" },
   { re: /^\/site-maintenance$/,                    title: "Site Maintenance",    back: "/" },
   { re: /^\/activity-logs$/,                       title: "Activity Logs",        back: "/" },
+  { re: /^\/tools\/image-converter$/,              title: "Image to WebP",       back: "/" },
   { re: /^\/setting-config\/user-management$/,     title: "User Management",     back: "/" },
   { re: /^\/setting-config\/role-management$/,     title: "Role Management",     back: "/" },
   { re: /^\/setting-config\/module-management$/,   title: "Module Management",   back: "/" },

@@ -170,12 +170,9 @@ button, nav, header, aside, label, [role="button"], [role="tab"] {
 }
 
 /* Dark mode ──────────────────────────────────────────────────────────────── */
-/* Proton VPN desktop palette:
-   window   plum #8b3a55 at the top → #1b1a21 at the bottom (gradient shell)
-   panels   frosted glass rgba(24,21,30,.58) + hairline rgba(255,255,255,.08)
-   tiles    rgba(255,255,255,.05) · solid popovers / tables #1f1c26 – #2a2632
-   text     #ffffff → weak #a7a4b5 → hint #7c788c · accent purple #6d4aff
-   modals   teal glow at the top (#11454b) fading into #1f1c26               */
+/* Flat black palette (same as the mobile dark theme):
+   window   #000 · cards #121212 · inputs / popovers / modals #262626
+   dividers #262626 · text #fff → dim #a8a8a8 · accent purple #6d4aff       */
 .dark {
   /* ── Brand primary — Proton purple, white text on top ────────────────── */
   --primary:       #6d4aff;
@@ -184,48 +181,44 @@ button, nav, header, aside, label, [role="button"], [role="tab"] {
   --primary-text:  #ffffff;
   --primary-ring:  rgba(109,74,255,0.35);
 
-  /* ── App window: gradient shell + floating glass panels ─────────────── */
-  --sc-shell:          #1b1a21;
-  --sc-shell-gradient: linear-gradient(180deg,
-                         #8b3a55 0%, #6c2f4a 12%, #45283e 28%,
-                         #2a2231 48%, #1f1c26 70%, #1b1a21 100%);
-  --glass-bg:          rgba(24,21,30,0.58);
-  --glass-border:      rgba(255,255,255,0.07);
-  --glass-blur:        blur(22px) saturate(140%);
+  /* ── App window: flat black shell, panels framed by a hairline ──────── */
+  --sc-shell:          #000000;
+  --sc-shell-gradient: none;
+  --glass-bg:          #000000;
+  --glass-border:      #262626;
+  --glass-blur:        none;
 
-  /* ── Modals — Proton "Discover" teal glow fading into the dialog body ── */
-  --modal-bg:          #1f1c26;   /* solid: footers, sticky bars, popovers  */
-  --modal-panel-bg:    linear-gradient(180deg,
-                         #11454b 0%, #173640 16%, #1e2731 34%,
-                         #211f2a 56%, #1f1c26 100%);
-  --modal-border:      rgba(255,255,255,0.08);
+  /* ── Modals ──────────────────────────────────────────────────────────── */
+  --modal-bg:          #262626;   /* solid: footers, sticky bars, popovers  */
+  --modal-panel-bg:    #262626;
+  --modal-border:      transparent;
 
   /* ── Shell + Content card ───────────────────────────────────────────── */
-  --sc-card:       rgba(255,255,255,0.04);  /* filled tiles, no outline     */
-  --bottom-bar-bg: rgba(27,25,33,0.82);     /* frosted bottom bar          */
-  --sc-surface:    rgba(255,255,255,0.06);  /* toolbars, search pill       */
-  --sc-border:     rgba(255,255,255,0.05);  /* barely-there dividers      */
+  --sc-card:       #121212;  /* filled tiles, no outline     */
+  --bottom-bar-bg: #000000;
+  --sc-surface:    #262626;  /* toolbars, search pill       */
+  --sc-border:     #262626;  /* dividers                    */
 
-  /* ── Sidebar — transparent on its glass panel ────────────────────────── */
+  /* ── Sidebar — transparent on its panel ──────────────────────────────── */
   --sb-bg:          transparent;
-  --sb-drawer-bg:   linear-gradient(180deg, #6c2f4a 0%, #3a2637 30%, #221f2a 60%, #1d1b23 100%);
-  --sb-elevated:    #2a2632;
-  --sb-hover:       rgba(255,255,255,0.07);
-  --sb-active:      rgba(255,255,255,0.11);
-  --sb-text:        #ffffff;
-  --sb-text-dim:    #b8b5c6;
+  --sb-drawer-bg:   #000000;
+  --sb-elevated:    #262626;
+  --sb-hover:       #1a1a1a;
+  --sb-active:      #262626;
+  --sb-text:        #f5f5f5;
+  --sb-text-dim:    #a8a8a8;
   --sb-text-active: #ffffff;
   --sb-accent:      #ffffff;
-  --sb-border:      rgba(255,255,255,0.04);  /* top bar / footer: no hard line */
+  --sb-border:      #262626;
 
   /* ── Form / Input atoms ─────────────────────────────────────────────── */
-  --fi-bg:           rgba(255,255,255,0.07);  /* filled, borderless — like Proton */
-  --fi-bg-panel:     #2a2632;               /* solid dropdown / popover panels */
-  --fi-border:       rgba(255,255,255,0.05);  /* hairline — shapes come from the fill */
+  --fi-bg:           #262626;               /* filled, borderless          */
+  --fi-bg-panel:     #262626;               /* solid dropdown / popover panels */
+  --fi-border:       transparent;
   --fi-border-focus: var(--primary);
   --fi-border-error: #f0566a;
-  --fi-text:         #ffffff;
-  --fi-muted:        #a7a4b5;               /* placeholders stay readable      */
+  --fi-text:         #f5f5f5;
+  --fi-muted:        #a8a8a8;               /* placeholders stay readable      */
   --fi-label:        #ffffff;
   --fi-radius:       var(--radius);
   --fi-font-size:    13px;
@@ -245,28 +238,27 @@ button, nav, header, aside, label, [role="button"], [role="tab"] {
   --badge-red-bg:       rgba(220,50,81,0.22);    --badge-red-text:     #ff8fa3;
   --badge-blue-bg:      rgba(79,124,255,0.20);   --badge-blue-text:    #9db4ff;
 
-  /* ── DataTable — rows are see-through so the gradient shows on every
-        route; pinned columns / popups use --dt-solid, the sticky header
-        is near-opaque so scrolled rows don't bleed through it ─────────── */
+  /* ── DataTable — pinned columns / popups use --dt-solid, the sticky
+        header is opaque so scrolled rows don't bleed through it ──────── */
   --dt-bg:              transparent;
-  --dt-solid:           #221f2a;
-  --dt-accent-text:     #1b1a21;
-  --dt-header:          rgba(34,31,42,0.92);
-  --dt-hover:           rgba(255,255,255,0.05);
-  --dt-header-hover:    #2e2a37;
-  --dt-border:          #2a2631;
-  --dt-border-strong:   #403b4c;
-  --dt-text:            #ffffff;
-  --dt-dim:             #e9e7ef;
-  --dt-muted:           #a7a4b5;
+  --dt-solid:           #000000;
+  --dt-accent-text:     #000000;
+  --dt-header:          #000000;
+  --dt-hover:           #1a1a1a;
+  --dt-header-hover:    #121212;
+  --dt-border:          #262626;
+  --dt-border-strong:   #363636;
+  --dt-text:            #f5f5f5;
+  --dt-dim:             #e0e0e0;
+  --dt-muted:           #a8a8a8;
   --dt-accent:          #9d8cff;
   --dt-scrollbar:       rgba(255,255,255,0.16);
   --dt-scrollbar-hover: rgba(255,255,255,0.28);
-  --dt-skeleton-from:   #25212c;
-  --dt-skeleton-to:     #2d2935;
+  --dt-skeleton-from:   #1a1a1a;
+  --dt-skeleton-to:     #262626;
 }
 
-/* ── Proton-style window: gradient shell, floating frosted panels ─────────── */
+/* ── Window shell + panels (colours come from the tokens above) ──────────── */
 .dark body,
 .dark .dashboard-shell {
   background-image: var(--sc-shell-gradient);
@@ -282,7 +274,7 @@ button, nav, header, aside, label, [role="button"], [role="tab"] {
   isolation: isolate;
   background: transparent !important;
   border: 1px solid var(--glass-border) !important;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+  box-shadow: none;
 }
 .dark .app-glass-panel::before,
 .dark .content-card::before {
@@ -438,7 +430,7 @@ button, nav, header, aside, label, [role="button"], [role="tab"] {
 }
 
 .dark select option {
-  background-color: #2a2632;
+  background-color: #262626;
   color: #ffffff;
 }
 

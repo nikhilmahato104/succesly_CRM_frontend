@@ -35,6 +35,7 @@ const CampaignAnalyticsPage = lazy(() => import("../pages/campaign-management/Ca
 const CampaignOverviewPage  = lazy(() => import("../pages/campaign-management/CampaignOverview"));
 const SiteMaintenancePage     = lazy(() => import("../pages/site-maintenance"));
 const SiteMaintenanceFormPage = lazy(() => import("../pages/site-maintenance/SiteMaintenanceForm"));
+const ImageConverterPage      = lazy(() => import("../features/image-converter"));
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -436,6 +437,18 @@ export const AppRoutes: React.FC = () => {
             element={
               <ProtectedRoute moduleId="activity_log">
                 <ActivityLogsPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* ── TOOLS ───────────────────────────────────────────────────────────
+              Browser-only utilities (no API, no module permission key) —
+              open to any authenticated user.                                    */}
+          <Route
+            path="/tools/image-converter"
+            element={
+              <ProtectedRoute>
+                <ImageConverterPage />
               </ProtectedRoute>
             }
           />
