@@ -1,5 +1,6 @@
 import { useEffect, useRef, type RefObject } from "react";
 import { NAV_DONE_EVENT } from "../atoms/NavigationProgress";
+import { clearGetCache } from "../services/crmServices/identityinstance";
 
 /**
  * Global pull-to-refresh plumbing. The gesture itself lives in <PullToRefresh>
@@ -36,6 +37,8 @@ function waitForNavDone(timeoutMs: number): Promise<void> {
 
 /** Refresh the page on screen — resolves once its data is back */
 export async function refreshActivePage(): Promise<void> {
+  // A pull must hit the server — not the 5-minute in-memory GET cache
+  clearGetCache();
   const active = [...registry].filter(e => isOnScreen(e.el()));
   if (active.length) {
     await Promise.all(active.map(e => e.run()));
