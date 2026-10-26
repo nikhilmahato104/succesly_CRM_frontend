@@ -4,6 +4,7 @@ import { useDispatch } from "react-redux";
 import Sidebar from "@/organisms/SidebarV2";
 import { TopBar } from "../organisms/TopBar/TopBar";
 import MobileBottomBar from "../organisms/MobileBottomBar";
+import { PullToRefresh } from "../atoms/PullToRefresh";
 import { useDarkMode } from "../hooks/useDarkMode";
 import { useIOSViewport } from "../hooks/useIOSViewport";
 import { useLayoutMode } from "../hooks/useLayoutMode";
@@ -185,9 +186,9 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
                 WebkitOverflowScrolling: "touch" as any,
               }}
             >
-              <div style={{ flex: 1, boxSizing: "border-box", display: "flex", flexDirection: "column", minHeight: 0 }}>
+              <PullToRefresh enabled={isMobileOrTablet}>
                 {children}
-              </div>
+              </PullToRefresh>
             </main>
           </div>
         </div>

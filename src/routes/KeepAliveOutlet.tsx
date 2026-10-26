@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useOutlet } from "react-router-dom";
 import { NAV_DONE_EVENT, emitNavDone, emitNavStart } from "../atoms/NavigationProgress";
 import { useDevice } from "../hooks/useDevice";
 import { useSwipePageOrder, useSwipePager } from "../hooks/useSwipeNavigation";
+import { PULL_REMOUNT_EVENT } from "../hooks/usePullToRefresh";
 
 /**
  * KeepAliveOutlet — app-like module switching.
@@ -38,6 +39,7 @@ const KEEP_ALIVE_PATHS = new Set([
   "/setting-config/api-key-management",
 ]);
 const SETTINGS_TABS = /^\/setting-config\/(user|role|module)-management$/;
+const UNCACHED_KEY  = "__outlet";   // remount counter for the plain (non-cached) outlet
 
 function keepAliveKey(pathname: string): string | null {
   if (SETTINGS_TABS.test(pathname)) return "settings";
@@ -217,6 +219,19 @@ export const KeepAliveOutlet: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeKey]);
 
+  // ── Pull-to-refresh fallback ────────────────────────────────────────────────
+  // A page that registered no refresh of its own is remounted → fresh fetch.
+  const [epochs, setEpochs] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    const onRemount = () => {
+      const key = activeKeyRef.current ?? UNCACHED_KEY;
+      setEpochs(e => ({ ...e, [key]: (e[key] ?? 0) + 1 }));
+    };
+    window.addEventListener(PULL_REMOUNT_EVENT, onRemount);
+    return () => window.removeEventListener(PULL_REMOUNT_EVENT, onRemount);
+  }, []);
+
   // ── Per-page scroll position of the shared <main> scroller ──────────────────
   // Dashboards scroll <main> itself; without this, one page's scroll offset
   // would leak into (and get clamped by) the next page.
@@ -365,7 +380,7 @@ export const KeepAliveOutlet: React.FC = () => {
             transform={dragTransform(mode)}
             transition={transition}
           >
-            {element}
+            <React.Fragment key={epochs[key] ?? 0}>{element}</React.Fragment>
           </KeepAlivePane>
         );
       })}
@@ -381,7 +396,7 @@ export const KeepAliveOutlet: React.FC = () => {
       )}
 
       {!activeKey && (
-        <Suspense fallback={<PageCircleLoader />}>{outlet}</Suspense>
+        <Suspense key={epochs[UNCACHED_KEY] ?? 0} fallback={<PageCircleLoader />}>{outlet}</Suspense>
       )}
     </div>
   );

@@ -45,6 +45,7 @@ import {
 } from 'lucide-react'
 import { BulkActionBar }     from './my_clean_code_atoms/BulkActionBar'
 import { ConfirmDeleteModal } from './my_clean_code_atoms/ConfirmDeleteModal'
+import { usePullRefresh }     from '../hooks/usePullToRefresh'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -1473,13 +1474,35 @@ export function CustomDatagrid<T extends Record<string, unknown>>({
   useEffect(() => { setColumnOrder(buildColumnOrder(columns as GridColumn[])) }, [columns])
 
   // Skeleton stays at least 300 ms (no flash) — but not 300 ms *after* a slow load
-  const skeletonSince = useRef(Date.now())
+  const skeletonSince  = useRef(Date.now())
+  const quietRefresh   = useRef(false)              // pull-to-refresh: keep the rows on screen, no skeleton
+  const refreshWaiters = useRef<(() => void)[]>([])
+  const loadingNow     = useRef(isLoading)
+  loadingNow.current   = isLoading
+
   useEffect(() => {
-    if (isLoading) { skeletonSince.current = Date.now(); setShowSkeleton(true); return }
+    if (isLoading) {
+      if (quietRefresh.current) return
+      skeletonSince.current = Date.now(); setShowSkeleton(true); return
+    }
+    quietRefresh.current = false
+    refreshWaiters.current.splice(0).forEach((resolve) => resolve())
     const remaining = Math.max(0, 300 - (Date.now() - skeletonSince.current))
     const t = setTimeout(() => setShowSkeleton(false), remaining)
     return () => clearTimeout(t)
   }, [isLoading])
+
+  // ── Global pull-to-refresh (mobile) → this grid's onRefresh ──────────────
+  // Resolves when the reload finishes, so the spinner stays exactly that long.
+  const rootRef = useRef<HTMLDivElement>(null)
+  const pullRefresh = useCallback(() => new Promise<void>((resolve) => {
+    quietRefresh.current = true
+    refreshWaiters.current.push(resolve)
+    onRefresh?.()
+    // A refresh that never flips isLoading (nothing to fetch) settles on its own
+    window.setTimeout(() => { if (!loadingNow.current) { quietRefresh.current = false; resolve() } }, 400)
+  }), [onRefresh])
+  usePullRefresh(rootRef, onRefresh ? pullRefresh : undefined)
 
   // Clear selection on page change (traditional pagination only)
   useEffect(() => {
@@ -1651,7 +1674,7 @@ export function CustomDatagrid<T extends Record<string, unknown>>({
   // ─── Skeleton return — includes exact-replica footer ─────────────────────
   if (showSkeleton) {
     return (
-      <div className="flex flex-col h-full" style={{ background: 'var(--dt-bg)', overflow: 'hidden' }}>
+      <div ref={rootRef} className="flex flex-col h-full" style={{ background: 'var(--dt-bg)', overflow: 'hidden' }}>
         <style>{SCROLL_CSS}</style>
         {isCardView ? (
           <div style={{ flex: '1 1 0', height: 0, overflow: 'hidden' }}><CardSkeleton /></div>
@@ -1683,6 +1706,7 @@ export function CustomDatagrid<T extends Record<string, unknown>>({
 
   return (
     <div
+      ref={rootRef}
       className={`flex flex-col relative ${resizingColumn ? 'select-none' : ''}`}
       style={{ height: '100%', background: 'var(--dt-bg)', overflow: 'hidden' }}
     >
