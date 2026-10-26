@@ -150,6 +150,136 @@ const COLUMNS: GridColumn<DeviceInfo>[] = [
   },
 ];
 
+// ── Details view — shared by the desktop modal & mobile bottom sheet ───────────
+
+const Field: React.FC<{ label: string; children: React.ReactNode; mono?: boolean }> = ({ label, children, mono }) => (
+  <div style={{ minWidth: 0 }}>
+    <strong>{label}</strong>
+    <div style={{
+      color: "var(--dt-muted)", wordBreak: "break-all",
+      ...(mono ? { fontFamily: "ui-monospace, monospace", fontSize: 11 } : {}),
+    }}>
+      {children}
+    </div>
+  </div>
+);
+
+const mapLinks = (lat: number, long: number) => ({
+  embed: `https://www.google.com/maps?q=${lat},${long}&z=15&output=embed`,
+  open:  `https://www.google.com/maps?q=${lat},${long}`,
+});
+
+// Small map at the top-right of each mobile card. Non-interactive so a tap still
+// opens the details and a long-press still deletes.
+const renderCardMap = (row: DeviceInfo) => {
+  if (row.lat == null || row.long == null) return null;
+  return (
+    <iframe
+      title={`Map — ${row.reference_id}`}
+      src={mapLinks(row.lat, row.long).embed}
+      loading="lazy"
+      tabIndex={-1}
+      style={{ display: "block", width: 96, height: 96, border: 0, borderRadius: "var(--radius)", pointerEvents: "none" }}
+    />
+  );
+};
+
+// The iframe mounts only after the sheet/modal has finished sliding in, then
+// fades in once Google has painted — no blank white flash while it animates.
+const MAP_MOUNT_DELAY = 500; // ms — matches the vaul sheet transition
+
+const DetailsMap: React.FC<{ title: string; src: string }> = ({ title, src }) => {
+  const [mounted, setMounted] = useState(false);
+  const [loaded,  setLoaded]  = useState(false);
+
+  useEffect(() => {
+    const id = setTimeout(() => setMounted(true), MAP_MOUNT_DELAY);
+    return () => clearTimeout(id);
+  }, []);
+
+  return (
+    <div style={{ marginTop: 8, height: 240, borderRadius: "var(--radius)", overflow: "hidden", background: "var(--dt-header)" }}>
+      {mounted && (
+        <iframe
+          title={title}
+          src={src}
+          referrerPolicy="no-referrer-when-downgrade"
+          allowFullScreen
+          onLoad={() => setLoaded(true)}
+          style={{ display: "block", width: "100%", height: "100%", border: 0, opacity: loaded ? 1 : 0, transition: "opacity 200ms ease" }}
+        />
+      )}
+    </div>
+  );
+};
+
+const DeviceDetails: React.FC<{ row: DeviceInfo }> = ({ row }) => {
+  const hasCoords = row.lat != null && row.long != null;
+  const map = hasCoords ? mapLinks(row.lat as number, row.long as number) : null;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 14, fontSize: 12, color: "var(--dt-text)" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12 }}>
+        <Field label="Reference ID" mono>{row.reference_id}</Field>
+        <Field label="Device Name">{row.device_name || "—"}</Field>
+        <Field label="Device Number">{row.device_number || "—"}</Field>
+        <Field label="Website">{row.website_name || "—"}</Field>
+        <Field label="Country">{row.country || "—"}</Field>
+        <Field label="IP Address" mono>{row.device_ip || "—"}</Field>
+        <Field label="Latitude">{row.lat ?? "—"}</Field>
+        <Field label="Longitude">{row.long ?? "—"}</Field>
+        <Field label="Device Changes">{row.device_change}</Field>
+        <Field label="Total Hits">{totalHits(row)}</Field>
+        <div><strong>Status</strong><div><ActiveBadge active={row.is_active} /></div></div>
+        <Field label="First Seen">{formatDateTime(row.createdAt)}</Field>
+        <Field label="Last Seen">{formatDateTime(row.updatedAt)}</Field>
+        <Field label="Frontend UUID" mono>{row.frontend_generated_uuid || "—"}</Field>
+        <Field label="Record ID" mono>{row._id}</Field>
+      </div>
+
+      <div style={{ height: 1, background: "var(--fi-border)" }} />
+
+      {/* Location map */}
+      <div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+          <strong>Location Map</strong>
+          {map && (
+            <a href={map.open} target="_blank" rel="noopener noreferrer" style={{ color: "var(--dt-muted)", textDecoration: "underline" }}>
+              Open in Google Maps
+            </a>
+          )}
+        </div>
+        {map ? (
+          <DetailsMap title={`Map — ${row.reference_id}`} src={map.embed} />
+        ) : (
+          <div style={{ marginTop: 8, color: "var(--dt-muted)" }}>Location not available for this device</div>
+        )}
+      </div>
+
+      <div style={{ height: 1, background: "var(--fi-border)" }} />
+
+      {/* Pages visited */}
+      <div>
+        <strong>Pages Visited ({row.website_all_url_route.length})</strong>
+        <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
+          {row.website_all_url_route.map((r, i) => (
+            <div key={i} style={{ padding: "8px 10px", background: "var(--dt-header)", borderRadius: "var(--radius)", display: "flex", flexDirection: "column", gap: 4 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                <span style={{ wordBreak: "break-all", minWidth: 0 }}>{r.url}</span>
+                <span style={{ flexShrink: 0, color: "var(--dt-muted)" }}>{r.hit_count} hit{r.hit_count !== 1 ? "s" : ""}</span>
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "2px 14px", color: "var(--dt-muted)", fontSize: 11 }}>
+                <span>First hit: {formatDateTime(r.created_at)}</span>
+                <span>Last hit: {formatDateTime(r.last_hit_at)}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ── Filter content — shared between desktop dropdown & mobile modal ────────────
 
 interface FilterContentProps {
@@ -427,35 +557,10 @@ const DeviceInfoPage: React.FC = () => {
         onClose={() => setViewRow(null)}
         title={viewRow?.device_name || "Device details"}
         subtitle={viewRow?.reference_id}
+        maxWidth={760}
+        sheetOpenFull
       >
-        {viewRow && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 14, fontSize: 12, color: "var(--dt-text)" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-              <div><strong>Device Number</strong><div style={{ color: "var(--dt-muted)" }}>{viewRow.device_number || "—"}</div></div>
-              <div><strong>Website</strong><div style={{ color: "var(--dt-muted)" }}>{viewRow.website_name || "—"}</div></div>
-              <div><strong>Country</strong><div style={{ color: "var(--dt-muted)" }}>{viewRow.country || "—"}</div></div>
-              <div><strong>IP Address</strong><div style={{ color: "var(--dt-muted)" }}>{viewRow.device_ip || "—"}</div></div>
-              <div><strong>Device Changes</strong><div style={{ color: "var(--dt-muted)" }}>{viewRow.device_change}</div></div>
-              <div><strong>Status</strong><div><ActiveBadge active={viewRow.is_active} /></div></div>
-              <div><strong>First Seen</strong><div style={{ color: "var(--dt-muted)" }}>{formatDateTime(viewRow.createdAt)}</div></div>
-              <div><strong>Last Seen</strong><div style={{ color: "var(--dt-muted)" }}>{formatDateTime(viewRow.updatedAt)}</div></div>
-            </div>
-
-            <div style={{ height: 1, background: "var(--fi-border)" }} />
-
-            <div>
-              <strong>Pages Visited ({viewRow.website_all_url_route.length})</strong>
-              <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6, maxHeight: 260, overflowY: "auto" }}>
-                {viewRow.website_all_url_route.map((r, i) => (
-                  <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 8, padding: "6px 8px", background: "var(--dt-header)", borderRadius: "var(--radius)" }}>
-                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}>{r.url}</span>
-                    <span style={{ flexShrink: 0, color: "var(--dt-muted)" }}>{r.hit_count} hit{r.hit_count !== 1 ? "s" : ""}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
+        {viewRow && <DeviceDetails row={viewRow} />}
       </CleanModal>
 
       {/* ── Table ────────────────────────────────────────────────────────── */}
@@ -478,6 +583,7 @@ const DeviceInfoPage: React.FC = () => {
           onBulkDelete={perms.delete !== false ? handleBulkDelete : undefined}
           bulkDeleteLabel="Delete selected device records — this cannot be undone"
           onView={handleView}
+          renderCardAside={renderCardMap}
           onDelete={perms.delete !== false ? handleDelete : undefined}
           deleteConfirmTitle="Delete device record?"
           deleteConfirmDescription="This will permanently remove this device's tracking history. This action cannot be undone."

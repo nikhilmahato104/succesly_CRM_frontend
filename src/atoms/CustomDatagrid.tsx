@@ -119,6 +119,10 @@ export interface CustomDatagridProps<T = Record<string, unknown>> {
   onDelete?: (row: T) => Promise<void> | void
   deleteConfirmTitle?:       string
   deleteConfirmDescription?: string
+
+  // ── Card view (<1024px) ──────────────────────────────────────────────────
+  /** Extra content shown at the top-right of each card (e.g. a thumbnail or map) */
+  renderCardAside?: (row: T) => React.ReactNode
 }
 
 // ─── Layout constants ─────────────────────────────────────────────────────────
@@ -1068,7 +1072,7 @@ const cardStyle: React.CSSProperties = {
 }
 
 function DataCard<T>({
-  row, columns, selectable, selected, onToggle, onTap, onLongPress,
+  row, columns, selectable, selected, onToggle, onTap, onLongPress, renderAside,
 }: {
   row: T
   columns: GridColumn<T>[]
@@ -1077,6 +1081,7 @@ function DataCard<T>({
   onToggle: () => void
   onTap?: (row: T) => void
   onLongPress?: (row: T) => void
+  renderAside?: (row: T) => React.ReactNode
 }) {
   const { primary, secondary, rest } = cardColumns(columns)
   const timer   = useRef(0)
@@ -1136,14 +1141,19 @@ function DataCard<T>({
       )}
 
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div className="cdg-card-value" style={{ fontSize: 14, fontWeight: 600, color: 'var(--dt-text)', lineHeight: 1.3 }}>
-          {renderCardCell(primary, row)}
-        </div>
-        {secondary && (
-          <div className="cdg-card-value" style={{ marginTop: 2, fontSize: 12, color: 'var(--dt-muted)', lineHeight: 1.35 }}>
-            {renderCardCell(secondary, row)}
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="cdg-card-value" style={{ fontSize: 14, fontWeight: 600, color: 'var(--dt-text)', lineHeight: 1.3 }}>
+              {renderCardCell(primary, row)}
+            </div>
+            {secondary && (
+              <div className="cdg-card-value" style={{ marginTop: 2, fontSize: 12, color: 'var(--dt-muted)', lineHeight: 1.35 }}>
+                {renderCardCell(secondary, row)}
+              </div>
+            )}
           </div>
-        )}
+          {renderAside && <div style={{ flexShrink: 0 }}>{renderAside(row)}</div>}
+        </div>
 
         {rest.length > 0 && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '6px 12px', marginTop: 8 }}>
@@ -1420,6 +1430,7 @@ export function CustomDatagrid<T extends Record<string, unknown>>({
   onDelete,
   deleteConfirmTitle,
   deleteConfirmDescription,
+  renderCardAside,
 }: CustomDatagridProps<T>) {
   const isMobile = useIsMobile()
   const isCardView = useIsCardView()
@@ -1728,6 +1739,7 @@ export function CustomDatagrid<T extends Record<string, unknown>>({
                   onToggle={() => toggleRow(rowId)}
                   onTap={onRowClick ?? onView ?? onEdit}
                   onLongPress={onDelete ? setDeleteTarget : undefined}
+                  renderAside={renderCardAside}
                 />
               )
             })}

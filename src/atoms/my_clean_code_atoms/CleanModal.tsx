@@ -24,6 +24,8 @@ export interface CleanModalProps {
   zIndex?:          number;
   /** Desktop: show expand/collapse icon. Mobile sheet: open at ~65% with swipe-up to full height (default: true) */
   expandable?:      boolean;
+  /** Mobile sheet: open straight at full height instead of the ~65% point (expandable sheets only) */
+  sheetOpenFull?:   boolean;
   /** "auto" (default) = mobile→sheet, desktop→modal  |  "modal" = always centered  |  "sheet" = always bottom sheet */
   mode?:            "auto" | "modal" | "sheet";
 }
@@ -249,7 +251,7 @@ function useStickyFooter(
 
 const BottomSheet: React.FC<CleanModalProps> = ({
   isOpen, onClose, title, subtitle, children, footer,
-  closeOnBackdrop = false, headerExtra, zIndex = 9999, expandable = true,
+  closeOnBackdrop = false, headerExtra, zIndex = 9999, expandable = true, sheetOpenFull = false,
 }) => {
   const contentRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -257,9 +259,10 @@ const BottomSheet: React.FC<CleanModalProps> = ({
   const isOpenRef  = useRef(isOpen);
   isOpenRef.current = isOpen;
 
-  const [snap, setSnap] = useState<number | string | null>(PARTIAL_SNAP);
+  const openSnap = sheetOpenFull ? FULL_SNAP : PARTIAL_SNAP;
+  const [snap, setSnap] = useState<number | string | null>(openSnap);
 
-  useEffect(() => { if (isOpen) setSnap(PARTIAL_SNAP); }, [isOpen]);
+  useEffect(() => { if (isOpen) setSnap(openSnap); }, [isOpen, openSnap]);
 
   useStickyFooter(isOpen && expandable && !!footer, contentRef, footerRef);
 
@@ -270,15 +273,15 @@ const BottomSheet: React.FC<CleanModalProps> = ({
     const el = contentRef.current;
     if (el) {
       el.style.transition = `transform ${VAUL_MS}ms ${VAUL_EASE}`;
-      el.style.transform  = `translate3d(0, ${expandable ? partialHiddenPx() : 0}px, 0)`;
+      el.style.transform  = `translate3d(0, ${expandable && !sheetOpenFull ? partialHiddenPx() : 0}px, 0)`;
     }
     const ov = overlayRef.current;
     if (ov) {
       ov.style.transition = `opacity ${VAUL_MS}ms ${VAUL_EASE}`;
       ov.style.opacity    = "1";
     }
-    setSnap(PARTIAL_SNAP);
-  }, [expandable]);
+    setSnap(openSnap);
+  }, [expandable, sheetOpenFull, openSnap]);
 
   const handleOpenChange = useCallback((open: boolean) => {
     if (open) return;
